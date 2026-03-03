@@ -1,11 +1,5 @@
 import json
 import os
-from oauth2client.service_account import ServiceAccountCredentials
-import gspread
-from dotenv import load_dotenv
-import csv
-
-# Load .env
 import gspread
 from google.oauth2.service_account import Credentials
 
