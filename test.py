@@ -1,3 +1,5 @@
+import os
+
 import requests
 from autoRender import delete_from_r2, render_from_csv
 
@@ -13,17 +15,17 @@ from facebook_business.adobjects.instagramuser import InstagramUser
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
-ACCOUNT_ID = "431c103f6e281a32903d97ba785cd492"
-ACCESS_KEY = "d94ec471afb6b8bb01584eb9941dd922"
-SECRET_KEY = "3e9aa8b28e2f1fc3daa3ac316e4329fa575c202048bd5200c4aeef72693bc819"
-BUCKET_NAME = "autopr-images"
-PUBLIC_URL_BASE = "https://pub-09044e0f73124f66b358b016f903929b.r2.dev"
+ACCOUNT_ID = os.getenv("ACCOUNT_ID")
+ACCESS_KEY = os.getenv("ACCESS_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE")
 
-IG_USER_ID = "17841468652872390" 
+IG_USER_ID = os.getenv("IG_USER_ID")  # Instagram Business Account ID to post to
 
-MY_APP_ID = '1598679764670845'
-MY_APP_SECRET = '019abfe854d55e46f7a2135e1d454cdb'
-MY_ACCESS_TOKEN = 'EAAWtZCaN7mX0BQyRdOF9F09DV1OHNmVpvKIBMO5grrQbAU5BY7KFfkl8hj9zqJwZAbIAAHtPIidawZChIhH4cZA46llmtwZCxZAeKv2s8SLNJ3ykm9j1DlUZBVtncKady2HS8m8zqb41v7pAZAfZB9JvuYd6dtyZBkFIYiZA7xZC0rad1gqb3HeBFXl1zqeXZCDjiOkZBBw3EmXd8QWx16oZBZCMrojh1mVhgb4ZAZC460DOJfXW5ZCFmNvsttiQkpWET5PK4WbnzZCmXZB7ZBwvBbe3vb5VCRfm88'
+MY_APP_ID = os.getenv("MY_APP_ID")
+MY_APP_SECRET = os.getenv("MY_APP_SECRET")
+MY_ACCESS_TOKEN = os.getenv("MY_ACCESS_TOKEN")
 
 # Initialize Facebook API
 FacebookAdsApi.init(MY_APP_ID, MY_APP_SECRET, MY_ACCESS_TOKEN)
