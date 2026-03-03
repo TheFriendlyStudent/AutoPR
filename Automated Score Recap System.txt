@@ -1,0 +1,31 @@
+Automated Score Recap System
+
+Features:
+
+INSTAGRAM/FACEBOOK API CALLS
+
+- Used to access Instagram and Facebook pages. Necessary for automated posting.
+- Handles captions, tagging, sharing.
+- Posts carousels with finished posts.
+
+CLOUDFLARE API CALLS
+
+- Used for temporary image hosting. Instagram can only post photos that are publicly accessible.
+- Create a bucket where images ready to be posted can be made publicly accessible, allowing Instagram to find photo/s.
+- Delete photos from bucket once Instagram has finished uploading the post.
+
+PILLOW PYTHON LIBRARY
+
+- Edit an existing score template as a PSD per user input. Exports a jpeg for posting.
+- Manipulate text layers (identified by name) for scores, records, rankings, etc.
+- Repeat process for a number of images, then send images to Cloudflare R2 to be accessed by Instagram.
+
+TKINTER
+
+- Create UI for convenience and to take input.
+- Generate live previews of images.
+
+PANDAS PYTHON LIBRARY
+
+- Process input as CSV data for convenience.
+- Retrieve relevant data stored as strings.
