@@ -27,6 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("scores");
       container.innerHTML = "";
 
+      const ticker = document.getElementById("scoreTicker");
+      ticker.innerHTML = "";
+
       const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
       const headers = rows.shift().split(",").map(h => h.trim());
 
@@ -77,6 +80,12 @@ document.addEventListener("DOMContentLoaded", () => {
 `;
 
         container.appendChild(gameRow);
+
+        // ===== ADD TO TICKER =====
+const tickerItem = document.createElement("div");
+tickerItem.className = "ticker-item";
+tickerItem.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (Final)`;
+ticker.appendChild(tickerItem);
       });
     })
     .catch(err => console.error(err));

@@ -131,14 +131,77 @@ body {
 .tie { color: gray; }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 600px) {
-  .game-row {
+@media (max-width: 900px) {
+  .main-layout {
     flex-direction: column;
-    gap: 10px;
   }
-  .score-center { gap: 8px; min-width: auto; }
-  .team { min-width: auto; text-align: center; }
-  .right-team { text-align: center; }
+
+  .sidebar {
+    position: relative;
+    top: 0;
+  }
+
+  .sidebar iframe {
+    height: 500px;
+  }
+}
+
+/* ===== TICKER ===== */
+.ticker-wrapper {
+  width: 100%;
+  overflow: hidden;
+  background: #0a1f44;
+  color: white;
+  padding: 10px 0;
+  border-bottom: 2px solid #123a7a;
+}
+
+.ticker {
+  display: flex;
+  gap: 60px;
+  white-space: nowrap;
+  animation: scrollTicker 35s linear infinite;
+}
+
+.ticker-item {
+  font-weight: 600;
+}
+
+@keyframes scrollTicker {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ===== MAIN LAYOUT ===== */
+.main-layout {
+  display: flex;
+  max-width: 1300px;
+  margin: 30px auto;
+  padding: 0 20px;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+/* Left side (scores area) */
+.content {
+  flex: 2;
+  margin: 0; /* remove previous auto margin */
+  padding: 0;
+}
+
+/* Right side (MaxPreps widget) */
+.sidebar {
+  flex: 1;
+  position: sticky;
+  top: 20px;
+}
+
+.sidebar iframe {
+  width: 100%;
+  height: 700px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 </style>
 </head>
@@ -146,14 +209,29 @@ body {
 
 <div class="header">CIAC Score Reports</div>
 
+<div class="ticker-wrapper">
+  <div class="ticker" id="scoreTicker"></div>
+</div>
+
 <div class="tabs">
   <div class="tab active">Scores</div>
   <div class="tab">Livestreams</div>
 </div>
 
-<div class="content">
-  <div id="scores"></div>
-  <div id="livestreams" style="display:none;"></div>
+<div class="main-layout">
+
+  <div class="content">
+    <div id="scores"></div>
+    <div id="livestreams" style="display:none;"></div>
+  </div>
+
+  <div class="sidebar">
+    <iframe 
+      src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-"
+      style="background:#FFFFFF;"
+    ></iframe>
+  </div>
+
 </div>
 
 <!-- ===== EXTERNAL SCRIPT ===== -->
