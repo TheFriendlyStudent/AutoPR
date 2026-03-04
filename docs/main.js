@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const awayScoreIdx = headers.indexOf("away_score");
       const homeRecordIdx = headers.indexOf("home_record");
       const awayRecordIdx = headers.indexOf("away_record");
+      const isTestIdx = headers.indexOf("is_test");
 
       if (homeTeamIdx === -1) {
         container.textContent = "Header mismatch.";
@@ -53,6 +54,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const awayScore = parseInt(values[awayScoreIdx]);
         const homeRecord = values[homeRecordIdx] || "";
         const awayRecord = values[awayRecordIdx] || "";
+        const isTest = values[isTestIdx] === "true";
+
+        if (isTest) {
+          return;
+        }
 
         let homeClass = "tie", awayClass = "tie";
         if (homeScore > awayScore) { homeClass = "winner"; awayClass = "loser"; }

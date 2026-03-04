@@ -37,27 +37,33 @@ def render_from_csv(csv_path, template_png="graphic.png"):
 
         for row in reader:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_png = f"C:\\Users\\vasub\\AutoPR\\output_{timestamp}.png"   
-            render_image(
-                output_path=output_png,
-                home_won=int(row["home_score"]) > int(row["away_score"]),
-                title_text=row["header"],
-                caption_text=row["caption"],
-                home_score=int(row["home_score"]),
-                away_score=int(row["away_score"]),
-                home_rank=row["home_rank"],
-                away_rank=row["away_rank"],
-                home_record=row["home_record"],
-                away_record=row["away_record"],
-                home_team=row["home_team"],
-                away_team=row["away_team"],
-                photo_text="PHOTO: @" + row["photo_cred"],
-                template_png=template_png,
-                background_image=row["bg_image"]
-            )
-            url = upload_to_r2(output_png)
-            urls.append(url)
-            os.remove(output_png)
+            output_png = f"C:\\Users\\vasub\\AutoPR\\output_{timestamp}.png"
+            game_date_time_str = row['game_datetime']  # from CSV
+            game_dt = datetime.strptime(game_date_time_str, "%m/%d/%Y %H:%M:%S")
+            if game_dt > datetime.now():
+                print("Skipping future game")
+                continue
+            if game_dt <= datetime.now():   
+                render_image(
+                    output_path=output_png,
+                    home_won=int(row["home_score"]) > int(row["away_score"]),
+                    title_text=row["header"],
+                    caption_text=row["caption"],
+                    home_score=int(row["home_score"]),
+                    away_score=int(row["away_score"]),
+                    home_rank=row["home_rank"],
+                    away_rank=row["away_rank"],
+                    home_record=row["home_record"],
+                    away_record=row["away_record"],
+                    home_team=row["home_team"],
+                    away_team=row["away_team"],
+                    photo_text="PHOTO: @" + row["photo_cred"],
+                    template_png=template_png,
+                    background_image=row["bg_image"]
+                )
+                url = upload_to_r2(output_png)
+                urls.append(url)
+                os.remove(output_png)
     return urls
 
 def delete_from_r2(file_name):
