@@ -1,4 +1,4 @@
-Automated Score Recap System
+CT Scores (AutoPR testing)
 
 Features:
 
@@ -20,12 +20,18 @@ PILLOW PYTHON LIBRARY
 - Manipulate text layers (identified by name) for scores, records, rankings, etc.
 - Repeat process for a number of images, then send images to Cloudflare R2 to be accessed by Instagram.
 
-TKINTER
+GOOGLE SHEETS API
 
-- Create UI for convenience and to take input.
-- Generate live previews of images.
+- Use a Google Form to get user input. Link the Google Form to a Google Sheet.
+- API allows code to access the Google Sheet so that its contents can be stored in GitHub repo.
+- Provides data for Instagram posts and website.
 
-PANDAS PYTHON LIBRARY
+WEBSITE (GITHUB PAGES)
 
-- Process input as CSV data for convenience.
-- Retrieve relevant data stored as strings.
+- Web page serves as another place for people to get score information.
+- Uses the same CSV file as the python code to get info.
+- GitHub actions and workflows update scores every 20 mins from 8 AM to 11 PM EST.
+
+
+
+
