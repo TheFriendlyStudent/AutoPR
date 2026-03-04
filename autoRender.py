@@ -2,6 +2,7 @@ import csv
 import datetime
 import os
 from tkinter import Image
+import pytz 
 
 from renderGraphic import render_image
 import boto3
@@ -39,11 +40,21 @@ def render_from_csv(csv_path, template_png="graphic.png"):
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             output_png = f"C:\\Users\\vasub\\AutoPR\\output_{timestamp}.png"
             game_date_time_str = row['game_datetime']  # from CSV
-            game_dt = datetime.strptime(game_date_time_str, "%m/%d/%Y %H:%M:%S")
-            if game_dt > datetime.now():
+
+            # Define the EST and CST timezones
+            eastern = pytz.timezone("US/Eastern")
+            central = pytz.timezone("US/Central")
+
+            # Parse the CSV string (which is in EST) and localize it
+            game_dt_naive = datetime.strptime(game_date_time_str, "%m/%d/%Y %H:%M:%S")
+            game_dt_est = eastern.localize(game_dt_naive)
+
+            # Convert to CST for comparison with your local time (or convert now to EST)
+            now_cst = datetime.now(central)
+            if game_dt_est > now_cst.astimezone(eastern):
                 print("Skipping future game")
                 continue
-            if game_dt <= datetime.now():   
+            if game_dt_est <= now_cst.astimezone(eastern) and row.get("is_test", "").lower() != "true":   
                 render_image(
                     output_path=output_png,
                     home_won=int(row["home_score"]) > int(row["away_score"]),
