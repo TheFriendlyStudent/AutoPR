@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import gspread
@@ -26,7 +27,19 @@ spreadsheet = client.open_by_key("1UJzab8BwMgScaYoLqTBKk_8sDy7Y7cNp3YqrrZhy38I")
 
 sheet = spreadsheet.worksheet("working_data")
 
+local_file = "games.csv"
+
 # Get all rows as dictionaries (uses row 1 as headers)
 data = sheet.get_all_records()
 
-print(data)
+# Write the data to the local CSV
+if data:
+    headers = list(data[0].keys())  # Use headers from the data
+    with open(local_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(data)
+
+    print(f"Local file '{local_file}' updated successfully!")
+else:
+    print("No data to write to the local CSV.")
