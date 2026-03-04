@@ -81,6 +81,16 @@ body {
   min-width: 120px;
 }
 
+.left-team {
+  text-align: left;
+}
+
+.right-team {
+  text-align: right;       /* aligns text with right edge */
+  justify-content: center;  /* vertically centers */
+}
+
+/* ===== TEAM NAME & RECORD ===== */
 .team-name {
   font-weight: 700;
   font-size: 1.1rem;
@@ -94,9 +104,9 @@ body {
 /* ===== SCORE CENTER ===== */
 .score-center {
   display: flex;
-  align-items: center;       /* vertical alignment */
-  justify-content: center;   /* horizontal alignment inside the center */
-  gap: 12px;                 /* spacing between scores and FINAL */
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   min-width: 160px;
 }
 
@@ -104,7 +114,7 @@ body {
   font-weight: 800;
   font-size: 1.8rem;
   text-align: center;
-  min-width: 40px;
+  width: 50px; /* fixed width to line up names with score */
 }
 
 .center-info {
@@ -128,6 +138,7 @@ body {
   }
   .score-center { gap: 8px; min-width: auto; }
   .team { min-width: auto; text-align: center; }
+  .right-team { text-align: center; }
 }
 </style>
 </head>
