@@ -7,19 +7,15 @@ fetch("games.csv")
     rows.forEach(row => {
       if (!row.trim()) return; // skip empty lines
 
-      // Split by comma
       const cols = row.split(",");
 
-      // Optional: parse safely in case values have commas
       const homeTeam = cols[2];
       const awayTeam = cols[3];
       const homeScore = cols[6];
       const awayScore = cols[7];
-      const caption = cols[1]; // e.g., "BELT" or "FINAL"
 
-      // Create a div for this game
       const div = document.createElement("div");
-      div.textContent = `${homeTeam} (${homeScore}) vs ${awayTeam} (${awayScore}) — ${caption}`;
+      div.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}`;
       container.appendChild(div);
     });
   });
