@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>CIAC Sports</title>
-
 <style>
-/* ===== GLOBAL STYLES ===== */
 body {
   margin: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -13,7 +11,6 @@ body {
   color: #1a1a1a;
 }
 
-/* ===== HEADER ===== */
 .header {
   background: linear-gradient(90deg, #0a1f44, #123a7a);
   color: white;
@@ -24,7 +21,6 @@ body {
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
-/* ===== TABS ===== */
 .tabs {
   display: flex;
   background: white;
@@ -50,14 +46,13 @@ body {
   color: #000;
 }
 
-/* ===== CONTENT AREA ===== */
 .content {
   max-width: 900px;
   margin: 30px auto;
   padding: 0 20px;
 }
 
-/* ===== SCORE CARDS ===== */
+/* GAME ROW FLEX LAYOUT */
 .game-row {
   display: flex;
   align-items: center;
@@ -75,68 +70,49 @@ body {
   box-shadow: 0 6px 18px rgba(0,0,0,0.1);
 }
 
-/* TEAM COLUMN */
-.team {
-  display: flex;
-  flex-direction: column;
-}
-
-.left-team {
-  align-items: flex-end;
-  text-align: right;
-}
-
-.right-team {
-  align-items: flex-start;
-  text-align: left;
-}
-
+/* TEAM NAME AND SCORE */
 .team-name {
   font-weight: 700;
   font-size: 1.1rem;
 }
 
-.team-record {
-  font-size: 0.85rem;
-  color: #777;
-  margin-top: 2px;
-}
-
 .team-score {
   font-weight: 800;
   font-size: 1.8rem;
-  margin-top: 5px;
+  margin: 0 15px;
+  min-width: 40px;
+  text-align: center;
 }
 
 /* CENTER INFO */
 .center-info {
-  text-align: center;
-  font-size: 0.85rem;
   font-weight: 700;
+  font-size: 0.85rem;
   color: #888;
-  min-width: 80px;
+  text-align: center;
+  min-width: 60px;
+}
+
+/* WINNING TEAM HIGHLIGHT */
+.team.winner {
+  color: #0a7a0a;
 }
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
   .game-row {
     flex-direction: column;
-    gap: 10px;
-    align-items: center;
+    gap: 8px;
   }
-  .left-team, .right-team {
-    align-items: center;
-    text-align: center;
+  .team-score, .center-info {
+    margin: 0;
   }
 }
 </style>
 </head>
-
 <body>
 
-<div class="header">
-  CIAC Score Reports
-</div>
+<div class="header">CIAC Score Reports</div>
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('scores')">Scores</div>
@@ -145,57 +121,39 @@ body {
 
 <div class="content">
   <div id="scores">
-    <!-- Example Game Rows -->
-    <div class="game-row">
-      <div class="team left-team">
-        <div class="team-name">Glastonbury</div>
-        <div class="team-record">5-0</div>
-        <div class="team-score">42</div>
-      </div>
 
+    <!-- Example row -->
+    <div class="game-row">
+      <div class="team left-team winner">Glastonbury</div>
+      <div class="team-score">42</div>
       <div class="center-info">FINAL</div>
-
-      <div class="team right-team">
-        <div class="team-name">New Haven</div>
-        <div class="team-record">3-2</div>
-        <div class="team-score">38</div>
-      </div>
+      <div class="team-score">38</div>
+      <div class="team right-team">New Haven</div>
     </div>
 
     <div class="game-row">
-      <div class="team left-team">
-        <div class="team-name">Bridgeport</div>
-        <div class="team-record">2-3</div>
-        <div class="team-score">21</div>
-      </div>
-
-      <div class="center-info">Q4 10:32</div>
-
-      <div class="team right-team">
-        <div class="team-name">Waterbury</div>
-        <div class="team-record">4-1</div>
-        <div class="team-score">28</div>
-      </div>
+      <div class="team left-team">Bridgeport</div>
+      <div class="team-score">21</div>
+      <div class="center-info">FINAL</div>
+      <div class="team-score winner">28</div>
+      <div class="team right-team">Waterbury</div>
     </div>
+
   </div>
 
-  <div id="livestreams" style="display:none;">
-    <!-- Not implemented yet -->
-  </div>
+  <div id="livestreams" style="display:none;"></div>
 </div>
 
 <script>
 function showTab(tabName) {
   document.getElementById("scores").style.display = "none";
   document.getElementById("livestreams").style.display = "none";
-
   document.getElementById(tabName).style.display = "block";
 
   document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
   event.target.classList.add("active");
 }
 </script>
-
 <script src="main.js"></script>
 
 </body>
