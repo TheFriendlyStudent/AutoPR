@@ -2,46 +2,64 @@ fetch("games.csv")
   .then(res => res.text())
   .then(text => {
     const container = document.getElementById("scores");
-
-    // Split CSV into lines and remove empty lines
     const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
 
-    if (rows.length < 2) {
-      container.textContent = "No data found!";
-      return;
-    }
-
-    // Get headers from the first row
     const headers = rows.shift().split(",").map(h => h.trim());
 
-    // Create table
-    const table = document.createElement("table");
+    const homeTeamIdx = headers.indexOf("HomeTeam");
+    const homeScoreIdx = headers.indexOf("HomeScore");
+    const awayTeamIdx = headers.indexOf("AwayTeam");
+    const awayScoreIdx = headers.indexOf("AwayScore");
 
-    // Add header row
-    const thead = document.createElement("thead");
-    const headerRow = document.createElement("tr");
-    headers.forEach(h => {
-      const th = document.createElement("th");
-      th.textContent = h;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    // Add table body
-    const tbody = document.createElement("tbody");
     rows.forEach(row => {
       const values = row.split(",").map(v => v.trim());
-      const tr = document.createElement("tr");
-      values.forEach(val => {
-        const td = document.createElement("td");
-        td.textContent = val;
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
+      const homeTeam = values[homeTeamIdx];
+      const homeScore = parseInt(values[homeScoreIdx]);
+      const awayTeam = values[awayTeamIdx];
+      const awayScore = parseInt(values[awayScoreIdx]);
 
-    container.appendChild(table);
+      const gameRow = document.createElement("div");
+      gameRow.className = "game-row";
+
+      // Decide colors
+      let homeColor = "black";
+      let awayColor = "black";
+      if (homeScore > awayScore) homeColor = "green", awayColor = "red";
+      else if (awayScore > homeScore) homeColor = "green", homeColor = "red";
+      else homeColor = awayColor = "gray";
+
+      // Home team
+      const homeDiv = document.createElement("div");
+      homeDiv.className = "team";
+      homeDiv.innerHTML = `<span class="team-name" style="color:${homeColor}">${homeTeam}</span>`;
+
+      const homeScoreSpan = document.createElement("span");
+      homeScoreSpan.className = "team-score";
+      homeScoreSpan.textContent = homeScore;
+      homeScoreSpan.style.color = homeColor;
+
+      // Away team
+      const awayDiv = document.createElement("div");
+      awayDiv.className = "team";
+      awayDiv.innerHTML = `<span class="team-name" style="color:${awayColor}">${awayTeam}</span>`;
+
+      const awayScoreSpan = document.createElement("span");
+      awayScoreSpan.className = "team-score";
+      awayScoreSpan.textContent = awayScore;
+      awayScoreSpan.style.color = awayColor;
+
+      // Center info (optional)
+      const centerDiv = document.createElement("div");
+      centerDiv.className = "center-info";
+      centerDiv.textContent = "Final"; // replace with dynamic info if available
+
+      gameRow.appendChild(homeDiv);
+      gameRow.appendChild(homeScoreSpan);
+      gameRow.appendChild(centerDiv);
+      gameRow.appendChild(awayScoreSpan);
+      gameRow.appendChild(awayDiv);
+
+      container.appendChild(gameRow);
+    });
   })
-  .catch(err => console.error("Error loading CSV:", err));
+  .catch(err => console.error(err));
