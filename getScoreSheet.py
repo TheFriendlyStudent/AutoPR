@@ -27,7 +27,7 @@ spreadsheet = client.open_by_key("1UJzab8BwMgScaYoLqTBKk_8sDy7Y7cNp3YqrrZhy38I")
 
 sheet = spreadsheet.worksheet("working_data")
 
-local_file = "games.csv"
+local_file = "docs/games.csv"
 
 # Get all rows as dictionaries (uses row 1 as headers)
 data = sheet.get_all_records()
