@@ -7,7 +7,6 @@ fetch("games.csv")
     const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
     const headers = rows.shift().split(",").map(h => h.trim());
 
-    // Match your REAL column names (lowercase + underscores)
     const homeTeamIdx = headers.indexOf("home_team");
     const homeScoreIdx = headers.indexOf("home_score");
     const awayTeamIdx = headers.indexOf("away_team");
@@ -15,14 +14,8 @@ fetch("games.csv")
     const homeRecordIdx = headers.indexOf("home_record");
     const awayRecordIdx = headers.indexOf("away_record");
 
-    // Safety check
-    if (
-      homeTeamIdx === -1 ||
-      homeScoreIdx === -1 ||
-      awayTeamIdx === -1 ||
-      awayScoreIdx === -1
-    ) {
-      container.textContent = "Column names not found. Check CSV header.";
+    if (homeTeamIdx === -1) {
+      container.textContent = "Header mismatch.";
       return;
     }
 
@@ -36,9 +29,6 @@ fetch("games.csv")
       const homeRecord = values[homeRecordIdx] || "";
       const awayRecord = values[awayRecordIdx] || "";
 
-      const gameRow = document.createElement("div");
-      gameRow.className = "game-row";
-
       let homeColor = "black";
       let awayColor = "black";
 
@@ -51,6 +41,9 @@ fetch("games.csv")
       } else {
         homeColor = awayColor = "gray";
       }
+
+      const gameRow = document.createElement("div");
+      gameRow.className = "game-row";
 
       gameRow.innerHTML = `
         <div class="team">
