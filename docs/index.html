@@ -5,6 +5,7 @@
 <title>CIAC Sports</title>
 
 <style>
+/* ===== GLOBAL STYLES ===== */
 body {
   margin: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -58,14 +59,15 @@ body {
 
 /* ===== SCORE CARDS ===== */
 .game-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   background: white;
   margin: 15px 0;
   padding: 18px 25px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .game-row:hover {
@@ -73,9 +75,20 @@ body {
   box-shadow: 0 6px 18px rgba(0,0,0,0.1);
 }
 
+/* TEAM COLUMN */
 .team {
   display: flex;
   flex-direction: column;
+}
+
+.left-team {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.right-team {
+  align-items: flex-start;
+  text-align: left;
 }
 
 .team-name {
@@ -86,43 +99,36 @@ body {
 .team-record {
   font-size: 0.85rem;
   color: #777;
-}
-
-.center-info {
-  font-size: 0.85rem;
-  color: #888;
-  font-weight: 600;
-}
-
-.score-center {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  justify-content: center;
-}
-
-.left-team {
-  text-align: right;
-}
-
-.right-team {
-  text-align: left;
+  margin-top: 2px;
 }
 
 .team-score {
   font-weight: 800;
   font-size: 1.8rem;
-  min-width: 40px;
-  text-align: center;
+  margin-top: 5px;
 }
 
+/* CENTER INFO */
 .center-info {
+  text-align: center;
   font-size: 0.85rem;
-  color: #888;
   font-weight: 700;
-  letter-spacing: 1px;
+  color: #888;
+  min-width: 80px;
 }
 
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .game-row {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  .left-team, .right-team {
+    align-items: center;
+    text-align: center;
+  }
+}
 </style>
 </head>
 
@@ -138,7 +144,41 @@ body {
 </div>
 
 <div class="content">
-  <div id="scores"></div>
+  <div id="scores">
+    <!-- Example Game Rows -->
+    <div class="game-row">
+      <div class="team left-team">
+        <div class="team-name">Glastonbury</div>
+        <div class="team-record">5-0</div>
+        <div class="team-score">42</div>
+      </div>
+
+      <div class="center-info">FINAL</div>
+
+      <div class="team right-team">
+        <div class="team-name">New Haven</div>
+        <div class="team-record">3-2</div>
+        <div class="team-score">38</div>
+      </div>
+    </div>
+
+    <div class="game-row">
+      <div class="team left-team">
+        <div class="team-name">Bridgeport</div>
+        <div class="team-record">2-3</div>
+        <div class="team-score">21</div>
+      </div>
+
+      <div class="center-info">Q4 10:32</div>
+
+      <div class="team right-team">
+        <div class="team-name">Waterbury</div>
+        <div class="team-record">4-1</div>
+        <div class="team-score">28</div>
+      </div>
+    </div>
+  </div>
+
   <div id="livestreams" style="display:none;">
     <!-- Not implemented yet -->
   </div>
