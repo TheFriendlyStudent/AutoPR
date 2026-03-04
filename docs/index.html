@@ -108,6 +108,12 @@ body {
     margin: 0;
   }
 }
+
+.score-center {
+  display: flex;
+  align-items: center;   /* ensures vertical alignment */
+  gap: 12px;             /* space between scores and FINAL */
+}
 </style>
 </head>
 <body>
@@ -124,19 +130,23 @@ body {
 
     <!-- Example row -->
     <div class="game-row">
-      <div class="team left-team winner">Glastonbury</div>
-      <div class="team-score">42</div>
-      <div class="center-info">FINAL</div>
-      <div class="team-score">38</div>
-      <div class="team right-team">New Haven</div>
+    <div class="team left-team">Glastonbury</div>
+    <div class="score-center">
+        <div class="team-score">42</div>
+        <div class="center-info">FINAL</div>
+        <div class="team-score">38</div>
+    </div>
+    <div class="team right-team">Hillhouse</div>
     </div>
 
     <div class="game-row">
-      <div class="team left-team">Bridgeport</div>
-      <div class="team-score">21</div>
-      <div class="center-info">FINAL</div>
-      <div class="team-score winner">28</div>
-      <div class="team right-team">Waterbury</div>
+    <div class="team left-team">Manchester</div>
+    <div class="score-center">
+        <div class="team-score">42</div>
+        <div class="center-info">FINAL</div>
+        <div class="team-score">38</div>
+    </div>
+    <div class="team right-team">East Hartford</div>
     </div>
 
   </div>
