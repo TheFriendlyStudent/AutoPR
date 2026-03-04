@@ -6,10 +6,12 @@ fetch("games.csv")
 
     const headers = rows.shift().split(",").map(h => h.trim());
 
-    const homeTeamIdx = headers.indexOf("HomeTeam");
-    const homeScoreIdx = headers.indexOf("HomeScore");
-    const awayTeamIdx = headers.indexOf("AwayTeam");
-    const awayScoreIdx = headers.indexOf("AwayScore");
+    const homeTeamIdx = headers.indexOf("home_team");
+    const homeScoreIdx = headers.indexOf("home_score");
+    const awayTeamIdx = headers.indexOf("away_team");
+    const awayScoreIdx = headers.indexOf("away_score");
+    const homeRecord = values[headers.indexOf("home_record")] || "";
+    const awayRecord = values[headers.indexOf("away_record")] || "";
 
     rows.forEach(row => {
       const values = row.split(",").map(v => v.trim());
@@ -31,7 +33,10 @@ fetch("games.csv")
       // Home team
       const homeDiv = document.createElement("div");
       homeDiv.className = "team";
-      homeDiv.innerHTML = `<span class="team-name" style="color:${homeColor}">${homeTeam}</span>`;
+      homeDiv.innerHTML = `<span class="team-name" style="color:${homeColor}">${homeTeam}</span>      
+      <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
+      <div class="team-record">${homeRecord}</div>
+      `;
 
       const homeScoreSpan = document.createElement("span");
       homeScoreSpan.className = "team-score";
@@ -41,7 +46,10 @@ fetch("games.csv")
       // Away team
       const awayDiv = document.createElement("div");
       awayDiv.className = "team";
-      awayDiv.innerHTML = `<span class="team-name" style="color:${awayColor}">${awayTeam}</span>`;
+      awayDiv.innerHTML = `<span class="team-name" style="color:${awayColor}">${awayTeam}</span>  
+      <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
+  <div class="team-record">${awayRecord}</div>
+`;
 
       const awayScoreSpan = document.createElement("span");
       awayScoreSpan.className = "team-score";
