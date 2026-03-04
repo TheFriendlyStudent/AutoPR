@@ -1,4 +1,3 @@
-// Wait until DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
 
   // ===== TAB SWITCHING =====
@@ -18,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Default to "scores"
+  // Default tab
   sections.scores.style.display = "block";
 
   // ===== FETCH SCORES FROM CSV =====
@@ -52,37 +51,31 @@ document.addEventListener("DOMContentLoaded", () => {
         const homeRecord = values[homeRecordIdx] || "";
         const awayRecord = values[awayRecordIdx] || "";
 
-        let homeColor = "black";
-        let awayColor = "black";
-
-        if (homeScore > awayScore) {
-          homeColor = "green"; awayColor = "red";
-        } else if (awayScore > homeScore) {
-          homeColor = "red"; awayColor = "green";
-        } else {
-          homeColor = awayColor = "gray";
-        }
+        let homeClass = "tie", awayClass = "tie";
+        if (homeScore > awayScore) { homeClass = "winner"; awayClass = "loser"; }
+        else if (awayScore > homeScore) { homeClass = "loser"; awayClass = "winner"; }
 
         const gameRow = document.createElement("div");
         gameRow.className = "game-row";
 
         gameRow.innerHTML = `
 <div class="team left-team">
-  <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
+  <div class="team-name ${homeClass}">${homeTeam}</div>
   <div class="team-record">${homeRecord}</div>
 </div>
 
 <div class="score-center">
-    <div class="team-score" style="color:${homeColor}">${homeScore}</div>
-    <div class="center-info">Final</div>
-    <div class="team-score" style="color:${awayColor}">${awayScore}</div>
+  <div class="team-score ${homeClass}">${homeScore}</div>
+  <div class="center-info">Final</div>
+  <div class="team-score ${awayClass}">${awayScore}</div>
 </div>
 
 <div class="team right-team">
-  <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
+  <div class="team-name ${awayClass}">${awayTeam}</div>
   <div class="team-record">${awayRecord}</div>
 </div>
 `;
+
         container.appendChild(gameRow);
       });
     })

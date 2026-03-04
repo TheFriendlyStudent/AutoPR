@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>CIAC Sports</title>
 <style>
+/* ===== BODY ===== */
 body {
   margin: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -11,6 +12,7 @@ body {
   color: #1a1a1a;
 }
 
+/* ===== HEADER ===== */
 .header {
   background: linear-gradient(90deg, #0a1f44, #123a7a);
   color: white;
@@ -21,6 +23,7 @@ body {
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
+/* ===== TABS ===== */
 .tabs {
   display: flex;
   background: white;
@@ -46,13 +49,14 @@ body {
   color: #000;
 }
 
+/* ===== CONTENT ===== */
 .content {
   max-width: 900px;
   margin: 30px auto;
   padding: 0 20px;
 }
 
-/* GAME ROW FLEX LAYOUT */
+/* ===== GAME ROW ===== */
 .game-row {
   display: flex;
   align-items: center;
@@ -70,21 +74,39 @@ body {
   box-shadow: 0 6px 18px rgba(0,0,0,0.1);
 }
 
-/* TEAM NAME AND SCORE */
+/* ===== TEAM INFO ===== */
+.team {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
 .team-name {
   font-weight: 700;
   font-size: 1.1rem;
 }
 
+.team-record {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+/* ===== SCORE CENTER ===== */
+.score-center {
+  display: flex;
+  align-items: center;       /* vertical alignment */
+  justify-content: center;   /* horizontal alignment inside the center */
+  gap: 12px;                 /* spacing between scores and FINAL */
+  min-width: 160px;
+}
+
 .team-score {
   font-weight: 800;
   font-size: 1.8rem;
-  margin: 0 15px;
-  min-width: 40px;
   text-align: center;
+  min-width: 40px;
 }
 
-/* CENTER INFO */
 .center-info {
   font-weight: 700;
   font-size: 0.85rem;
@@ -93,26 +115,19 @@ body {
   min-width: 60px;
 }
 
-/* WINNING TEAM HIGHLIGHT */
-.team.winner {
-  color: #0a7a0a;
-}
+/* ===== WIN/LOSE COLORS ===== */
+.winner { color: green; }
+.loser { color: red; }
+.tie { color: gray; }
 
-/* RESPONSIVE */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
   .game-row {
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
-  .team-score, .center-info {
-    margin: 0;
-  }
-}
-
-.score-center {
-  display: flex;
-  align-items: center;   /* ensures vertical alignment */
-  gap: 12px;             /* space between scores and FINAL */
+  .score-center { gap: 8px; min-width: auto; }
+  .team { min-width: auto; text-align: center; }
 }
 </style>
 </head>
@@ -121,38 +136,16 @@ body {
 <div class="header">CIAC Score Reports</div>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('scores')">Scores</div>
-  <div class="tab" onclick="showTab('livestreams')">Livestreams</div>
+  <div class="tab active">Scores</div>
+  <div class="tab">Livestreams</div>
 </div>
 
 <div class="content">
-  <div id="scores">
-
-    <!-- Example row -->
-    <div class="game-row">
-    <div class="team left-team">Glastonbury</div>
-    <div class="score-center">
-        <div class="team-score">42</div>
-        <div class="center-info">FINAL</div>
-        <div class="team-score">38</div>
-    </div>
-    <div class="team right-team">Hillhouse</div>
-    </div>
-
-    <div class="game-row">
-    <div class="team left-team">Manchester</div>
-    <div class="score-center">
-        <div class="team-score">42</div>
-        <div class="center-info">FINAL</div>
-        <div class="team-score">38</div>
-    </div>
-    <div class="team right-team">East Hartford</div>
-    </div>
-
-  </div>
-
+  <div id="scores"></div>
   <div id="livestreams" style="display:none;"></div>
 </div>
+
+<!-- ===== EXTERNAL SCRIPT ===== -->
 <script src="main.js"></script>
 
 </body>
