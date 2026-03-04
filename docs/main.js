@@ -5,9 +5,9 @@ fetch("games.csv")
     container.innerHTML = "";
 
     const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
-    const headers = rows.shift().split(",").map(h => h.trim()); 
-    // IMPORTANT: your file appears tab-separated, not comma-separated
+    const headers = rows.shift().split(",").map(h => h.trim());
 
+    // Match your REAL column names (lowercase + underscores)
     const homeTeamIdx = headers.indexOf("home_team");
     const homeScoreIdx = headers.indexOf("home_score");
     const awayTeamIdx = headers.indexOf("away_team");
@@ -15,20 +15,30 @@ fetch("games.csv")
     const homeRecordIdx = headers.indexOf("home_record");
     const awayRecordIdx = headers.indexOf("away_record");
 
+    // Safety check
+    if (
+      homeTeamIdx === -1 ||
+      homeScoreIdx === -1 ||
+      awayTeamIdx === -1 ||
+      awayScoreIdx === -1
+    ) {
+      container.textContent = "Column names not found. Check CSV header.";
+      return;
+    }
+
     rows.forEach(row => {
-      const values = row.split("\t").map(v => v.trim());
+      const values = row.split(",").map(v => v.trim());
 
       const homeTeam = values[homeTeamIdx];
       const awayTeam = values[awayTeamIdx];
       const homeScore = parseInt(values[homeScoreIdx]);
       const awayScore = parseInt(values[awayScoreIdx]);
-      const homeRecord = values[homeRecordIdx];
-      const awayRecord = values[awayRecordIdx];
+      const homeRecord = values[homeRecordIdx] || "";
+      const awayRecord = values[awayRecordIdx] || "";
 
       const gameRow = document.createElement("div");
       gameRow.className = "game-row";
 
-      // Determine winner colors
       let homeColor = "black";
       let awayColor = "black";
 
