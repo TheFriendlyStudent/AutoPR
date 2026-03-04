@@ -1,55 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Auto Score Reports</title>
-  <style>
-    /* styles.css */
-    .game-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #f5f5f5;
-    margin: 10px 0;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-family: Arial, sans-serif;
-    }
+<meta charset="UTF-8">
+<title>CIAC Sports</title>
 
-    .team {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f2f4f8;
+  color: #1a1a1a;
+}
 
-    .team-name {
-    font-weight: bold;
-    font-size: 1.2em;
-    }
+/* ===== HEADER ===== */
+.header {
+  background: linear-gradient(90deg, #0a1f44, #123a7a);
+  color: white;
+  padding: 25px 40px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
 
-    .team-score {
-    font-weight: bold;
-    font-size: 1.5em;
-    margin: 0 20px;
-    }
+/* ===== TABS ===== */
+.tabs {
+  display: flex;
+  background: white;
+  border-bottom: 2px solid #ddd;
+  padding-left: 40px;
+}
 
-    .center-info {
-    text-align: center;
-    font-size: 0.9em;
-    color: #555;
-    }
+.tab {
+  padding: 15px 25px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 3px solid transparent;
+  transition: 0.2s;
+}
 
-    .team-record {
-    font-size: 0.8em;
-    color: #555; /* grayish for subtext */
-    line-height: 1.2;
-    }
-  </style>
+.tab.active {
+  color: #123a7a;
+  border-bottom: 3px solid #123a7a;
+}
+
+.tab:hover {
+  color: #000;
+}
+
+/* ===== CONTENT AREA ===== */
+.content {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* ===== SCORE CARDS ===== */
+.game-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: white;
+  margin: 15px 0;
+  padding: 18px 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.game-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+
+.team {
+  display: flex;
+  flex-direction: column;
+}
+
+.team-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.team-record {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.center-info {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 600;
+}
+
+.score-center {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: center;
+}
+
+.left-team {
+  text-align: right;
+}
+
+.right-team {
+  text-align: left;
+}
+
+.team-score {
+  font-weight: 800;
+  font-size: 1.8rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.center-info {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+</style>
 </head>
-<body>
-  <h1>CIAC Score Reports</h1>
-  <div id="scores"></div>
 
-  <script src="main.js"></script>
+<body>
+
+<div class="header">
+  CIAC Score Reports
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('scores')">Scores</div>
+  <div class="tab" onclick="showTab('livestreams')">Livestreams</div>
+</div>
+
+<div class="content">
+  <div id="scores"></div>
+  <div id="livestreams" style="display:none;">
+    <!-- Not implemented yet -->
+  </div>
+</div>
+
+<script>
+function showTab(tabName) {
+  document.getElementById("scores").style.display = "none";
+  document.getElementById("livestreams").style.display = "none";
+
+  document.getElementById(tabName).style.display = "block";
+
+  document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+  event.target.classList.add("active");
+}
+</script>
+
+<script src="main.js"></script>
+
 </body>
 </html>

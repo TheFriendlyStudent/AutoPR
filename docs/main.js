@@ -46,28 +46,30 @@ fetch("games.csv")
       gameRow.className = "game-row";
 
       gameRow.innerHTML = `
-        <div class="team">
-          <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
-          <div class="team-record">${homeRecord}</div>
-        </div>
+  <div class="team left-team">
+    <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
+    <div class="team-record">${homeRecord}</div>
+  </div>
 
-        <div class="team-score" style="color:${homeColor}">
-          ${homeScore}
-        </div>
+  <div class="score-center">
+      <div class="team-score" style="color:${homeColor}">
+        ${homeScore}
+      </div>
 
-        <div class="center-info">Final</div>
+      <div class="center-info">Final</div>
 
-        <div class="team-score" style="color:${awayColor}">
-          ${awayScore}
-        </div>
+      <div class="team-score" style="color:${awayColor}">
+        ${awayScore}
+      </div>
+  </div>
 
-        <div class="team">
-          <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
-          <div class="team-record">${awayRecord}</div>
-        </div>
-      `;
+  <div class="team right-team">
+    <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
+    <div class="team-record">${awayRecord}</div>
+  </div>
+`;
 
       container.appendChild(gameRow);
     });
   })
-  .catch(err => console.error(err));
+.catch(err => console.error(err));
