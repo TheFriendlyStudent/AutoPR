@@ -153,17 +153,6 @@ body {
 
   <div id="livestreams" style="display:none;"></div>
 </div>
-
-<script>
-function showTab(tabName) {
-  document.getElementById("scores").style.display = "none";
-  document.getElementById("livestreams").style.display = "none";
-  document.getElementById(tabName).style.display = "block";
-
-  document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-  event.target.classList.add("active");
-}
-</script>
 <script src="main.js"></script>
 
 </body>

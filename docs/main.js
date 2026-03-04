@@ -1,75 +1,91 @@
-fetch("games.csv")
-  .then(res => res.text())
-  .then(text => {
-    const container = document.getElementById("scores");
-    container.innerHTML = "";
+// Wait until DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
 
-    const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
-    const headers = rows.shift().split(",").map(h => h.trim());
+  // ===== TAB SWITCHING =====
+  const tabs = document.querySelectorAll(".tab");
+  const sections = {
+    scores: document.getElementById("scores"),
+    livestreams: document.getElementById("livestreams")
+  };
 
-    const homeTeamIdx = headers.indexOf("home_team");
-    const homeScoreIdx = headers.indexOf("home_score");
-    const awayTeamIdx = headers.indexOf("away_team");
-    const awayScoreIdx = headers.indexOf("away_score");
-    const homeRecordIdx = headers.indexOf("home_record");
-    const awayRecordIdx = headers.indexOf("away_record");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const tabName = tab.textContent.toLowerCase();
+      Object.values(sections).forEach(sec => sec.style.display = "none");
+      if (sections[tabName]) sections[tabName].style.display = "block";
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+    });
+  });
 
-    if (homeTeamIdx === -1) {
-      container.textContent = "Header mismatch.";
-      return;
-    }
+  // Default to "scores"
+  sections.scores.style.display = "block";
 
-    rows.forEach(row => {
-      const values = row.split(",").map(v => v.trim());
+  // ===== FETCH SCORES FROM CSV =====
+  fetch("games.csv")
+    .then(res => res.text())
+    .then(text => {
+      const container = document.getElementById("scores");
+      container.innerHTML = "";
 
-      const homeTeam = values[homeTeamIdx];
-      const awayTeam = values[awayTeamIdx];
-      const homeScore = parseInt(values[homeScoreIdx]);
-      const awayScore = parseInt(values[awayScoreIdx]);
-      const homeRecord = values[homeRecordIdx] || "";
-      const awayRecord = values[awayRecordIdx] || "";
+      const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
+      const headers = rows.shift().split(",").map(h => h.trim());
 
-      let homeColor = "black";
-      let awayColor = "black";
+      const homeTeamIdx = headers.indexOf("home_team");
+      const homeScoreIdx = headers.indexOf("home_score");
+      const awayTeamIdx = headers.indexOf("away_team");
+      const awayScoreIdx = headers.indexOf("away_score");
+      const homeRecordIdx = headers.indexOf("home_record");
+      const awayRecordIdx = headers.indexOf("away_record");
 
-      if (homeScore > awayScore) {
-        homeColor = "green";
-        awayColor = "red";
-      } else if (awayScore > homeScore) {
-        homeColor = "red";
-        awayColor = "green";
-      } else {
-        homeColor = awayColor = "gray";
+      if (homeTeamIdx === -1) {
+        container.textContent = "Header mismatch.";
+        return;
       }
 
-      const gameRow = document.createElement("div");
-      gameRow.className = "game-row";
+      rows.forEach(row => {
+        const values = row.split(",").map(v => v.trim());
+        const homeTeam = values[homeTeamIdx];
+        const awayTeam = values[awayTeamIdx];
+        const homeScore = parseInt(values[homeScoreIdx]);
+        const awayScore = parseInt(values[awayScoreIdx]);
+        const homeRecord = values[homeRecordIdx] || "";
+        const awayRecord = values[awayRecordIdx] || "";
 
-      gameRow.innerHTML = `
-  <div class="team left-team">
-    <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
-    <div class="team-record">${homeRecord}</div>
-  </div>
+        let homeColor = "black";
+        let awayColor = "black";
 
-  <div class="score-center">
-      <div class="team-score" style="color:${homeColor}">
-        ${homeScore}
-      </div>
+        if (homeScore > awayScore) {
+          homeColor = "green"; awayColor = "red";
+        } else if (awayScore > homeScore) {
+          homeColor = "red"; awayColor = "green";
+        } else {
+          homeColor = awayColor = "gray";
+        }
 
-      <div class="center-info">Final</div>
+        const gameRow = document.createElement("div");
+        gameRow.className = "game-row";
 
-      <div class="team-score" style="color:${awayColor}">
-        ${awayScore}
-      </div>
-  </div>
+        gameRow.innerHTML = `
+<div class="team left-team">
+  <div class="team-name" style="color:${homeColor}">${homeTeam}</div>
+  <div class="team-record">${homeRecord}</div>
+</div>
 
-  <div class="team right-team">
-    <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
-    <div class="team-record">${awayRecord}</div>
-  </div>
+<div class="score-center">
+    <div class="team-score" style="color:${homeColor}">${homeScore}</div>
+    <div class="center-info">Final</div>
+    <div class="team-score" style="color:${awayColor}">${awayScore}</div>
+</div>
+
+<div class="team right-team">
+  <div class="team-name" style="color:${awayColor}">${awayTeam}</div>
+  <div class="team-record">${awayRecord}</div>
+</div>
 `;
+        container.appendChild(gameRow);
+      });
+    })
+    .catch(err => console.error(err));
 
-      container.appendChild(gameRow);
-    });
-  })
-.catch(err => console.error(err));
+});
