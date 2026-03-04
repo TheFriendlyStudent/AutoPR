@@ -38,7 +38,7 @@ ig_account = page.api_get(fields=["instagram_business_account"])
 ig_user = InstagramUser(IG_USER_ID)
 ig_info = ig_user.api_get(fields=['id', 'username', 'followers_count', 'media_count'])
 
-urls = render_from_csv("games.csv")
+urls = render_from_csv("docs/games.csv")
 
 # -----------------------------
 # POST TO INSTAGRAM (Graph API)
