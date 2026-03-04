@@ -1,6 +1,12 @@
 // main.js
 fetch("games.csv")
   .then(res => res.text())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return res.text();
+  })
+  .then(text => console.log(text))
+  .catch(err => console.error(err))
   .then(text => {
     const container = document.getElementById("scores");
 
