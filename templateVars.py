@@ -172,7 +172,7 @@ template = {
 
     "away_score_text" : {
         "font_size" : 255,
-        "font" : r"assets\\OCRAEXT.ttf",
+        "font" : "assets/OCRAEXT.ttf",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
