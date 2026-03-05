@@ -35,9 +35,22 @@ def create_s3_client():
     )
 
 
+
 # -----------------------------
 # Utilities
 # -----------------------------
+
+def delete_from_r2(client, file_name):
+    try:
+        client.delete_object(
+            Bucket=BUCKET_NAME,
+            Key=file_name
+        )
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to delete {file_name} from R2: {e}")
+        return False
+    
 def upload_to_r2(client, file_path, file_name):
     client.upload_file(
         file_path,
