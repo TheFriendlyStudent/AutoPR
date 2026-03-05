@@ -58,6 +58,8 @@ for url in urls[:10]:  # max 10 images for carousel
             "access_token": MY_ACCESS_TOKEN
         }
     )
+    print("Status:", response.status_code)
+    print("Response:", response.text) 
     response.raise_for_status()
     creation_id = response.json().get("id")
     if not creation_id:
