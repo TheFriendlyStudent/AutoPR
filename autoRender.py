@@ -65,7 +65,7 @@ def download_image(url, save_path):
 # -----------------------------
 def render_game(row, template_png="graphic.png"):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S%f")
-    output_png = f"C:\\Users\\vasub\\AutoPR\\output_{timestamp}.png"
+    output_png = f"/output_{timestamp}.png"
 
     # Skip empty datetime
     game_date_time_str = row.get("game_datetime")
@@ -87,7 +87,7 @@ def render_game(row, template_png="graphic.png"):
 
         drive_direct = convert_drive_link(bg_url)
         if drive_direct:
-            local_bg = f"C:\\Users\\vasub\\AutoPR\\temp_bg_{timestamp}.jpg"
+            local_bg = f"/temp_bg_{timestamp}.jpg"
             download_image(drive_direct, local_bg)
             background_path = local_bg
 
