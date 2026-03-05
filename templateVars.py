@@ -1,7 +1,7 @@
 template = {
     "header_text" : {
         "font_size" : 48,
-        "font" : r"assets\\SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
+        "font" : "assets/SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
         "color" : "#f1f1f1",
         "stroke" : 0,
         "stroke_color" : "#f1f1f1",
@@ -14,7 +14,7 @@ template = {
 
     "caption_text" : {
         "font_size" : 120,
-        "font" : r"assets\\GOLDMAN-BOLD.TTF",
+        "font" : "assets/GOLDMAN-BOLD.TTF",
         "color" : "#f1f1f1",
         "stroke" : 0,
         "stroke_color" : "#f1f1f1",
@@ -27,7 +27,7 @@ template = {
 
     "photo_text" : {
         "font_size" : 33,
-        "font" : r"assets\\SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
+        "font" : "assets/SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
         "color" : "#f1f1f1",
         "stroke" : 2,
         "stroke_color" : "#04030F",
@@ -136,7 +136,7 @@ template = {
 
     "home_score_text" : {
         "font_size" : 255,
-        "font" : r"assets\\OCRAEXT.ttf",
+        "font" : "assets/OCRAEXT.ttf",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -148,7 +148,7 @@ template = {
 
     "home_rank_text" : {
         "font_size" : 54,
-        "font" : r"assets\\OCRAEXT.ttf",
+        "font" : "assets/OCRAEXT.ttf",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -160,7 +160,7 @@ template = {
 
     "home_record_text" : {
         "font_size" : 54,
-        "font" : r"assets\\OCRAEXT.ttf",
+        "font" : "assets/OCRAEXT.ttf",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -184,7 +184,7 @@ template = {
 
     "away_rank_text" : {
         "font_size" : 54,
-        "font" : r"assets\\OCRAEXT.ttf",
+        "font" : "assets/OCRAEXT.ttf",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -196,7 +196,7 @@ template = {
 
     "away_record_text" : {
         "font_size" : 54,
-        "font" : r"assets\\OCRAEXT.TTF",
+        "font" : "assets/OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
