@@ -124,6 +124,7 @@ def render_game(row, template_png="graphic.png"):
 # -----------------------------
 # Multithreaded CSV processing
 # -----------------------------
+
 def render_from_csv(csv_path, template_png="graphic.png", max_threads=4):
     urls = []
     with open(csv_path, newline='', encoding="utf-8") as file:
@@ -132,16 +133,16 @@ def render_from_csv(csv_path, template_png="graphic.png", max_threads=4):
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = {executor.submit(render_game, row, template_png): row for row in rows}
         for future in as_completed(futures):
-            print(f"Rendering game: {row['game_datetime']}")
-            print(f"Home logo: assets/logos/{row['home_team'].replace(' ', '_')}.jpg")
-            print(f"Away logo: assets/logos/{row['away_team'].replace(' ', '_')}.jpg")
+            row = futures[future]  # <-- get the row associated with this future
+            print(f"Rendering game: {row.get('game_datetime')}")
+            print(f"Home logo: assets/logos/{row.get('home_team','').replace(' ', '_')}.jpg")
+            print(f"Away logo: assets/logos/{row.get('away_team','').replace(' ', '_')}.jpg")
             try:
                 url = future.result()
                 if url:
                     urls.append(url)
                     print(f"[OK] Rendered & uploaded: {url}")
             except Exception as e:
-                row = futures[future]
                 print(f"[ERROR] Failed to render {row.get('game_datetime')}: {e}")
 
     return urls
