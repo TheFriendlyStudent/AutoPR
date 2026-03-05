@@ -1,2 +1,8 @@
 gspread
 google-auth
+Pillow
+requests
+boto3
+pytz
+python-dotenv
+facebook-business
