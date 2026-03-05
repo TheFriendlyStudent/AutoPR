@@ -1,4 +1,4 @@
-name: Auto Render & Upload
+name: Run AutoRender Test
 
 # Trigger manually
 on:
@@ -10,11 +10,11 @@ on:
         type: string
 
 jobs:
-  render_upload:
+  run_test:
     runs-on: ubuntu-latest
 
     env:
-      # Static secrets (store these in your repo secrets)
+      # Static secrets (stored in your repo)
       ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
       ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -23,11 +23,11 @@ jobs:
       MY_APP_ID: ${{ secrets.MY_APP_ID }}
       MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
 
-      # Dynamic token input from workflow_dispatch
+      # Dynamic token input
       MY_ACCESS_TOKEN: ${{ github.event.inputs.fb_token }}
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -39,8 +39,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        # Make sure pytz is included
+        pip install pytz boto3 pillow requests
 
-    - name: Run Test script
+    - name: Run test.py
       run: |
-        echo "Running test.py with token from user input..."
+        echo "Running test.py with MY_ACCESS_TOKEN from user input..."
         python test.py
