@@ -94,8 +94,18 @@ publish_response = requests.post(
         "access_token": MY_ACCESS_TOKEN
     }
 )
-time.sleep(3) 
-publish_response.raise_for_status()
+
+status_url = f"https://graph.facebook.com/v19.0/{carousel_id}"
+params = {
+    "fields": "status_code",
+    "access_token": MY_ACCESS_TOKEN
+}
+
+max_attempts = 30  # ~60 seconds
+attempt = 0
+
+time.sleep(2)  # initial delay before first check
+
 print("Instagram carousel published! ID:", carousel_id)
 
 # -----------------------------
