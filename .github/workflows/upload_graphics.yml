@@ -1,0 +1,46 @@
+name: Auto Render & Upload
+
+# Trigger manually
+on:
+  workflow_dispatch:
+    inputs:
+      fb_token:
+        description: 'Enter your Facebook / Instagram Access Token (expires frequently)'
+        required: true
+        type: string
+
+jobs:
+  render_upload:
+    runs-on: ubuntu-latest
+
+    env:
+      # Static secrets (store these in your repo secrets)
+      ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+      ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+      PUBLIC_URL_BASE: ${{ secrets.PUBLIC_URL_BASE }}
+      MY_APP_ID: ${{ secrets.MY_APP_ID }}
+      MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
+
+      # Dynamic token input from workflow_dispatch
+      MY_ACCESS_TOKEN: ${{ github.event.inputs.fb_token }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Test script
+      run: |
+        echo "Running test.py with token from user input..."
+        python test.py
