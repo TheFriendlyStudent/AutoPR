@@ -17,127 +17,190 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Default tab
-  sections.scores.style.display = "block";
+  // ===== SCORES SECTION =====
+  const scoresContainer = document.getElementById("scores");
+  const ticker = document.getElementById("scoreTicker");
+  let allScoreRows = []; // store CSV rows
+  let headers, homeTeamIdx, awayTeamIdx, homeScoreIdx, awayScoreIdx,
+      homeRecordIdx, awayRecordIdx, isTestIdx, datetimeIdx;
 
-  // ===== FETCH SCORES FROM CSV =====
+  // Add date picker
+  const scoresControls = document.createElement("div");
+  scoresControls.id = "scoresControls";
+  scoresControls.style.marginBottom = "15px";
+  scoresControls.innerHTML = `
+    <label for="gameDate">Select date: </label>
+    <input type="date" id="gameDate">
+  `;
+  scoresContainer.appendChild(scoresControls);
+  const dateInput = document.getElementById("gameDate");
+
+  // fetch CSV
   fetch("games.csv")
     .then(res => res.text())
     .then(text => {
-      const container = document.getElementById("scores");
-      container.innerHTML = "";
-      const ticker = document.getElementById("scoreTicker");
-      ticker.innerHTML = "";
-
       const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
-      const headers = rows.shift().split(",").map(h => h.trim());
+      headers = rows.shift().split(",").map(h => h.trim());
+      homeTeamIdx = headers.indexOf("home_team");
+      awayTeamIdx = headers.indexOf("away_team");
+      homeScoreIdx = headers.indexOf("home_score");
+      awayScoreIdx = headers.indexOf("away_score");
+      homeRecordIdx = headers.indexOf("home_record");
+      awayRecordIdx = headers.indexOf("away_record");
+      isTestIdx = headers.indexOf("is_test");
+      datetimeIdx = headers.indexOf("game_datetime");
 
-      const homeTeamIdx = headers.indexOf("home_team");
-      const awayTeamIdx = headers.indexOf("away_team");
-      const homeScoreIdx = headers.indexOf("home_score");
-      const awayScoreIdx = headers.indexOf("away_score");
-      const homeRecordIdx = headers.indexOf("home_record");
-      const awayRecordIdx = headers.indexOf("away_record");
-      const isTestIdx = headers.indexOf("is_test");
-      const datetimeIdx = headers.indexOf("game_datetime");
-
-      if (homeTeamIdx === -1 || datetimeIdx === -1) {
-        container.textContent = "Header mismatch.";
+      if(homeTeamIdx === -1 || datetimeIdx === -1){
+        scoresContainer.textContent = "Header mismatch.";
         return;
       }
 
+      allScoreRows = rows; // save rows
+
+      // default to today
       const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-      let hasGames = false;
-
-      rows.forEach(row => {
-        const values = row.split(",").map(v => v.trim());
-        const homeTeam = values[homeTeamIdx];
-        const awayTeam = values[awayTeamIdx];
-        const homeScore = parseInt(values[homeScoreIdx]);
-        const awayScore = parseInt(values[awayScoreIdx]);
-        const homeRecord = values[homeRecordIdx] || "";
-        const awayRecord = values[awayRecordIdx] || "";
-        const isTest = values[isTestIdx] === "true";
-        const gameDateTimeStr = values[datetimeIdx]; // e.g. "03/04/2026 19:00:00"
-
-        if (isTest || !gameDateTimeStr) return;
-
-        // Convert CSV datetime to YYYY-MM-DD
-        const [month, day, year] = gameDateTimeStr.split(" ")[0].split("/");
-        const gameDateStr = `${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`;
-
-        if (gameDateStr !== todayStr) return; // skip games not today
-        hasGames = true;
-
-        let homeClass = "tie", awayClass = "tie";
-        if (homeScore > awayScore) { homeClass = "winner"; awayClass = "loser"; }
-        else if (awayScore > homeScore) { homeClass = "loser"; awayClass = "winner"; }
-
-        // Add date header once
-        if (!container.querySelector(".game-date")) {
-          const dateHeader = document.createElement("div");
-          dateHeader.className = "game-date";
-          dateHeader.textContent = `Games for ${todayStr}`;
-          container.appendChild(dateHeader);
-        }
-
-        const gameRow = document.createElement("div");
-        gameRow.className = "game-row";
-        gameRow.innerHTML = `
-          <div class="team left-team">
-            <div class="team-name ${homeClass}">${homeTeam}</div>
-            <div class="team-record">${homeRecord}</div>
-          </div>
-          <div class="score-center">
-            <div class="team-score ${homeClass}">${homeScore}</div>
-            <div class="center-info">Final</div>
-            <div class="team-score ${awayClass}">${awayScore}</div>
-          </div>
-          <div class="team right-team">
-            <div class="team-name ${awayClass}">${awayTeam}</div>
-            <div class="team-record">${awayRecord}</div>
-          </div>
-        `;
-        container.appendChild(gameRow);
-
-        // Add to ticker
-        const tickerItem = document.createElement("div");
-        tickerItem.className = "ticker-item";
-        tickerItem.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (Final)`;
-        ticker.appendChild(tickerItem);
-      });
-
-      if (!hasGames) {
-        container.textContent = "No games today.";
-      }
+      dateInput.valueAsDate = today;
+      renderScoresForDate(today);
     })
     .catch(err => console.error(err));
 
-  // ===== LIVESTREAM CHANNELS =====
+  function renderScoresForDate(selectedDate){
+    // clear previous
+    scoresContainer.querySelectorAll(".game-row, .game-date, .no-games-msg").forEach(el => el.remove());
+    ticker.innerHTML = "";
+
+    const dateStr = selectedDate.toISOString().slice(0,10); // YYYY-MM-DD
+    let hasGames = false;
+
+    allScoreRows.forEach(row => {
+      const values = row.split(",").map(v => v.trim());
+      const isTest = values[isTestIdx] === "true";
+      const gameDateTimeStr = values[datetimeIdx];
+      if(isTest || !gameDateTimeStr) return;
+
+      // parse CSV date
+      const [month, day, year] = gameDateTimeStr.split(" ")[0].split("/");
+      const gameDateStr = `${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`;
+      if(gameDateStr !== dateStr) return;
+
+      hasGames = true;
+
+      const homeTeam = values[homeTeamIdx];
+      const awayTeam = values[awayTeamIdx];
+      const homeScore = parseInt(values[homeScoreIdx]);
+      const awayScore = parseInt(values[awayScoreIdx]);
+      const homeRecord = values[homeRecordIdx] || "";
+      const awayRecord = values[awayRecordIdx] || "";
+
+      let homeClass = "tie", awayClass = "tie";
+      if(homeScore > awayScore){ homeClass="winner"; awayClass="loser"; }
+      else if(awayScore > homeScore){ homeClass="loser"; awayClass="winner"; }
+
+      const gameRow = document.createElement("div");
+      gameRow.className = "game-row";
+      gameRow.innerHTML = `
+        <div class="team left-team">
+          <div class="team-name ${homeClass}">${homeTeam}</div>
+          <div class="team-record">${homeRecord}</div>
+        </div>
+
+        <div class="score-center">
+          <div class="team-score ${homeClass}">${homeScore}</div>
+          <div class="center-info">Final</div>
+          <div class="team-score ${awayClass}">${awayScore}</div>
+        </div>
+
+        <div class="team right-team">
+          <div class="team-name ${awayClass}">${awayTeam}</div>
+          <div class="team-record">${awayRecord}</div>
+        </div>
+      `;
+      scoresContainer.appendChild(gameRow);
+
+      // add to ticker
+      const tickerItem = document.createElement("div");
+      tickerItem.className = "ticker-item";
+      tickerItem.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (Final)`;
+      ticker.appendChild(tickerItem);
+    });
+
+    if(!hasGames){
+      const msg = document.createElement("div");
+      msg.className = "no-games-msg";
+      msg.textContent = "No games for this day.";
+      scoresContainer.appendChild(msg);
+    }
+  }
+
+  dateInput.addEventListener("change", e => {
+    renderScoresForDate(new Date(e.target.value));
+  });
+
+  // refresh scores every 2 minutes
+  setInterval(()=>{
+    renderScoresForDate(new Date(dateInput.value));
+  }, 2*60*1000);
+
+
+  // ===== LIVESTREAM SECTION =====
   const channels = [
-    { name: "Staples Boys Basketball", url: "https://www.youtube.com/@staplesboysbasketball" },
-    { name: "The Day CT", url: "https://www.youtube.com/@thedayct" },
-    { name: "TB860LIVE", url: "https://www.youtube.com/@TB860LIVE" },
-    { name: "WHCI", url: "https://www.youtube.com/@whci" },
-    { name: "Newington High School", url: "https://www.youtube.com/@NewingtonHighSchool605" },
-    { name: "Project Purple Sports", url: "https://www.youtube.com/@ProjectPurpleSports" },
-    { name: "Waterbury Public Schools", url: "https://www.youtube.com/@waterburypublicschoolsathl9870" }
+    { name:"Staples Boys Basketball", url:"https://www.youtube.com/@staplesboysbasketball", channelId:"UCxxxx", logo:"logos/staples.png" },
+    { name:"The Day CT", url:"https://www.youtube.com/@thedayct", channelId:"UCyyyy", logo:"logos/dayct.png" },
+    { name:"TB860LIVE", url:"https://www.youtube.com/@TB860LIVE", channelId:"UCzzzz", logo:"logos/tb860.png" },
+    { name:"WHCI", url:"https://www.youtube.com/@whci", channelId:"UCaaaa", logo:"logos/whci.png" },
+    { name:"Newington High School", url:"https://www.youtube.com/@NewingtonHighSchool605", channelId:"UCbbbb", logo:"logos/newington.png" },
+    { name:"Project Purple Sports", url:"https://www.youtube.com/@ProjectPurpleSports", channelId:"UCcccc", logo:"logos/projectpurple.png" },
+    { name:"Waterbury Public Schools", url:"https://www.youtube.com/@waterburypublicschoolsathl9870", channelId:"UCdddd", logo:"logos/waterbury.png" }
   ];
 
-  const listContainer = document.querySelector(".channel-list");
+  async function checkLive(channel){
+    try{
+      const apiKey = "YOUR_YOUTUBE_API_KEY"; // replace
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channel.channelId}&eventType=live&type=video&key=${apiKey}`);
+      const data = await res.json();
+      if(data.items && data.items.length > 0){
+        return { live:true, title: data.items[0].snippet.title, url:`https://www.youtube.com/watch?v=${data.items[0].id.videoId}` };
+      }
+      return { live:false };
+    }catch(e){
+      console.error(e);
+      return { live:false };
+    }
+  }
 
-  channels.forEach(channel => {
-    const row = document.createElement("div");
-    row.className = "channel-row";
-    row.innerHTML = `
-      <div class="channel-info">
-        <div class="channel-name">${channel.name}</div>
+  async function renderChannels(){
+    const listContainer = document.querySelector(".channel-list");
+    listContainer.innerHTML = "";
+
+    const results = await Promise.all(channels.map(async c=>{
+      const liveStatus = await checkLive(c);
+      return {...c, ...liveStatus};
+    }));
+
+    results.sort((a,b)=>{
+      if(a.live && !b.live) return -1;
+      if(!a.live && b.live) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    results.forEach(channel=>{
+      const row = document.createElement("div");
+      row.className = "channel-row";
+      row.innerHTML = `
+        <img class="channel-logo" src="${channel.logo}" alt="${channel.name}">
+        <div class="channel-info">
+          <div class="channel-name">${channel.name}</div>
+          ${channel.live ? `<div class="live-indicator">LIVE: ${channel.title}</div>` : `<div>Offline</div>`}
+        </div>
         <a class="watch-button" href="${channel.url}" target="_blank">Watch</a>
-      </div>
-    `;
-    listContainer.appendChild(row);
-  });
+      `;
+      listContainer.appendChild(row);
+    });
+  }
+
+  // initial render
+  renderChannels();
+  // refresh every 2 minutes
+  setInterval(renderChannels, 2*60*1000);
 
 });
