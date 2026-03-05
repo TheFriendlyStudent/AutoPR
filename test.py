@@ -1,16 +1,9 @@
 import os
-
 import requests
 from autoRender import delete_from_r2, render_from_csv
+from dotenv import load_dotenv
 
-# -----------------------------
-# Facebook / Instagram SDK
-# -----------------------------
-from facebook_business.api import FacebookAdsApi
-from facebook_business.adobjects.adaccount import AdAccount
-from facebook_business.adobjects.page import Page
-from facebook_business.adobjects.user import User
-from facebook_business.adobjects.instagramuser import InstagramUser
+load_dotenv(dotenv_path=".env")
 
 # -----------------------------
 # CONFIGURATION
@@ -21,64 +14,62 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE")
 
-IG_USER_ID = os.getenv("IG_USER_ID")  # Instagram Business Account ID to post to
-
 MY_APP_ID = os.getenv("MY_APP_ID")
 MY_APP_SECRET = os.getenv("MY_APP_SECRET")
 MY_ACCESS_TOKEN = os.getenv("MY_ACCESS_TOKEN")
 
-# Initialize Facebook API
-FacebookAdsApi.init(MY_APP_ID, MY_APP_SECRET, MY_ACCESS_TOKEN)
-
-# Optional: access account / user info
-my_account = AdAccount("act_771986928687472")
-me = User(fbid='me')
-page = Page("1025441090651921")
-ig_account = page.api_get(fields=["instagram_business_account"])
-ig_user = InstagramUser(IG_USER_ID)
-ig_info = ig_user.api_get(fields=['id', 'username', 'followers_count', 'media_count'])
-
-urls = render_from_csv("docs/games.csv")
+PAGE_ID = "1025441090651921"  # Facebook Page ID
 
 # -----------------------------
-# POST TO INSTAGRAM (Graph API)
+# STEP 0: Get Instagram Business ID from Page
 # -----------------------------
+page_response = requests.get(
+    f"https://graph.facebook.com/v19.0/{PAGE_ID}",
+    params={
+        "fields": "instagram_business_account",
+        "access_token": MY_ACCESS_TOKEN
+    }
+)
+page_response.raise_for_status()
+page_data = page_response.json()
 
-collaborator_usernames = ["ctbasketballhub"]  # Instagram usernames of potential collaborators
-collaborator_ids = []
+if "instagram_business_account" not in page_data:
+    raise ValueError("Page does not have an Instagram Business account linked.")
 
-for username in collaborator_usernames:
-    try:
-        r = requests.get(
-            f"https://graph.facebook.com/v19.0/{username}",
-            params={"access_token": MY_ACCESS_TOKEN, "fields": "id"}
-        )
-        r.raise_for_status()
-        collaborator_ids.append(r.json()["id"])
-    except Exception as e:
-        print(f"Could not get ID for {username}: {e}")
+IG_USER_ID = page_data["instagram_business_account"]["id"]
+print("Instagram Business ID:", IG_USER_ID)
 
-# Step 1: Create media objects for carousel
+# -----------------------------
+# STEP 1: Render images
+# -----------------------------
+urls = render_from_csv("docs/games.csv")  # should return list of public URLs
+
+# -----------------------------
+# STEP 2: Upload images as carousel children
+# -----------------------------
 creation_ids = []
-for url in urls:
+for url in urls[:10]:  # max 10 images for carousel
     response = requests.post(
         f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media",
-        params={
+        data={
             "image_url": url,
-            "is_carousel_item": True,
-            "access_token": MY_ACCESS_TOKEN,
-            "collaborators": collaborator_ids  
+            "is_carousel_item": "true",
+            "access_token": MY_ACCESS_TOKEN
         }
     )
     response.raise_for_status()
-    creation_ids.append(response.json()["id"])
-    if len(creation_ids) >= 10:  # Instagram carousel limit
-        break
+    creation_id = response.json().get("id")
+    if not creation_id:
+        raise ValueError(f"No ID returned for image: {url}")
+    creation_ids.append(creation_id)
+print("Uploaded images:", creation_ids)
 
-# Step 2: Create the carousel container
+# -----------------------------
+# STEP 3: Create carousel container
+# -----------------------------
 carousel_response = requests.post(
     f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media",
-    params={
+    data={
         "media_type": "CAROUSEL",
         "children": ",".join(creation_ids),
         "caption": "Automated Score Report",
@@ -87,18 +78,24 @@ carousel_response = requests.post(
 )
 carousel_response.raise_for_status()
 carousel_id = carousel_response.json()["id"]
+print("Carousel container ID:", carousel_id)
 
-# Step 3: Publish carousel
+# -----------------------------
+# STEP 4: Publish carousel
+# -----------------------------
 publish_response = requests.post(
     f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media_publish",
-    params={
+    data={
         "creation_id": carousel_id,
         "access_token": MY_ACCESS_TOKEN
     }
 )
 publish_response.raise_for_status()
-print(f"Instagram carousel published! ID: {carousel_id}")
+print("Instagram carousel published! ID:", carousel_id)
 
+# -----------------------------
+# STEP 5: Cleanup local R2 images
+# -----------------------------
 for url in urls:
     file_name = url.split("/")[-1]
     delete_from_r2(file_name)
