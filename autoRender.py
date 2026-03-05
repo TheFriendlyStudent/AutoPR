@@ -65,7 +65,7 @@ def download_image(url, save_path):
 # -----------------------------
 def render_game(row, template_png="graphic.png"):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S%f")
-    output_png = f"/output_{timestamp}.png"
+    output_png = f"output_{timestamp}.png"
 
     # Skip empty datetime
     game_date_time_str = row.get("game_datetime")
@@ -79,8 +79,11 @@ def render_game(row, template_png="graphic.png"):
     now_cst = datetime.datetime.now(central)
     if game_dt_est > now_cst.astimezone(eastern):
         return None
-
-    if row.get("is_test", "").lower() != "true":
+    
+    if row.get("is_test", "").lower() == "true":
+        return None
+    
+    else:
         bg_url = row.get("bg_image")
         background_path = bg_url
         local_bg = None

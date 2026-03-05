@@ -62,23 +62,19 @@ def draw_glow(draw, img, draw_func, *args, glow_color="#ffffff", blur_radius=6, 
     draw_func(draw, *args, **kwargs)
 
 def fetch_image(url):
-    if not url:
-        raise ValueError("Empty image URL")
-    # Convert Google Drive share link to direct download
+    """Fetch image from URL (Google Drive or direct)."""
     if "drive.google.com" in url:
-        parsed = urlparse(url)
-        file_id = None
-        if "/d/" in parsed.path:
-            file_id = parsed.path.split("/d/")[1].split("/")[0]
-        elif "id=" in parsed.query:
-            file_id = parse_qs(parsed.query).get("id", [None])[0]
-        if file_id:
-            url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        else:
-            raise ValueError(f"Cannot parse Google Drive URL: {url}")
+        # Convert Google Drive link to direct download
+        file_id = parse_qs(urlparse(url).query).get("id", [None])[0]
+        if file_id is None:
+            raise ValueError(f"Invalid Google Drive URL: {url}")
+        url = f"https://drive.google.com/uc?export=download&id={file_id}"
     resp = requests.get(url)
     resp.raise_for_status()
     return Image.open(BytesIO(resp.content)).convert("RGBA")
+
+def save_image(img, output_path):
+    img.save(output_path)
 
 def draw_logo_height_fit(img, logo_path, box_entry):
     logo = Image.open(logo_path).convert("RGBA")
