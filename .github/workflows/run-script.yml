@@ -1,7 +1,7 @@
 name: Run Google Sheets Script
 
 on:
-  workflow_dispatch:   # allows manual run
+  workflow_dispatch:
   schedule:
     # ET 8 AM – 11 PM = UTC 12:00 – 03:00 (next day)
     # Runs every 20 minutes
@@ -12,32 +12,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install dependencies
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 4. Run script
-      - name: Run Google Sheets script
+      - name: Run Google Sheets sync
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: python getScoreSheet.py
 
-      # 5. Commit updated CSV for GitHub Pages
-      - name: Commit updated CSV
+      - name: Commit updated CSVs for GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/games.csv
-          git commit -m "Update games.csv [ci skip]" || echo "No changes"
+          git add docs/master_games.csv docs/submitted_scores.csv docs/predictions.csv
+          git commit -m "Update CSVs [ci skip]" || echo "No changes"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
