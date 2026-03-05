@@ -52,16 +52,12 @@ if "instagram_business_account" not in page_data:
 IG_USER_ID = page_data["instagram_business_account"]["id"]
 print("Instagram Business ID:", IG_USER_ID)
 
-# -----------------------------
-# STEP 1: Render images
-# -----------------------------
-urls = render_from_csv("docs/games.csv")  # should return list of public URLs
+# --- Step 1: Render images to URLs ---
+urls = render_from_csv("docs/games.csv")  # returns list of public URLs
 
-# -----------------------------
-# STEP 2: Upload images as carousel children
-# -----------------------------
+# --- Step 2: Upload images as carousel children ---
 creation_ids = []
-for url in urls[:10]:  # max 10 images for carousel
+for url in urls[:10]:  # max 10 images
     response = requests.post(
         f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media",
         data={
@@ -70,8 +66,6 @@ for url in urls[:10]:  # max 10 images for carousel
             "access_token": MY_ACCESS_TOKEN
         }
     )
-    print("Status:", response.status_code)
-    print("Response:", response.text) 
     response.raise_for_status()
     creation_id = response.json().get("id")
     if not creation_id:
@@ -79,9 +73,7 @@ for url in urls[:10]:  # max 10 images for carousel
     creation_ids.append(creation_id)
 print("Uploaded images:", creation_ids)
 
-# -----------------------------
-# STEP 3: Create carousel container
-# -----------------------------
+# --- Step 3: Create carousel container ---
 carousel_response = requests.post(
     f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media",
     data={
@@ -92,12 +84,12 @@ carousel_response = requests.post(
     }
 )
 carousel_response.raise_for_status()
-carousel_id = carousel_response.json()["id"]
+carousel_id = carousel_response.json().get("id")
+if not carousel_id:
+    raise ValueError("Failed to create carousel container.")
 print("Carousel container ID:", carousel_id)
 
-# -----------------------------
-# STEP 4: Publish carousel
-# -----------------------------
+# --- Step 4: Publish carousel ---
 publish_response = requests.post(
     f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media_publish",
     data={
@@ -105,17 +97,16 @@ publish_response = requests.post(
         "access_token": MY_ACCESS_TOKEN
     }
 )
+publish_response.raise_for_status()
+published_id = publish_response.json().get("id")
+print("Publish request sent. Temporary ID:", published_id)
 
-# Get the returned carousel ID
-carousel_id = publish_response.json().get("id")
-print("Instagram carousel published! ID:", carousel_id)
-
-# --- Poll for permalink (optional, for reassurance) ---
-max_attempts = 10
-attempt = 0
+# --- Step 4a: Poll until post is live ---
+max_attempts = 15
+sleep_seconds = 4
 permalink = None
 
-while attempt < max_attempts:
+for attempt in range(max_attempts):
     resp = requests.get(
         f"https://graph.facebook.com/v19.0/{carousel_id}",
         params={
@@ -128,35 +119,14 @@ while attempt < max_attempts:
     if permalink:
         print("Post is live at:", permalink)
         break
-
-    attempt += 1
-    time.sleep(3)  # wait a few seconds before retry
+    else:
+        print(f"Attempt {attempt+1}/{max_attempts}: Post not ready, waiting {sleep_seconds}s...")
+        time.sleep(sleep_seconds)
 
 if not permalink:
-    print("Warning: permalink not available yet. Post may still be processing.") 
-    publish_response = requests.post( f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media_publish",
-    data={
-        "creation_id": carousel_id,
-        "access_token": MY_ACCESS_TOKEN
-    }
-)
+    print("Warning: permalink not available yet. Post may still be processing.")
 
-status_url = f"https://graph.facebook.com/v19.0/{carousel_id}"
-params = {
-    "fields": "status_code",
-    "access_token": MY_ACCESS_TOKEN
-}
-
-max_attempts = 30  # ~60 seconds
-attempt = 0
-
-time.sleep(2)  # initial delay before first check
-
-print("Instagram carousel published! ID:", carousel_id)
-
-# -----------------------------
-# STEP 5: Cleanup local R2 images
-# -----------------------------
+# --- Step 5: Cleanup local R2 images ---
 for url in urls:
     file_name = url.split("/")[-1]
-    delete_from_r2(client,file_name)
+    delete_from_r2(client, file_name)
