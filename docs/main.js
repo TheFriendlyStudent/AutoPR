@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   async function fetchChannelInfo(channel){
-    const apiKey = "YOUR_YOUTUBE_API_KEY";
+    const apiKey = "AIzaSyD3gdXcfW4o-JJaDPbgshV573llKx1NOLQ";
     try{
       const liveRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channel.channelId}&eventType=live&type=video&key=${apiKey}`);
       const liveData = await liveRes.json();
