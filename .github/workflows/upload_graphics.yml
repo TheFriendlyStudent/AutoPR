@@ -23,11 +23,11 @@ jobs:
       MY_APP_ID: ${{ secrets.MY_APP_ID }}
       MY_APP_SECRET: ${{ secrets.MY_APP_SECRET }}
 
-      # Dynamic token input
+      # Dynamic token input from workflow_dispatch
       MY_ACCESS_TOKEN: ${{ github.event.inputs.fb_token }}
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -35,14 +35,22 @@ jobs:
       with:
         python-version: 3.11
 
+    - name: Upgrade pip
+      run: python -m pip install --upgrade pip
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        # Make sure pytz is included
-        pip install pytz boto3 pillow requests
+        echo "Installing dependencies from requirements.txt..."
+        pip install --no-cache-dir -r requirements.txt
+        # Install any additional runtime dependencies just in case
+        pip install --no-cache-dir pytz boto3 pillow requests
+
+    - name: Verify dynamic token
+      run: |
+        echo "MY_ACCESS_TOKEN received: $MY_ACCESS_TOKEN"
+        python -c "import os; print('Token length:', len(os.getenv('MY_ACCESS_TOKEN', '')))"
 
     - name: Run test.py
       run: |
-        echo "Running test.py with MY_ACCESS_TOKEN from user input..."
+        echo "Running test.py..."
         python test.py
