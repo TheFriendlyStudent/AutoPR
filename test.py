@@ -1,5 +1,6 @@
 import os
 import time
+import boto3
 import requests
 from autoRender import delete_from_r2, render_from_csv
 from dotenv import load_dotenv
@@ -21,6 +22,16 @@ MY_ACCESS_TOKEN = os.getenv("MY_ACCESS_TOKEN")
 
 PAGE_ID = "1025441090651921"  # Facebook Page ID
 
+
+def create_s3_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{ACCOUNT_ID}.r2.cloudflarestorage.com",
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY,
+    )
+
+client = create_s3_client()
 
 # -----------------------------
 # STEP 0: Get Instagram Business ID from Page
@@ -113,4 +124,4 @@ print("Instagram carousel published! ID:", carousel_id)
 # -----------------------------
 for url in urls:
     file_name = url.split("/")[-1]
-    delete_from_r2(file_name)
+    delete_from_r2(client,file_name)
