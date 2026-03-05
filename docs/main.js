@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
     scores: document.getElementById("scores"),
     livestreams: document.getElementById("livestreams")
   };
-
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       const tabName = tab.textContent.toLowerCase();
@@ -17,14 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // ===== SCORES SECTION =====
+  // ===== SCORES =====
   const scoresContainer = document.getElementById("scores");
   const ticker = document.getElementById("scoreTicker");
-  let allScoreRows = []; // store CSV rows
+  let allScoreRows = [];
   let headers, homeTeamIdx, awayTeamIdx, homeScoreIdx, awayScoreIdx,
       homeRecordIdx, awayRecordIdx, isTestIdx, datetimeIdx;
 
-  // Add date picker
+  // Date picker
   const scoresControls = document.createElement("div");
   scoresControls.id = "scoresControls";
   scoresControls.style.marginBottom = "15px";
@@ -35,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   scoresContainer.appendChild(scoresControls);
   const dateInput = document.getElementById("gameDate");
 
-  // fetch CSV
+  // ===== Fetch CSV =====
   fetch("games.csv")
     .then(res => res.text())
     .then(text => {
@@ -55,36 +54,49 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      allScoreRows = rows; // save rows
+      allScoreRows = rows;
 
-      // default to today
+      // Default to today
       const today = new Date();
       dateInput.valueAsDate = today;
-      renderScoresForDate(today);
+      renderScores(today);
+      renderTickerToday();
     })
     .catch(err => console.error(err));
 
-  function renderScoresForDate(selectedDate){
-    // clear previous
-    scoresContainer.querySelectorAll(".game-row, .game-date, .no-games-msg").forEach(el => el.remove());
-    ticker.innerHTML = "";
+  function parseCSVDate(str){
+    const [month, day, year] = str.split(" ")[0].split("/");
+    return new Date(`${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`);
+  }
 
-    const dateStr = selectedDate.toISOString().slice(0,10); // YYYY-MM-DD
-    let hasGames = false;
+  function formatDate(date){
+    return date.toISOString().slice(0,10);
+  }
 
-    allScoreRows.forEach(row => {
-      const values = row.split(",").map(v => v.trim());
-      const isTest = values[isTestIdx] === "true";
-      const gameDateTimeStr = values[datetimeIdx];
-      if(isTest || !gameDateTimeStr) return;
+  function renderScores(selectedDate){
+    const dateStr = formatDate(selectedDate);
+    const existingRows = scoresContainer.querySelectorAll(".game-row, .game-date, .no-games-msg");
+    existingRows.forEach(el => el.remove());
 
-      // parse CSV date
-      const [month, day, year] = gameDateTimeStr.split(" ")[0].split("/");
-      const gameDateStr = `${year}-${month.padStart(2,"0")}-${day.padStart(2,"0")}`;
-      if(gameDateStr !== dateStr) return;
+    const gamesForDate = allScoreRows
+      .map(row => row.split(",").map(v => v.trim()))
+      .filter(values => values[isTestIdx] !== "true" && values[datetimeIdx])
+      .filter(values => formatDate(parseCSVDate(values[datetimeIdx])) === dateStr);
 
-      hasGames = true;
+    if(gamesForDate.length === 0){
+      const msg = document.createElement("div");
+      msg.className = "no-games-msg";
+      msg.textContent = "No games for this day.";
+      scoresContainer.appendChild(msg);
+      return;
+    }
 
+    const dateHeader = document.createElement("div");
+    dateHeader.className = "game-date";
+    dateHeader.textContent = selectedDate.toDateString();
+    scoresContainer.appendChild(dateHeader);
+
+    gamesForDate.forEach(values => {
       const homeTeam = values[homeTeamIdx];
       const awayTeam = values[awayTeamIdx];
       const homeScore = parseInt(values[homeScoreIdx]);
@@ -103,80 +115,79 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="team-name ${homeClass}">${homeTeam}</div>
           <div class="team-record">${homeRecord}</div>
         </div>
-
         <div class="score-center">
           <div class="team-score ${homeClass}">${homeScore}</div>
           <div class="center-info">Final</div>
           <div class="team-score ${awayClass}">${awayScore}</div>
         </div>
-
         <div class="team right-team">
           <div class="team-name ${awayClass}">${awayTeam}</div>
           <div class="team-record">${awayRecord}</div>
         </div>
       `;
       scoresContainer.appendChild(gameRow);
-
-      // add to ticker
-      const tickerItem = document.createElement("div");
-      tickerItem.className = "ticker-item";
-      tickerItem.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (Final)`;
-      ticker.appendChild(tickerItem);
     });
-
-    if(!hasGames){
-      const msg = document.createElement("div");
-      msg.className = "no-games-msg";
-      msg.textContent = "No games for this day.";
-      scoresContainer.appendChild(msg);
-    }
   }
 
-  dateInput.addEventListener("change", e => {
-    renderScoresForDate(new Date(e.target.value));
+  function renderTickerToday(){
+    ticker.innerHTML = "";
+    const todayStr = formatDate(new Date());
+    allScoreRows
+      .map(r => r.split(",").map(v => v.trim()))
+      .filter(values => values[isTestIdx] !== "true" && values[datetimeIdx])
+      .filter(values => formatDate(parseCSVDate(values[datetimeIdx])) === todayStr)
+      .forEach(values=>{
+        const homeTeam = values[homeTeamIdx];
+        const awayTeam = values[awayTeamIdx];
+        const homeScore = parseInt(values[homeScoreIdx]);
+        const awayScore = parseInt(values[awayScoreIdx]);
+        const item = document.createElement("div");
+        item.className = "ticker-item";
+        item.textContent = `${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (Final)`;
+        ticker.appendChild(item);
+      });
+  }
+
+  dateInput.addEventListener("change", e=>{
+    renderScores(new Date(e.target.value));
   });
 
-  // refresh scores every 2 minutes
-  setInterval(()=>{
-    renderScoresForDate(new Date(dateInput.value));
-  }, 2*60*1000);
-
-
-  // ===== LIVESTREAM SECTION =====
+  // ===== LIVESTREAMS =====
   const channels = [
-    { name:"Staples Boys Basketball", url:"https://www.youtube.com/@staplesboysbasketball", channelId:"UCxxxx", logo:"logos/staples.png" },
-    { name:"The Day CT", url:"https://www.youtube.com/@thedayct", channelId:"UCyyyy", logo:"logos/dayct.png" },
-    { name:"TB860LIVE", url:"https://www.youtube.com/@TB860LIVE", channelId:"UCzzzz", logo:"logos/tb860.png" },
-    { name:"WHCI", url:"https://www.youtube.com/@whci", channelId:"UCaaaa", logo:"logos/whci.png" },
-    { name:"Newington High School", url:"https://www.youtube.com/@NewingtonHighSchool605", channelId:"UCbbbb", logo:"logos/newington.png" },
-    { name:"Project Purple Sports", url:"https://www.youtube.com/@ProjectPurpleSports", channelId:"UCcccc", logo:"logos/projectpurple.png" },
-    { name:"Waterbury Public Schools", url:"https://www.youtube.com/@waterburypublicschoolsathl9870", channelId:"UCdddd", logo:"logos/waterbury.png" }
+    { name:"Staples Boys Basketball", url:"https://www.youtube.com/@staplesboysbasketball", channelId:"UCxxxx" },
+    { name:"The Day CT", url:"https://www.youtube.com/@thedayct", channelId:"UCyyyy" },
+    { name:"TB860LIVE", url:"https://www.youtube.com/@TB860LIVE", channelId:"UCzzzz" },
+    { name:"WHCI", url:"https://www.youtube.com/@whci", channelId:"UCaaaa" },
+    { name:"Newington High School", url:"https://www.youtube.com/@NewingtonHighSchool605", channelId:"UCbbbb" },
+    { name:"Project Purple Sports", url:"https://www.youtube.com/@ProjectPurpleSports", channelId:"UCcccc" },
+    { name:"Waterbury Public Schools", url:"https://www.youtube.com/@waterburypublicschoolsathl9870", channelId:"UCdddd" }
   ];
 
-  async function checkLive(channel){
+  async function fetchChannelInfo(channel){
+    const apiKey = "YOUR_YOUTUBE_API_KEY";
     try{
-      const apiKey = "YOUR_YOUTUBE_API_KEY"; // replace
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channel.channelId}&eventType=live&type=video&key=${apiKey}`);
-      const data = await res.json();
-      if(data.items && data.items.length > 0){
-        return { live:true, title: data.items[0].snippet.title, url:`https://www.youtube.com/watch?v=${data.items[0].id.videoId}` };
+      const liveRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channel.channelId}&eventType=live&type=video&key=${apiKey}`);
+      const liveData = await liveRes.json();
+
+      const logoRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channel.channelId}&key=${apiKey}`);
+      const logoData = await logoRes.json();
+      const logo = logoData.items[0].snippet.thumbnails.default.url;
+
+      if(liveData.items && liveData.items.length>0){
+        return {...channel, live:true, title:liveData.items[0].snippet.title, url:`https://www.youtube.com/watch?v=${liveData.items[0].id.videoId}`, logo};
       }
-      return { live:false };
+      return {...channel, live:false, logo};
     }catch(e){
       console.error(e);
-      return { live:false };
+      return {...channel, live:false, logo:""};
     }
   }
 
-  async function renderChannels(){
+  async function renderLivestreams(){
     const listContainer = document.querySelector(".channel-list");
     listContainer.innerHTML = "";
 
-    const results = await Promise.all(channels.map(async c=>{
-      const liveStatus = await checkLive(c);
-      return {...c, ...liveStatus};
-    }));
-
+    const results = await Promise.all(channels.map(fetchChannelInfo));
     results.sort((a,b)=>{
       if(a.live && !b.live) return -1;
       if(!a.live && b.live) return 1;
@@ -198,9 +209,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // initial render
-  renderChannels();
-  // refresh every 2 minutes
-  setInterval(renderChannels, 2*60*1000);
+  renderLivestreams();
+
+  // ===== AUTO REFRESH =====
+  setInterval(()=>{
+    renderScores(new Date(dateInput.value));
+    renderTickerToday();
+    renderLivestreams();
+  }, 2*60*1000);
 
 });
