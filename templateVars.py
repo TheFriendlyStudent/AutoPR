@@ -1,7 +1,7 @@
 template = {
     "header_text" : {
         "font_size" : 48,
-        "font" : "assets/SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
+        "font" : "SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
         "color" : "#f1f1f1",
         "stroke" : 0,
         "stroke_color" : "#f1f1f1",
@@ -14,7 +14,7 @@ template = {
 
     "caption_text" : {
         "font_size" : 120,
-        "font" : "assets/GOLDMAN-BOLD.TTF",
+        "font" : "GOLDMAN-BOLD.TTF",
         "color" : "#f1f1f1",
         "stroke" : 0,
         "stroke_color" : "#f1f1f1",
@@ -27,7 +27,7 @@ template = {
 
     "photo_text" : {
         "font_size" : 33,
-        "font" : "assets/SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
+        "font" : "SPECIALGOTHICEXPANDEDONE-REGULAR.TTF",
         "color" : "#f1f1f1",
         "stroke" : 2,
         "stroke_color" : "#04030F",
@@ -136,7 +136,7 @@ template = {
 
     "home_score_text" : {
         "font_size" : 255,
-        "font" : "assets/OCRAEXT.ttf",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -148,7 +148,7 @@ template = {
 
     "home_rank_text" : {
         "font_size" : 54,
-        "font" : "assets/OCRAEXT.ttf",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -160,7 +160,7 @@ template = {
 
     "home_record_text" : {
         "font_size" : 54,
-        "font" : "assets/OCRAEXT.ttf",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -172,7 +172,7 @@ template = {
 
     "away_score_text" : {
         "font_size" : 255,
-        "font" : "assets/OCRAEXT.ttf",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -184,7 +184,7 @@ template = {
 
     "away_rank_text" : {
         "font_size" : 54,
-        "font" : "assets/OCRAEXT.ttf",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,
@@ -196,7 +196,7 @@ template = {
 
     "away_record_text" : {
         "font_size" : 54,
-        "font" : "assets/OCRAEXT.TTF",
+        "font" : "OCRAEXT.TTF",
         "win_color" : "#f1f1f1",
         "lose_color" : "#E60054",
         "glow" : True,

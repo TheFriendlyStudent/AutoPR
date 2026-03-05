@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 from urllib.parse import urlparse, parse_qs
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageColor
 import requests
@@ -13,7 +14,8 @@ def get_color(entry, won: bool):
     return entry.get("color", "#000000")
 
 def draw_text(draw, text, entry, won=True, x_offset=0, y_offset=0):
-    font = ImageFont.truetype(entry["font"], entry["font_size"])
+    font_path = os.path.join(os.path.dirname(__file__), "assets", entry["font"])
+    font = ImageFont.truetype(font_path, entry["font_size"])
     color = get_color(entry, won)
     x, y = entry["x"] + x_offset, entry["y"] + y_offset
     anchor = entry.get("anchor", "mm")
