@@ -132,6 +132,9 @@ def render_from_csv(csv_path, template_png="graphic.png", max_threads=4):
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = {executor.submit(render_game, row, template_png): row for row in rows}
         for future in as_completed(futures):
+            print(f"Rendering game: {row['game_datetime']}")
+            print(f"Home logo: assets/logos/{row['home_team'].replace(' ', '_')}.jpg")
+            print(f"Away logo: assets/logos/{row['away_team'].replace(' ', '_')}.jpg")
             try:
                 url = future.result()
                 if url:
