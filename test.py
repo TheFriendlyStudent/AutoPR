@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from autoRender import delete_from_r2, render_from_csv
 from dotenv import load_dotenv
@@ -93,6 +94,7 @@ publish_response = requests.post(
         "access_token": MY_ACCESS_TOKEN
     }
 )
+time.sleep(3) 
 publish_response.raise_for_status()
 print("Instagram carousel published! ID:", carousel_id)
 
