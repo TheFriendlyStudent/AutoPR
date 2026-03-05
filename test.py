@@ -106,6 +106,41 @@ publish_response = requests.post(
     }
 )
 
+# Get the returned carousel ID
+carousel_id = publish_response.json().get("id")
+print("Instagram carousel published! ID:", carousel_id)
+
+# --- Poll for permalink (optional, for reassurance) ---
+max_attempts = 10
+attempt = 0
+permalink = None
+
+while attempt < max_attempts:
+    resp = requests.get(
+        f"https://graph.facebook.com/v19.0/{carousel_id}",
+        params={
+            "fields": "id,permalink,media_type",
+            "access_token": MY_ACCESS_TOKEN
+        }
+    ).json()
+
+    permalink = resp.get("permalink")
+    if permalink:
+        print("Post is live at:", permalink)
+        break
+
+    attempt += 1
+    time.sleep(3)  # wait a few seconds before retry
+
+if not permalink:
+    print("Warning: permalink not available yet. Post may still be processing.") 
+    publish_response = requests.post( f"https://graph.facebook.com/v19.0/{IG_USER_ID}/media_publish",
+    data={
+        "creation_id": carousel_id,
+        "access_token": MY_ACCESS_TOKEN
+    }
+)
+
 status_url = f"https://graph.facebook.com/v19.0/{carousel_id}"
 params = {
     "fields": "status_code",
