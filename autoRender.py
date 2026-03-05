@@ -1,8 +1,10 @@
 import csv
 import datetime
 import os
+import re
 from tkinter import Image
-import pytz 
+import pytz
+import requests 
 
 from renderGraphic import render_image
 import boto3
@@ -31,6 +33,28 @@ def upload_to_r2(file_path, file_name=None):
     )
     return f"{PUBLIC_URL_BASE}/{file_name}"
 
+def convert_drive_link(url):
+    """
+    Converts a Google Drive share link to a direct download link.
+    Returns direct URL or None if not a Drive link.
+    """
+    if "drive.google.com" not in url:
+        return None
+
+    match = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
+    if not match:
+        return None
+
+    file_id = match.group(1)
+    return f"https://drive.google.com/uc?export=download&id={file_id}"
+
+def download_image(url, save_path):
+    response = requests.get(url)
+    response.raise_for_status()
+    with open(save_path, "wb") as f:
+        f.write(response.content)
+    return save_path
+
 def render_from_csv(csv_path, template_png="graphic.png"):
     urls = []
     with open(csv_path, newline='', encoding="utf-8") as file:
@@ -54,7 +78,20 @@ def render_from_csv(csv_path, template_png="graphic.png"):
             if game_dt_est > now_cst.astimezone(eastern):
                 print("Skipping future game")
                 continue
-            if game_dt_est <= now_cst.astimezone(eastern) and row.get("is_test", "").lower() != "true":   
+            if game_dt_est <= now_cst.astimezone(eastern) and row.get("is_test", "").lower() != "true":
+                bg_url = row["bg_image"]
+
+                # Check if it's a Drive link
+                drive_direct = convert_drive_link(bg_url)
+
+                if drive_direct:
+                    # Download to temp file
+                    local_bg = f"C:\\Users\\vasub\\AutoPR\\temp_bg_{timestamp}.jpg"
+                    download_image(drive_direct, local_bg)
+                    background_path = local_bg
+                else:
+                    # Not Drive → assume it's already usable (Instagram or normal URL)
+                    background_path = bg_url   
                 render_image(
                     output_path=output_png,
                     home_won=int(row["home_score"]) > int(row["away_score"]),
@@ -70,11 +107,13 @@ def render_from_csv(csv_path, template_png="graphic.png"):
                     away_team=row["away_team"],
                     photo_text="PHOTO: @" + row["photo_cred"],
                     template_png=template_png,
-                    background_image=row["bg_image"]
+                    background_image=background_path
                 )
                 url = upload_to_r2(output_png)
                 urls.append(url)
                 os.remove(output_png)
+                if drive_direct:
+                    os.remove(local_bg)
     return urls
 
 def delete_from_r2(file_name):
