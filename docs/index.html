@@ -213,6 +213,72 @@ body {
   border-bottom: 2px solid #ddd;
   padding-bottom: 5px;
 }
+
+/* Livestream channels container */
+.channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Individual channel row */
+.channel-row {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.channel-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+/* Channel logo */
+.channel-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  margin-right: 15px;
+  object-fit: cover;
+}
+
+/* Channel name and info */
+.channel-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.channel-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 3px;
+}
+
+.live-indicator {
+  color: red;
+  font-weight: 700;
+}
+
+/* Watch button */
+.watch-button {
+  background: #123a7a;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.watch-button:hover {
+  background: #0a2a5c;
+}
 </style>
 </head>
 <body>
@@ -232,7 +298,12 @@ body {
 
   <div class="content">
     <div id="scores"></div>
-    <div id="livestreams" style="display:none;"></div>
+    <div id="livestreams" style="display:none;">
+      <h2>Livestream Channels</h2>
+  <div class="channel-list">
+    <!-- Channels will be dynamically added here -->
+  </div>
+</div>
   </div>
 
   <div class="sidebar">

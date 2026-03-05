@@ -33,6 +33,67 @@ document.addEventListener("DOMContentLoaded", () => {
       const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
       const headers = rows.shift().split(",").map(h => h.trim());
 
+      const livestreamChannels = [
+        {
+          name: "Staples Boys Basketball",
+          youtubeUrl: "https://www.youtube.com/@staplesboysbasketball",
+          logo: "assets/logos/staplesboysbasketball.jpg"
+        },
+        {
+          name: "The Day CT",
+          youtubeUrl: "https://www.youtube.com/@thedayct",
+          logo: "assets/logos/thedayct.jpg"
+        },
+        {
+          name: "TB860 Live",
+          youtubeUrl: "https://www.youtube.com/@TB860LIVE",
+          logo: "assets/logos/tb860live.jpg"
+        },
+        {
+          name: "WHCI",
+          youtubeUrl: "https://www.youtube.com/@whci",
+          logo: "assets/logos/whci.jpg"
+        },
+        {
+          name: "Newington High School",
+          youtubeUrl: "https://www.youtube.com/@NewingtonHighSchool605",
+          logo: "assets/logos/newingtonhighschool.jpg"
+        },
+        {
+          name: "Project Purple Sports",
+          youtubeUrl: "https://www.youtube.com/@ProjectPurpleSports",
+          logo: "assets/logos/projectpurplesports.jpg"
+        },
+        {
+          name: "Waterbury Public Schools Athletics",
+          youtubeUrl: "https://www.youtube.com/@waterburypublicschoolsathl9870",
+          logo: "assets/logos/waterburypublicschools.jpg"
+        }
+      ];
+
+      function renderLivestreams(channels) {
+        const container = document.querySelector("#livestreams .channel-list");
+        container.innerHTML = "";
+
+        channels.forEach(channel => {
+          const row = document.createElement("div");
+          row.className = "channel-row";
+
+          row.innerHTML = `
+            <img class="channel-logo" src="${channel.logo}" alt="${channel.name} logo">
+            <div class="channel-info">
+              <div class="channel-name">${channel.name}</div>
+              <div class="live-indicator">LIVE</div> <!-- optional, could be dynamic -->
+            </div>
+            <button class="watch-button" onclick="window.open('${channel.youtubeUrl}', '_blank')">Watch</button>
+          `;
+
+          container.appendChild(row);
+        });
+      }
+
+      renderLivestreams(livestreamChannels);
+
       const homeTeamIdx = headers.indexOf("home_team");
       const homeScoreIdx = headers.indexOf("home_score");
       const awayTeamIdx = headers.indexOf("away_team");
