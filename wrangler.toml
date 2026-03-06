@@ -1,5 +1,5 @@
 name = "nutmeg-youtube-proxy"
-main = "youtube-proxy.js"
+main = "docs/youtube-proxy.js"
 compatibility_date = "2024-01-01"
 
 # Secrets are set via CLI — never put real keys here:
