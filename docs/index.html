@@ -179,34 +179,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   white-space: nowrap;
 }
 
-.ms-count-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ms-count-btn {
-  background: var(--navy-mid);
-  border: 1px solid var(--bdr);
-  border-radius: 5px;
-  color: var(--gray-l);
-  font-family: var(--fd);
-  font-size: .78rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  padding: 5px 11px;
-  cursor: pointer;
-  transition: all .15s;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.ms-count-btn:hover { background: var(--surf2); color: var(--white); }
-.ms-count-btn.active {
-  background: var(--blue-b);
-  border-color: var(--blue-b);
-  color: #fff;
-}
-
 .ms-launch-btn {
   background: var(--blue-b);
   border: none;
@@ -230,11 +202,15 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   display: grid;
   gap: 6px;
   width: 100%;
+  /* 2 columns always; rows grow automatically as channels are added */
+  grid-template-columns: repeat(2, 1fr);
 }
-.ms-grid[data-cols="1"] { grid-template-columns: 1fr; }
-.ms-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
-.ms-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
-.ms-grid[data-cols="4"] { grid-template-columns: 1fr 1fr 1fr 1fr; }
+/* Single stream gets full width */
+.ms-grid.solo { grid-template-columns: 1fr; }
+
+@media(max-width:500px) {
+  .ms-grid { grid-template-columns: 1fr; }
+}
 
 /* ── Individual stream cell ───────────────────────────────────────────── */
 .ms-cell {
@@ -456,14 +432,10 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 .ms-status-dot.err { background: var(--red); }
 
 @media(max-width:600px) {
-  .ms-grid[data-cols="3"],
-  .ms-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
   .ms-toolbar { gap: 8px; padding: 10px 12px; }
 }
 @media(max-width:380px) {
-  .ms-grid[data-cols="2"],
-  .ms-grid[data-cols="3"],
-  .ms-grid[data-cols="4"] { grid-template-columns: 1fr; }
+  .ms-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -534,16 +506,9 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 <div id="sec-livestreams" style="display:none">
 
-  <!-- Toolbar: how many streams + launch button -->
+  <!-- Toolbar: audio indicator + refresh -->
   <div class="ms-toolbar">
-    <span class="ms-toolbar-title">Streams</span>
-    <div class="ms-count-group" id="msCountGroup">
-      <button class="ms-count-btn active" data-n="1">1</button>
-      <button class="ms-count-btn" data-n="2">2</button>
-      <button class="ms-count-btn" data-n="3">3</button>
-      <button class="ms-count-btn" data-n="4">4</button>
-    </div>
-    <span class="ms-toolbar-title" style="margin-left:8px">Audio</span>
+    <span class="ms-toolbar-title">🔊 Audio</span>
     <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
     <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
   </div>
@@ -571,12 +536,8 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 (function () {
 
   // ── CONFIG ──────────────────────────────────────────────────────────────
-  // Set this to your deployed Cloudflare Worker URL.
-  // Leave empty ("") to skip live-detection and show all channels as placeholders.
-  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";   // e.g. "https://nutmeg-youtube-proxy.yourname.workers.dev"
+  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev/";   // e.g. "https://nutmeg-youtube-proxy.yourname.workers.dev"
 
-  // Channel definitions — add/remove as needed.
-  // channelId: the part after /channel/ on YouTube (or use the @ handle lookup below)
   const CHANNELS = [
     { name: "Staples Boys Basketball", channelId: "UCvWbpYUuSdpQ4yuvkYV3B3g", url: "https://www.youtube.com/@staplesboysbasketball" },
     { name: "The Day CT",              channelId: "UCpXEAt82SDbHqHVJ3nl0dWg", url: "https://www.youtube.com/@thedayct" },
@@ -585,12 +546,12 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     { name: "Newington High School",   channelId: "UCE4T7nWIAb9i5GkNioBH5MA", url: "https://www.youtube.com/@NewingtonHighSchool605" },
     { name: "Project Purple Sports",   channelId: "UCuBD7Qq-CY0nO1K-MpYK3mA", url: "https://www.youtube.com/@ProjectPurpleSports" },
     { name: "Waterbury Public Schools",channelId: "UCWT9Dh6pUmq8GJzUuBO3K6Q", url: "https://www.youtube.com/@waterburypublicschoolsathl9870" },
-    { name: "Fairfield Prep Athletics:", channelId: "UCGecTgvH_28YBQJx-YW2OIg", url: "https://www.youtube.com/@fairfieldprepjesuits"}
+    { name: "Fairfield Prep Athletics:", channelId: "UCGecTgvH_28YBQJx-YW2OIg", url: "https://www.youtube.com/@fairfieldprepjesuits"},
+    { name: "New Canaan Athletics", channelId: "UCdtLggb1RcyKQWuRpMp8u9A", url: "https://www.youtube.com/@newcanaanhighschoolathleti3780"}
   ];
 
   // ── STATE ────────────────────────────────────────────────────────────────
   let channelData   = CHANNELS.map(c => ({ ...c, isLive: false, videoId: null, liveTitle: null, thumb: null }));
-  let maxStreams     = 1;        // how many cells to show
   let selectedIds   = [];       // channelIds currently shown in grid (ordered)
   let activeAudioId = null;     // channelId whose audio is unmuted
   let fetchError    = false;
@@ -604,16 +565,18 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   const elStatusDot = document.getElementById("msStatusDot");
   const elStatusTxt = document.getElementById("msStatusTxt");
 
-  // ── Count buttons ─────────────────────────────────────────────────────────
-  document.getElementById("msCountGroup").addEventListener("click", e => {
-    const btn = e.target.closest(".ms-count-btn");
-    if (!btn) return;
-    maxStreams = parseInt(btn.dataset.n, 10);
-    document.querySelectorAll(".ms-count-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    trimSelection();
-    renderGrid();
-    renderChips();
+  // ── Event delegation on the grid — handles audio switching ───────────────
+  // Using delegation means it works even after iframes are rebuilt.
+  elGrid.addEventListener("click", e => {
+    const overlay = e.target.closest(".ms-click-overlay");
+    if (!overlay) return;
+    const cell = overlay.closest(".ms-cell");
+    if (!cell) return;
+    const cid = cell.dataset.cid;
+    if (!cid) return;
+    const ch = channelData.find(c => c.channelId === cid);
+    if (!ch?.isLive) return;
+    switchAudio(cid);
   });
 
   document.getElementById("msRefreshBtn").addEventListener("click", () => {
@@ -628,7 +591,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     fetchError = false;
 
     if (!PROXY_BASE) {
-      // No proxy configured — skip API, treat all as offline placeholders
       setStatus(false, "No proxy configured — showing placeholder tiles (set PROXY_BASE to enable live detection)");
       finishLoad();
       return;
@@ -667,15 +629,21 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
   function finishLoad() {
     elLoading.style.display = "none";
-    // Auto-select up to maxStreams live channels, then fill with offline
-    selectedIds = [];
-    const live    = channelData.filter(c => c.isLive).map(c => c.channelId);
-    const offline = channelData.filter(c => !c.isLive).map(c => c.channelId);
-    selectedIds = [...live, ...offline].slice(0, maxStreams);
 
-    // Default audio to first live channel (or first selected if none live)
+    // On first load, pre-select all live channels (up to all channels)
+    if (selectedIds.length === 0) {
+      const live    = channelData.filter(c => c.isLive).map(c => c.channelId);
+      const offline = channelData.filter(c => !c.isLive).map(c => c.channelId);
+      selectedIds = [...live, ...offline];
+    }
+
+    // Set default audio to first live channel
     if (!activeAudioId || !selectedIds.includes(activeAudioId)) {
-      activeAudioId = live[0] ?? selectedIds[0] ?? null;
+      const firstLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
+      activeAudioId = firstLive?.channelId ?? selectedIds[0] ?? null;
+      elAudioLbl.textContent = activeAudioId
+        ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "")
+        : "— tap a stream —";
     }
 
     renderGrid();
@@ -687,25 +655,23 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
   // ── Grid render ──────────────────────────────────────────────────────────
   function renderGrid() {
-    const cols = Math.min(maxStreams, selectedIds.length);
-    elGrid.setAttribute("data-cols", cols || 1);
+    // solo class makes 1-stream layout full width
+    elGrid.classList.toggle("solo", selectedIds.length === 1);
     elGrid.innerHTML = "";
 
-    selectedIds.slice(0, maxStreams).forEach(id => {
-      const ch  = channelData.find(c => c.channelId === id);
+    selectedIds.forEach(id => {
+      const ch = channelData.find(c => c.channelId === id);
       if (!ch) return;
-      const cell = buildCell(ch);
-      elGrid.appendChild(cell);
+      elGrid.appendChild(buildCell(ch));
     });
 
-    // Fill empty slots up to maxStreams with empty placeholder
-    for (let i = selectedIds.length; i < maxStreams; i++) {
+    if (selectedIds.length === 0) {
       const empty = document.createElement("div");
       empty.className = "ms-cell";
       empty.innerHTML = `<div class="ms-placeholder">
         <div class="ms-placeholder-icon">📺</div>
-        <div class="ms-placeholder-name">Select a channel</div>
-        <div class="ms-placeholder-status">Use chips below</div>
+        <div class="ms-placeholder-name">No channels selected</div>
+        <div class="ms-placeholder-status">Use chips below to add streams</div>
       </div>`;
       elGrid.appendChild(empty);
     }
@@ -720,12 +686,11 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     let inner = "";
 
     if (ch.isLive && ch.videoId) {
-      // Live iframe — muted unless this is the active audio channel
+      // mute=0 for active audio, mute=1 for all others
       const mute = isAudio ? "0" : "1";
       const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
       inner += `<iframe src="${src}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
     } else {
-      // Placeholder — channel is offline or unknown
       inner += `<div class="ms-placeholder">
         <div class="ms-placeholder-icon">📡</div>
         <div class="ms-placeholder-name">${esc(ch.name)}</div>
@@ -733,35 +698,56 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       </div>`;
     }
 
-    // Audio badge
     inner += `<div class="ms-audio-badge">🔊 Audio</div>`;
-
-    // Bottom label
     inner += `<div class="ms-cell-label">
       <span class="ms-cell-name">${esc(ch.name)}</span>
       ${ch.isLive ? '<div class="ms-live-dot"></div>' : ''}
     </div>`;
-
-    // Click overlay (for audio switching)
-    inner += `<div class="ms-click-overlay" title="Tap to hear this stream's audio"></div>`;
+    // Overlay catches clicks for audio switching (delegation handles the event)
+    inner += `<div class="ms-click-overlay" title="${ch.isLive ? 'Tap to hear this stream' : 'Not live'}"></div>`;
 
     cell.innerHTML = inner;
-
-    // Click → switch audio to this cell
-    cell.querySelector(".ms-click-overlay").addEventListener("click", () => {
-      if (!ch.isLive) return; // can't unmute a placeholder
-      switchAudio(ch.channelId);
-    });
-
     return cell;
   }
 
-  // ── Switch audio: rebuild iframes with new mute states ───────────────────
+  // ── Switch audio ─────────────────────────────────────────────────────────
+  // Swaps mute state by rebuilding only the two affected iframes (not full grid)
+  // to avoid reloading every stream on every audio switch.
   function switchAudio(channelId) {
     if (activeAudioId === channelId) return;
+
+    const prevId = activeAudioId;
     activeAudioId = channelId;
     elAudioLbl.textContent = channelData.find(c => c.channelId === channelId)?.name ?? "";
-    renderGrid(); // re-render iframes with updated mute params
+
+    // Update only the two changed cells instead of rebuilding the whole grid
+    [prevId, channelId].forEach(cid => {
+      if (!cid) return;
+      const cell = elGrid.querySelector(`.ms-cell[data-cid="${cid}"]`);
+      if (!cell) return;
+      const ch = channelData.find(c => c.channelId === cid);
+      if (!ch) return;
+
+      const isNowAudio = cid === channelId;
+      cell.classList.toggle("active-audio", isNowAudio);
+
+      // Rebuild iframe with correct mute param
+      if (ch.isLive && ch.videoId) {
+        const existing = cell.querySelector("iframe");
+        const mute = isNowAudio ? "0" : "1";
+        const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
+        if (existing) {
+          existing.src = src;
+        } else {
+          const iframe = document.createElement("iframe");
+          iframe.src = src;
+          iframe.allow = "autoplay; encrypted-media";
+          iframe.allowFullscreen = true;
+          cell.insertBefore(iframe, cell.firstChild);
+        }
+      }
+    });
+
     renderChips();
   }
 
@@ -769,8 +755,9 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   function renderChips() {
     elChips.innerHTML = "";
     channelData.forEach(ch => {
+      const isSelected = selectedIds.includes(ch.channelId);
       const chip = document.createElement("div");
-      chip.className = "ms-ch-chip" + (selectedIds.includes(ch.channelId) ? " selected" : "");
+      chip.className = "ms-ch-chip" + (isSelected ? " selected" : "");
       chip.dataset.cid = ch.channelId;
       chip.innerHTML = `
         <div class="${ch.isLive ? "chip-live" : "chip-offline"}"></div>
@@ -786,20 +773,17 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       // Deselect
       selectedIds = selectedIds.filter(id => id !== channelId);
       if (activeAudioId === channelId) {
-        activeAudioId = selectedIds[0] ?? null;
+        // Pass audio to next live selected channel, or first selected
+        const nextLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
+        activeAudioId = nextLive?.channelId ?? selectedIds[0] ?? null;
         elAudioLbl.textContent = activeAudioId
           ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "")
           : "— tap a stream —";
       }
     } else {
-      // Select (respect max)
-      if (selectedIds.length >= maxStreams) {
-        // Replace the last selected
-        selectedIds[selectedIds.length - 1] = channelId;
-      } else {
-        selectedIds.push(channelId);
-      }
-      // Auto-give audio if nothing active
+      // Add to end — no max, rows grow naturally
+      selectedIds.push(channelId);
+      // Auto-give audio if nothing active yet
       if (!activeAudioId) {
         const ch = channelData.find(c => c.channelId === channelId);
         if (ch?.isLive) {
@@ -812,12 +796,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     renderChips();
   }
 
-  function trimSelection() {
-    if (selectedIds.length > maxStreams) {
-      selectedIds = selectedIds.slice(0, maxStreams);
-    }
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────────────
   function setStatus(ok, msg) {
     elStatusDot.className = "ms-status-dot " + (ok ? "ok" : "err");
@@ -828,9 +806,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  // ── Init: kick off when Livestreams tab is activated ──────────────────────
-  // Hook into your existing tab listener — when 's === "livestreams"', call init.
-  // OR call msInit() directly if you prefer.
+  // ── Init ─────────────────────────────────────────────────────────────────
   let msInitialized = false;
   window.msInit = function () {
     if (msInitialized) return;
@@ -838,7 +814,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     fetchLiveStatus();
   };
 
-  // Auto-refresh every 3 minutes while tab is visible
+  // Auto-refresh every 3 minutes while tab is open
   setInterval(() => {
     const tab = document.getElementById("sec-livestreams");
     if (tab && tab.style.display !== "none" && msInitialized) {
