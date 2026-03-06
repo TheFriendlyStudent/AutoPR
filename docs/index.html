@@ -991,7 +991,7 @@ document.querySelectorAll(".tab").forEach(t=>{
     t.classList.add("active");
     const s=t.dataset.s;
     ["scores","submit","livestreams"].forEach(id=>document.getElementById("sec-"+id).style.display=id===s?"block":"none");
-    if(s==="livestreams")renderLive();
+    if(s==="livestreams") msInit();
   });
 });
 
@@ -1061,14 +1061,6 @@ const channels=[
   {name:"Project Purple Sports",url:"https://www.youtube.com/@ProjectPurpleSports"},
   {name:"Waterbury Public Schools",url:"https://www.youtube.com/@waterburypublicschoolsathl9870"}
 ];
-function renderLive(){
-  const l=document.getElementById("chList");l.innerHTML="";
-  channels.forEach(ch=>{
-    const r=document.createElement("div");r.className="ch-row";
-    r.innerHTML=`<div class="ch-info"><div class="ch-name">${ch.name}</div><div class="ch-sub">YouTube</div></div><a class="watch-btn" href="${ch.url}" target="_blank" rel="noopener">Watch</a>`;
-    l.appendChild(r);
-  });
-}
 
 setInterval(()=>{const v=document.getElementById("gameDate").value;if(v){const[y,m,d]=v.split("-").map(Number);renderScores(new Date(y,m-1,d));}renderTicker();},120000);
 
