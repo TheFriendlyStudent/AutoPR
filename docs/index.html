@@ -529,10 +529,18 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   <div class="ms-channel-list" id="msChipList" style="display:none"></div>
 
 </div><!-- /sec-livestreams -->
+  </div>
 
+  <div class="sidebar">
+    <div class="sb-card">
+      <div class="sb-hdr">CIAC Rankings</div>
+      <iframe src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-" style="background:#fff"></iframe>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════ ADD TO YOUR <script> BLOCK (before loadData()) ═══════════ -->
-<script id="MULTISTREAM_SCRIPT">
+<script>
 (function () {
 
   // ── CONFIG ──────────────────────────────────────────────────────────────
@@ -824,19 +832,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   }, 3 * 60 * 1000);
 
 })();
-</script>
 
-  </div>
-
-  <div class="sidebar">
-    <div class="sb-card">
-      <div class="sb-hdr">CIAC Rankings</div>
-      <iframe src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-" style="background:#fff"></iframe>
-    </div>
-  </div>
-</div>
-
-<script>
 let games=[], preds={};
 const uv=JSON.parse(sessionStorage.getItem("uv")||"{}");
 const vid=sessionStorage.getItem("vid")||(()=>{const i=Math.random().toString(36).slice(2);sessionStorage.setItem("vid",i);return i})();
