@@ -179,6 +179,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   white-space: nowrap;
 }
 
+
 .ms-launch-btn {
   background: var(--blue-b);
   border: none;
@@ -503,7 +504,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
         <div class="success" id="successMsg">✓ Submitted! Your score will be reviewed and published shortly.</div>
       </div>
     </div>
-
+  </div>
 <div id="sec-livestreams" style="display:none">
 
   <!-- Toolbar: audio indicator + refresh -->
@@ -529,8 +530,9 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   <div class="ms-channel-list" id="msChipList" style="display:none"></div>
 
 </div><!-- /sec-livestreams -->
-  </div>
 
+
+<!-- ═══════════ ADD TO YOUR <script> BLOCK (before loadData()) ═══════════ -->
   <div class="sidebar">
     <div class="sb-card">
       <div class="sb-hdr">CIAC Rankings</div>
@@ -606,7 +608,13 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     }
 
     const ids = CHANNELS.map(c => c.channelId).join(",");
-    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}`;
+    // Build a keywords map — only include channels that have keywords defined
+    const keywordsMap = {};
+    CHANNELS.forEach(c => { if (c.keywords?.length) keywordsMap[c.channelId] = c.keywords; });
+    const kwParam = Object.keys(keywordsMap).length
+      ? "&keywords=" + encodeURIComponent(JSON.stringify(keywordsMap))
+      : "";
+    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}`;
 
     try {
       const res  = await fetch(endpoint);
@@ -832,29 +840,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   }, 3 * 60 * 1000);
 
 })();
-
-let games=[], preds={};
-const uv=JSON.parse(sessionStorage.getItem("uv")||"{}");
-const vid=sessionStorage.getItem("vid")||(()=>{const i=Math.random().toString(36).slice(2);sessionStorage.setItem("vid",i);return i})();
-
-function parseCSV(t){
-  const ls=t.split(/\r?\n/).filter(l=>l.trim());
-  const hs=ls[0].split(",").map(h=>h.trim());
-  return ls.slice(1).map(line=>{
-    const vs=csvSplit(line),o={};
-    hs.forEach((h,i)=>o[h]=(vs[i]||"").trim());
-    return o;
-  });
-}
-function csvSplit(l){
-  const r=[];let c="",q=false;
-  for(let i=0;i<l.length;i++){
-    if(l[i]==='"'){q=!q;continue}
-    if(l[i]===","&&!q){r.push(c);c="";continue}
-    c+=l[i];
-  }
-  r.push(c);return r;
-}
 
 async function loadData(){
   try{

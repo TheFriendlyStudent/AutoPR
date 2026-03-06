@@ -43,14 +43,21 @@ export default {
       }
 
       const channelIds = ids.split(",").map(s => s.trim()).filter(Boolean).slice(0, 20);
+
+      // Optional: per-channel keyword filters passed as JSON
+      // e.g. ?keywords={"UCxxx":["basketball","hoops"]}
+      let keywordsMap = {};
+      try {
+        const kw = url.searchParams.get("keywords");
+        if (kw) keywordsMap = JSON.parse(kw);
+      } catch (e) { /* malformed JSON — ignore */ }
+
       const apiKey = env.YOUTUBE_API_KEY;
 
       try {
-        // Process sequentially to avoid Cloudflare's concurrent fetch limit,
-        // which causes the "stalled HTTP response" deadlock warning.
         const results = [];
         for (const id of channelIds) {
-          results.push(await fetchChannelData(id, apiKey));
+          results.push(await fetchChannelData(id, apiKey, keywordsMap[id] ?? []));
         }
         log("OK", `Fetched ${channelIds.length} channels (RSS live detection)`, request);
         return Response.json({ channels: results }, { headers: cors });
@@ -67,11 +74,11 @@ export default {
 // ── Fetch channel data ───────────────────────────────────────────────────────
 // Live detection: parses the channel's public RSS feed for <yt:isLiveContent> flags.
 // No quota used. Channel name + thumbnail: one channels.list call (1 unit).
-async function fetchChannelData(channelId, apiKey) {
+async function fetchChannelData(channelId, apiKey, keywords = []) {
 
   // Run RSS (quota-free) and channel metadata (1 unit) in parallel
   const [liveResult, metaResult] = await Promise.allSettled([
-    detectLiveViaRSS(channelId),
+    detectLiveViaRSS(channelId, keywords),
     fetchChannelMeta(channelId, apiKey),
   ]);
 
@@ -99,7 +106,9 @@ async function fetchChannelData(channelId, apiKey) {
 // ── RSS live detection (no API key, no quota) ────────────────────────────────
 // YouTube exposes a public Atom feed for every channel. Live videos appear in
 // the feed with a <yt:isLiveContent> element. We grab the feed and scan for it.
-async function detectLiveViaRSS(channelId) {
+// keywords: optional array of strings — if provided, only live entries whose
+// title contains at least one keyword (case-insensitive) will match.
+async function detectLiveViaRSS(channelId, keywords = []) {
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
   const res = await fetch(feedUrl, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; NutmegSports/1.0)" },
@@ -110,38 +119,57 @@ async function detectLiveViaRSS(channelId) {
 
   const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
   const nowMs = Date.now();
+  const hasKeywords = keywords.length > 0;
 
   for (const [, entry] of entries) {
-    const videoIdMatch  = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
-    const titleMatch    = entry.match(/<title>([\s\S]*?)<\/title>/);
-    const publishedMatch= entry.match(/<published>([\s\S]*?)<\/published>/);
-    const viewsMatch    = entry.match(/<media:statistics views="(\d+)"/);
+    const videoIdMatch   = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
+    const titleMatch     = entry.match(/<title>([\s\S]*?)<\/title>/);
+    const publishedMatch = entry.match(/<published>([\s\S]*?)<\/published>/);
+    const viewsMatch     = entry.match(/<media:statistics views="(\d+)"/);
 
     if (!videoIdMatch || !publishedMatch) continue;
 
     const publishedMs = new Date(publishedMatch[1]).getTime();
     const ageHours    = (nowMs - publishedMs) / 3_600_000;
     const views       = viewsMatch ? parseInt(viewsMatch[1], 10) : -1;
+    const title       = titleMatch?.[1] ?? "";
 
-    // Heuristic: published within the last 12 hours AND view count is 0
-    // (YouTube doesn't update view counts on active live streams)
     const likelyLive = ageHours <= 12 && views === 0;
+    if (!likelyLive) continue;
 
-    if (likelyLive) {
-      console.log(JSON.stringify({
-        level: "DEBUG",
-        channelId,
-        signal: "live-heuristic",
-        videoId: videoIdMatch[1],
-        ageHours: ageHours.toFixed(2),
-        views,
-      }));
-      return {
-        isLive: true,
-        videoId:   videoIdMatch[1],
-        liveTitle: titleMatch?.[1]?.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">") ?? null,
-      };
+    // If keywords are set, skip entries whose title doesn't match any of them
+    if (hasKeywords) {
+      const titleLower = title.toLowerCase();
+      const matched = keywords.some(kw => titleLower.includes(kw.toLowerCase()));
+      if (!matched) {
+        console.log(JSON.stringify({
+          level: "DEBUG",
+          channelId,
+          signal: "keyword-skip",
+          videoId: videoIdMatch[1],
+          title: title.slice(0, 80),
+          keywords,
+        }));
+        continue;
+      }
     }
+
+    console.log(JSON.stringify({
+      level: "DEBUG",
+      channelId,
+      signal: "live-heuristic",
+      videoId: videoIdMatch[1],
+      ageHours: ageHours.toFixed(2),
+      views,
+      title: title.slice(0, 80),
+      keywordsApplied: hasKeywords,
+    }));
+
+    return {
+      isLive: true,
+      videoId:   videoIdMatch[1],
+      liveTitle: title.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">") ?? null,
+    };
   }
 
   return { isLive: false, videoId: null, liveTitle: null };
