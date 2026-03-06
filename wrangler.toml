@@ -2,7 +2,9 @@ name = "nutmeg-youtube-proxy"
 main = "docs/youtube-proxy.js"
 compatibility_date = "2024-01-01"
 [observability]
-enabled = false
+[observability.logs]
+enabled = true
+invocation_logs = true
 
 # Secrets are set via CLI — never put real keys here:
 #   wrangler secret put YOUTUBE_API_KEY
