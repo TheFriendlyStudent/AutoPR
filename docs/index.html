@@ -7,1971 +7,469 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ===== ROOT VARS ===== */
 :root {
-  --navy: #0a1628;
-  --navy-mid: #0f2040;
-  --navy-light: #162d52;
-  --blue: #1a4fa0;
-  --blue-bright: #2563d4;
-  --red: #d42525;
-  --red-bright: #ff2e2e;
-  --gold: #f0b429;
-  --white: #f0f4ff;
-  --gray: #8a9ab5;
-  --gray-light: #c8d3e8;
-  --surface: #111d33;
-  --surface-2: #192540;
-  --border: rgba(255,255,255,0.08);
-  --font-display: 'Barlow Condensed', sans-serif;
-  --font-body: 'Barlow', sans-serif;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: var(--font-body);
-  background: var(--navy);
-  color: var(--white);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* ===== HEADER ===== */
-.header {
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
-  border-bottom: 3px solid var(--blue);
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 70px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-}
-
-.logo {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--white);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo span { color: var(--gold); }
-
-.header-right {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.admin-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--gray);
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  padding: 6px 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s;
-}
-.admin-btn:hover { border-color: var(--gold); color: var(--gold); }
-
-/* ===== TICKER ===== */
-.ticker-wrapper {
-  background: var(--navy-mid);
-  border-bottom: 1px solid var(--border);
-  overflow: hidden;
-  height: 38px;
-  display: flex;
-  align-items: center;
-}
-
-.ticker-label {
-  background: var(--red);
-  color: white;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  padding: 0 16px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ticker-track {
-  overflow: hidden;
-  flex: 1;
-}
-
-.ticker {
-  display: flex;
-  gap: 50px;
-  white-space: nowrap;
-  animation: scrollTicker 40s linear infinite;
-  padding-left: 30px;
-}
-
-.ticker-item {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-  color: var(--gray-light);
-}
-.ticker-item .winner { color: var(--gold); }
-
-@keyframes scrollTicker {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ===== NAV TABS ===== */
-.nav {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  padding: 0 40px;
-  gap: 0;
-}
-
-.tab {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 16px 24px;
-  cursor: pointer;
-  color: var(--gray);
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
-  position: relative;
-}
-.tab:hover { color: var(--white); }
-.tab.active { color: var(--white); border-bottom-color: var(--gold); }
-
-/* ===== MAIN LAYOUT ===== */
-.main-layout {
-  display: flex;
-  max-width: 1400px;
-  margin: 30px auto;
-  padding: 0 24px;
-  gap: 28px;
-  align-items: flex-start;
-}
-
-.content { flex: 2; }
-.sidebar {
-  flex: 1;
-  position: sticky;
-  top: 90px;
-}
-
-/* ===== DATE PICKER ===== */
-.controls-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.date-label {
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gray);
-}
-
-input[type="date"] {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  padding: 8px 14px;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-input[type="date"]:focus { border-color: var(--blue-bright); }
-
-/* ===== DATE SECTION HEADER ===== */
-.game-date-header {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  margin: 24px 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.game-date-header::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-/* ===== GAME CARD ===== */
-.game-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  overflow: hidden;
-  transition: all 0.2s;
-}
-.game-card:hover {
-  border-color: rgba(255,255,255,0.16);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-}
-
-.game-card-inner {
-  padding: 18px 22px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.team-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 130px;
-}
-.team-col.right { text-align: right; }
-
-.team-name {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-.team-name.winner { color: var(--white); }
-.team-name.loser { color: var(--gray); }
-
-.rank-badge {
-  display: inline-block;
-  background: var(--blue);
-  color: var(--white);
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-  letter-spacing: 1px;
-}
-
-.team-record {
-  font-size: 0.8rem;
-  color: var(--gray);
-  font-weight: 500;
-}
-
-.score-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.scores-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.score-num {
-  font-family: var(--font-display);
-  font-size: 2.4rem;
-  font-weight: 900;
-  line-height: 1;
-  min-width: 54px;
-  text-align: center;
-}
-.score-num.winner { color: var(--white); }
-.score-num.loser { color: var(--gray); }
-
-.score-divider {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  text-align: center;
-  line-height: 1;
-}
-
-.caption-badge {
-  background: var(--red);
-  color: white;
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 3px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-
-/* scheduled game */
-.game-card.scheduled .game-card-inner { opacity: 0.85; }
-.time-badge {
-  background: var(--navy-mid);
-  border: 1px solid var(--border);
-  color: var(--gray-light);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-}
-
-/* ===== VOTE STRIP ===== */
-.vote-strip {
-  background: var(--navy-mid);
-  border-top: 1px solid var(--border);
-  padding: 12px 22px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.vote-label {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gold);
-}
-
-.vote-bars {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 200px;
-}
-
-.vote-team-label {
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--gray-light);
-  white-space: nowrap;
-  width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vote-team-label.right { text-align: right; }
-
-.bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--navy);
-  border-radius: 4px;
-  overflow: hidden;
-  display: flex;
-}
-
-.bar-home {
-  background: var(--blue-bright);
-  height: 100%;
-  transition: width 0.5s ease;
-  border-radius: 4px 0 0 4px;
-}
-.bar-away {
-  background: var(--red);
-  height: 100%;
-  transition: width 0.5s ease;
-  border-radius: 0 4px 4px 0;
-}
-
-.vote-pcts {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  color: var(--gray);
-  white-space: nowrap;
-}
-
-.vote-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--gray-light);
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-.vote-btn:hover { background: var(--blue-bright); border-color: var(--blue-bright); color: white; }
-.vote-btn.voted-home { background: var(--blue-bright); border-color: var(--blue-bright); color: white; }
-.vote-btn.voted-away { background: var(--red); border-color: var(--red); color: white; }
-
-/* ===== NO GAMES ===== */
-.no-games {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--gray);
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-/* ===== SIDEBAR ===== */
-.sidebar-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-.sidebar-card-header {
-  background: var(--navy-mid);
-  padding: 12px 18px;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  border-bottom: 1px solid var(--border);
-}
-.sidebar-card iframe {
-  width: 100%;
-  height: 680px;
-  border: none;
-}
-
-/* ===== SUBMIT FORM ===== */
-.submit-section { max-width: 680px; }
-
-.form-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 30px;
-  margin-bottom: 20px;
-}
-
-.form-title {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.form-subtitle {
-  color: var(--gray);
-  font-size: 0.9rem;
-  margin-bottom: 24px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  margin-bottom: 8px;
-}
-
-.form-control {
-  width: 100%;
-  background: var(--navy-mid);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  padding: 10px 14px;
-  outline: none;
-  transition: border-color 0.2s;
-  appearance: none;
-}
-.form-control:focus { border-color: var(--blue-bright); }
-.form-control::placeholder { color: var(--gray); }
-
-select.form-control {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238a9ab5' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
-}
-
-.scores-row-input {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.score-team-label {
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--gray-light);
-  min-width: 120px;
-}
-
-input[type="number"].form-control {
-  width: 90px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.score-dash {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--gray);
-}
-
-.file-drop {
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 32px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--navy-mid);
-}
-.file-drop:hover, .file-drop.drag-over {
-  border-color: var(--blue-bright);
-  background: rgba(37, 99, 212, 0.1);
-}
-
-.file-drop-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-.file-drop-text {
-  font-size: 0.9rem;
-  color: var(--gray);
-}
-.file-drop-text strong { color: var(--blue-bright); }
-
-.file-preview {
-  margin-top: 12px;
-  display: none;
-}
-.file-preview img {
-  max-height: 180px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
-.file-preview-name {
-  font-size: 0.85rem;
-  color: var(--gray-light);
-  margin-top: 6px;
-}
-
-.error-msg {
-  color: var(--red-bright);
-  font-size: 0.82rem;
-  margin-top: 6px;
-  display: none;
-  font-weight: 500;
-}
-.error-msg.show { display: block; }
-
-.submit-btn {
-  width: 100%;
-  background: var(--blue-bright);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 8px;
-}
-.submit-btn:hover { background: #1a50b8; transform: translateY(-1px); }
-.submit-btn:active { transform: translateY(0); }
-
-.success-banner {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  border-radius: 8px;
-  padding: 16px 20px;
-  color: #4ade80;
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  display: none;
-  margin-top: 16px;
-}
-.success-banner.show { display: block; }
-
-/* ===== ADMIN MODAL ===== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
-  z-index: 200;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  overflow-y: auto;
-  padding: 30px 16px;
-}
-.modal-overlay.open { display: flex; }
-
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 1100px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.modal-header {
-  background: var(--navy-mid);
-  padding: 20px 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-}
-.modal-title {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-.modal-close {
-  background: none;
-  border: none;
-  color: var(--gray);
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: color 0.2s;
-}
-.modal-close:hover { color: var(--white); }
-
-.modal-tabs {
-  display: flex;
-  background: var(--navy-mid);
-  border-bottom: 1px solid var(--border);
-}
-.modal-tab {
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 12px 20px;
-  cursor: pointer;
-  color: var(--gray);
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-.modal-tab:hover { color: var(--white); }
-.modal-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
-
-.modal-body { padding: 24px 28px; }
-
-/* Admin password screen */
-.admin-lock {
-  text-align: center;
-  padding: 40px 20px;
-}
-.admin-lock-title {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-}
-.admin-pin-input {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-.admin-pin-input input {
-  width: 56px;
-  height: 64px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  font-weight: 700;
-  background: var(--navy-mid);
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  color: var(--white);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.admin-pin-input input:focus { border-color: var(--blue-bright); }
-.pin-error {
-  color: var(--red-bright);
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 12px;
-  display: none;
-}
-.pin-error.show { display: block; }
-.unlock-btn {
-  background: var(--blue-bright);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-family: var(--font-display);
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 12px 32px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.unlock-btn:hover { background: #1a50b8; }
-
-/* Admin tables */
-.admin-section-title {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gray);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.add-game-btn {
-  background: var(--blue-bright);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.add-game-btn:hover { background: #1a50b8; }
-
-.admin-table-wrap { overflow-x: auto; }
-
-table.admin-tbl {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-table.admin-tbl th {
-  background: var(--navy-mid);
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gray);
-  padding: 10px 12px;
-  text-align: left;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border);
-}
-table.admin-tbl td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  color: var(--gray-light);
-}
-table.admin-tbl tr:hover td { background: rgba(255,255,255,0.03); }
-
-table.admin-tbl input, table.admin-tbl select {
-  background: var(--navy-mid);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  outline: none;
-  width: 100%;
-  min-width: 80px;
-}
-table.admin-tbl input:focus, table.admin-tbl select:focus { border-color: var(--blue-bright); }
-
-.tbl-action-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--gray);
-  font-size: 0.75rem;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-.tbl-action-btn:hover { background: var(--blue-bright); border-color: var(--blue-bright); color: white; }
-.tbl-action-btn.danger:hover { background: var(--red); border-color: var(--red); color: white; }
-.tbl-action-btn.approve { border-color: rgba(34,197,94,0.4); color: #4ade80; }
-.tbl-action-btn.approve:hover { background: rgba(34,197,94,0.2); border-color: #4ade80; color: #4ade80; }
-.tbl-action-btn.reject { border-color: rgba(239,68,68,0.4); color: #f87171; }
-.tbl-action-btn.reject:hover { background: rgba(239,68,68,0.2); border-color: #f87171; color: #f87171; }
-
-.status-pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-family: var(--font-display);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.status-pill.final { background: rgba(34,197,94,0.15); color: #4ade80; }
-.status-pill.scheduled { background: rgba(37,99,212,0.2); color: #93c5fd; }
-.status-pill.pending { background: rgba(245,158,11,0.2); color: var(--gold); }
-.status-pill.rejected { background: rgba(239,68,68,0.15); color: #f87171; }
-.status-pill.approved { background: rgba(34,197,94,0.15); color: #4ade80; }
-.status-pill.posted { background: rgba(168,85,247,0.2); color: #c4b5fd; }
-
-.admin-save-bar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.save-btn {
-  background: var(--blue-bright);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 24px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.save-btn:hover { background: #1a50b8; }
-
-.export-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--gray);
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 24px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.export-btn:hover { border-color: var(--gold); color: var(--gold); }
-
-/* new game form */
-.new-game-form {
-  display: none;
-  background: var(--navy-mid);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-.new-game-form.open { display: block; }
-.ng-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.ng-group label {
-  display: block;
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--gray);
-  margin-bottom: 5px;
-}
-.ng-group input, .ng-group select {
-  width: 100%;
-  background: var(--navy);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  padding: 7px 10px;
-  outline: none;
-}
-.ng-group input:focus, .ng-group select:focus { border-color: var(--blue-bright); }
-.ng-actions { display: flex; gap: 10px; }
-
-/* submission image preview */
-.sub-img {
-  width: 60px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 900px) {
-  .main-layout { flex-direction: column; }
-  .sidebar { position: relative; top: 0; }
-  .header { padding: 0 16px; }
-  .nav { padding: 0 16px; }
-  .tab { padding: 14px 14px; font-size: 0.8rem; }
+  --navy:#0a1628;--navy-mid:#0f2040;--blue:#1a4fa0;--blue-b:#2563d4;
+  --red:#d42525;--gold:#f0b429;--white:#f0f4ff;--gray:#8a9ab5;
+  --gray-l:#c8d3e8;--surf:#111d33;--surf2:#192540;
+  --bdr:rgba(255,255,255,0.08);--fd:'Barlow Condensed',sans-serif;
+  --fb:'Barlow',sans-serif;--r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:var(--navy);color:var(--white);min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--navy),var(--navy-mid));border-bottom:3px solid var(--blue);padding:0 20px;display:flex;align-items:center;height:58px;position:sticky;top:0;z-index:100;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.logo{font-family:var(--fd);font-size:clamp(1.3rem,4vw,1.85rem);font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.logo span{color:var(--gold)}
+
+/* TICKER */
+.ticker-wrap{background:var(--navy-mid);border-bottom:1px solid var(--bdr);overflow:hidden;height:34px;display:flex;align-items:center}
+.ticker-lbl{background:var(--red);color:#fff;font-family:var(--fd);font-weight:700;font-size:.68rem;letter-spacing:2px;padding:0 13px;height:100%;display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
+.ticker-track{overflow:hidden;flex:1}
+.ticker{display:flex;gap:50px;white-space:nowrap;padding-left:20px;animation:scrollT 40s linear infinite}
+.ticker-item{font-family:var(--fd);font-weight:600;font-size:.83rem;color:var(--gray-l)}
+.ticker-item .tw{color:var(--gold)}
+.ticker-item .upc{color:var(--gray)}
+@keyframes scrollT{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* NAV */
+.nav{background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.tab{font-family:var(--fd);font-size:.82rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:13px 16px;cursor:pointer;color:var(--gray);border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;user-select:none;-webkit-tap-highlight-color:transparent}
+.tab:hover{color:var(--white)}.tab.active{color:var(--white);border-bottom-color:var(--gold)}
+
+/* LAYOUT */
+.layout{display:flex;max-width:1380px;margin:22px auto;padding:0 16px;gap:22px;align-items:flex-start}
+.content{flex:2;min-width:0}
+.sidebar{flex:1;min-width:270px;position:sticky;top:76px}
+
+/* CONTROLS */
+.ctrl-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.date-lbl{font-family:var(--fd);font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
+input[type="date"]{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--white);font-family:var(--fb);font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer;transition:border-color .2s;-webkit-appearance:none;appearance:none;min-width:0}
+input[type="date"]:focus{border-color:var(--blue-b)}
+
+/* DATE HEADER */
+.date-hdr{font-family:var(--fd);font-size:1.05rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin:18px 0 10px;display:flex;align-items:center;gap:10px}
+.date-hdr::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+/* GAME CARD */
+.game-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.game-card:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.4);border-color:rgba(255,255,255,.14)}
+.card-inner{padding:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.team-col{display:flex;flex-direction:column;gap:2px}
+.team-col.right{text-align:right;align-items:flex-end}
+.team-name{font-family:var(--fd);font-size:clamp(.85rem,2.5vw,1.08rem);font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1.2}
+.team-name.W{color:var(--white)}.team-name.L{color:var(--gray)}.team-name.N{color:var(--white)}
+.rank-b{display:inline-block;background:var(--blue);color:var(--white);font-family:var(--fd);font-size:.63rem;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:.5px;margin-right:3px}
+.team-rec{font-size:.73rem;color:var(--gray)}
+.score-ctr{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 6px}
+.scores-row{display:flex;align-items:center;gap:7px}
+.score-n{font-family:var(--fd);font-size:clamp(1.5rem,5vw,2.1rem);font-weight:900;line-height:1;min-width:36px;text-align:center}
+.score-n.W{color:var(--white)}.score-n.L{color:var(--gray)}
+.score-div{font-family:var(--fd);font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray);text-align:center}
+.cap-b{background:var(--red);color:#fff;font-family:var(--fd);font-size:.63rem;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:1.5px;text-transform:uppercase}
+.time-b{background:var(--navy-mid);border:1px solid var(--bdr);color:var(--gray-l);font-family:var(--fd);font-size:.83rem;font-weight:600;padding:4px 12px;border-radius:4px}
+.sport-sub{font-family:var(--fd);font-size:.62rem;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* VOTE STRIP */
+.vote-strip{background:var(--navy-mid);border-top:1px solid var(--bdr);padding:9px 18px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.vote-lbl{font-family:var(--fd);font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+.vote-bars{flex:1;display:flex;align-items:center;gap:6px;min-width:140px}
+.vote-team-lbl{font-family:var(--fd);font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--gray-l);white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:6px;background:var(--navy);border-radius:3px;overflow:hidden;display:flex}
+.bar-h{background:var(--blue-b);height:100%;transition:width .4s ease;border-radius:3px 0 0 3px}
+.bar-a{background:var(--red);height:100%;transition:width .4s ease;border-radius:0 3px 3px 0}
+.vote-pcts{font-family:var(--fd);font-size:.68rem;color:var(--gray);white-space:nowrap}
+.vote-btn{background:transparent;border:1px solid var(--bdr);color:var(--gray-l);font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.vote-btn:hover,.vote-btn:active{background:var(--blue-b);border-color:var(--blue-b);color:#fff}
+.vote-btn.vh{background:var(--blue-b);border-color:var(--blue-b);color:#fff}
+.vote-btn.va{background:var(--red);border-color:var(--red);color:#fff}
+
+/* NO GAMES */
+.no-games{text-align:center;padding:56px 20px;color:var(--gray);font-family:var(--fd);font-size:.95rem;letter-spacing:1px;text-transform:uppercase}
+
+/* SIDEBAR */
+.sb-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden}
+.sb-hdr{background:var(--navy-mid);padding:10px 16px;font-family:var(--fd);font-size:.73rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray);border-bottom:1px solid var(--bdr)}
+.sb-card iframe{width:100%;height:630px;border:none;display:block}
+
+/* SUBMIT FORM */
+.form-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:clamp(16px,4vw,28px);max-width:620px}
+.form-title{font-family:var(--fd);font-size:clamp(1.15rem,3.5vw,1.45rem);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.form-sub{color:var(--gray);font-size:.83rem;margin-bottom:20px;line-height:1.5}
+.form-grp{margin-bottom:16px}
+.form-lbl{display:block;font-family:var(--fd);font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:6px}
+.fc{width:100%;background:var(--navy-mid);border:1px solid var(--bdr);border-radius:6px;color:var(--white);font-family:var(--fb);font-size:.88rem;padding:9px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.fc:focus{border-color:var(--blue-b)}.fc::placeholder{color:var(--gray)}
+select.fc{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%238a9ab5' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.score-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.score-lbl{font-family:var(--fd);font-size:.78rem;font-weight:700;text-transform:uppercase;color:var(--gray-l);flex:1;min-width:70px}
+.score-lbl.r{text-align:right}
+input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-size:1.2rem;font-weight:700;flex-shrink:0;padding:9px 4px}
+.dash{font-family:var(--fd);font-size:1.3rem;font-weight:700;color:var(--gray);flex-shrink:0}
+.file-drop{border:2px dashed var(--bdr);border-radius:8px;padding:clamp(18px,4vw,28px);text-align:center;cursor:pointer;transition:all .2s;background:var(--navy-mid)}
+.file-drop:hover,.file-drop.dov{border-color:var(--blue-b);background:rgba(37,99,212,.1)}
+.drop-icon{font-size:1.7rem;margin-bottom:7px}
+.drop-txt{font-size:.82rem;color:var(--gray)}.drop-txt strong{color:var(--blue-b)}
+.fprev{margin-top:10px;display:none}
+.fprev img{max-height:150px;border-radius:6px;border:1px solid var(--bdr)}
+.fprev-name{font-size:.78rem;color:var(--gray-l);margin-top:4px}
+.err{color:#ff6b6b;font-size:.76rem;margin-top:5px;display:none;font-weight:500}.err.show{display:block}
+.sub-btn{width:100%;background:var(--blue-b);border:none;border-radius:6px;color:#fff;font-family:var(--fd);font-size:.92rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px;cursor:pointer;transition:all .2s;margin-top:6px;touch-action:manipulation}
+.sub-btn:hover{background:#1a50b8}.sub-btn:disabled{opacity:.5;cursor:not-allowed}
+.success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:8px;padding:13px 16px;color:#4ade80;font-family:var(--fd);font-size:.88rem;font-weight:700;letter-spacing:1px;display:none;margin-top:14px}.success.show{display:block}
+
+/* LIVESTREAMS */
+.ch-row{display:flex;align-items:center;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 16px;margin-bottom:10px;gap:14px;transition:transform .15s,box-shadow .15s}
+.ch-row:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.ch-info{flex:1;min-width:0}
+.ch-name{font-family:var(--fd);font-size:.98rem;font-weight:700}
+.ch-sub{font-size:.76rem;color:var(--gray);margin-top:2px}
+.watch-btn{background:var(--blue-b);color:#fff;font-family:var(--fd);font-size:.73rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 13px;border-radius:5px;text-decoration:none;white-space:nowrap;flex-shrink:0;transition:background .15s}
+.watch-btn:hover{background:#1a50b8}
+
+/* RESPONSIVE */
+@media(max-width:860px){
+  .layout{flex-direction:column;margin:14px auto}
+  .sidebar{position:relative;top:0;width:100%;min-width:0}
+  .sb-card iframe{height:480px}
+}
+@media(max-width:480px){
+  .hdr{padding:0 12px;height:52px}
+  .nav{padding:0 6px}
+  .tab{padding:11px 12px;font-size:.76rem;letter-spacing:.8px}
+  .layout{padding:0 10px}
+  .card-inner{padding:10px 12px;gap:5px}
+  .team-name{font-size:.8rem}
+  .score-n{font-size:1.35rem;min-width:28px}
+  .vote-strip{padding:8px 12px;gap:6px}
+  .vote-bars{min-width:110px}
+  .vote-team-lbl{max-width:52px;font-size:.62rem}
+  .form-card{padding:14px}
+  .score-row{gap:5px}
+  input[type="number"].si{width:58px;font-size:1.05rem}
 }
 </style>
 </head>
 <body>
 
-<!-- ===== HEADER ===== -->
-<div class="header">
+<div class="hdr">
   <div class="logo">Nutmeg <span>Sports</span></div>
-  <div class="header-right">
-    <button class="admin-btn" onclick="openAdmin()">⚙ Admin</button>
-  </div>
 </div>
 
-<!-- ===== TICKER ===== -->
-<div class="ticker-wrapper">
-  <div class="ticker-label">SCORES</div>
-  <div class="ticker-track">
-    <div class="ticker" id="scoreTicker"></div>
-  </div>
+<div class="ticker-wrap">
+  <div class="ticker-lbl">SCORES</div>
+  <div class="ticker-track"><div class="ticker" id="ticker"></div></div>
 </div>
 
-<!-- ===== TABS ===== -->
 <div class="nav">
-  <div class="tab active" data-section="scores">Scores</div>
-  <div class="tab" data-section="submit">Submit Score</div>
-  <div class="tab" data-section="livestreams">Livestreams</div>
+  <div class="tab active" data-s="scores">Scores</div>
+  <div class="tab" data-s="submit">Submit Score</div>
+  <div class="tab" data-s="livestreams">Livestreams</div>
 </div>
 
-<!-- ===== MAIN LAYOUT ===== -->
-<div class="main-layout">
-
-  <!-- LEFT: SCORES -->
+<div class="layout">
   <div class="content">
 
-    <!-- SCORES SECTION -->
-    <div id="section-scores">
-      <div class="controls-bar">
-        <span class="date-label">Date</span>
+    <div id="sec-scores">
+      <div class="ctrl-bar">
+        <span class="date-lbl">Date</span>
         <input type="date" id="gameDate">
       </div>
-      <div id="scoresContainer"></div>
+      <div id="scoresCtr"></div>
     </div>
 
-    <!-- SUBMIT SECTION -->
-    <div id="section-submit" style="display:none;">
-      <div class="submit-section">
-        <div class="form-card">
-          <div class="form-title">Submit a Score</div>
-          <div class="form-subtitle">Select the game and enter the final score. All submissions are reviewed before being published.</div>
-
-          <div class="form-group">
-            <label class="form-label" for="gameSelect">Game</label>
-            <select class="form-control" id="gameSelect">
-              <option value="">— Select a game —</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="scoreInputGroup" style="display:none;">
-            <label class="form-label">Final Score</label>
-            <div class="scores-row-input">
-              <div class="score-team-label" id="homeTeamLabel">Home</div>
-              <input type="number" class="form-control" id="homeScoreInput" min="0" max="999" placeholder="0">
-              <div class="score-dash">—</div>
-              <input type="number" class="form-control" id="awayScoreInput" min="0" max="999" placeholder="0">
-              <div class="score-team-label" id="awayTeamLabel">Away</div>
-            </div>
-            <div class="error-msg" id="scoreError">Please enter valid scores (whole numbers, 0–999).</div>
-          </div>
-
-          <div class="form-group" id="imageUploadGroup" style="display:none;">
-            <label class="form-label">Game Photo</label>
-            <div class="file-drop" id="fileDrop">
-              <div class="file-drop-icon">📷</div>
-              <div class="file-drop-text">Drop your photo here or <strong>click to browse</strong></div>
-              <input type="file" id="fileInput" accept="image/*" style="display:none;">
-            </div>
-            <div class="file-preview" id="filePreview">
-              <img id="previewImg" src="" alt="Preview">
-              <div class="file-preview-name" id="previewName"></div>
-            </div>
-            <div class="error-msg" id="imageError">Please upload a valid image file (JPG, PNG, etc.).</div>
-          </div>
-
-          <button class="submit-btn" id="submitScoreBtn" style="display:none;">Submit Score</button>
-          <div class="success-banner" id="submitSuccess">✓ Score submitted! It will be reviewed and published shortly.</div>
+    <div id="sec-submit" style="display:none">
+      <div class="form-card">
+        <div class="form-title">Submit a Score</div>
+        <div class="form-sub">Select the game, enter the final score, and upload a photo. All submissions are reviewed before publishing.</div>
+        <div class="form-grp">
+          <label class="form-lbl" for="gameSelect">Game</label>
+          <select class="fc" id="gameSelect"><option value="">— Select a game —</option></select>
         </div>
+        <div class="form-grp" id="scoreGrp" style="display:none">
+          <label class="form-lbl">Final Score</label>
+          <div class="score-row">
+            <span class="score-lbl" id="homeL">Home</span>
+            <input type="number" class="fc si" id="homeS" min="0" max="999" placeholder="0" inputmode="numeric">
+            <span class="dash">—</span>
+            <input type="number" class="fc si" id="awayS" min="0" max="999" placeholder="0" inputmode="numeric">
+            <span class="score-lbl r" id="awayL">Away</span>
+          </div>
+          <div class="err" id="scoreErr">Enter valid whole number scores (0–999).</div>
+        </div>
+        <div class="form-grp" id="photoGrp" style="display:none">
+          <label class="form-lbl">Game Photo</label>
+          <div class="file-drop" id="fileDrop">
+            <div class="drop-icon">📷</div>
+            <div class="drop-txt">Drop photo here or <strong>tap to browse</strong></div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+          </div>
+          <div class="fprev" id="fprev">
+            <img id="prevImg" src="" alt="">
+            <div class="fprev-name" id="prevName"></div>
+          </div>
+          <div class="err" id="photoErr">Please upload a game photo.</div>
+        </div>
+        <button class="sub-btn" id="subBtn" style="display:none">Submit Score</button>
+        <div class="success" id="successMsg">✓ Submitted! Your score will be reviewed and published shortly.</div>
       </div>
     </div>
 
-    <!-- LIVESTREAMS SECTION -->
-    <div id="section-livestreams" style="display:none;">
-      <div class="channel-list" id="channelList"></div>
+    <div id="sec-livestreams" style="display:none">
+      <div id="chList"></div>
     </div>
-
   </div>
 
-  <!-- RIGHT: SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-card">
-      <div class="sidebar-card-header">Rankings</div>
-      <iframe src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-" style="background:#fff;"></iframe>
+    <div class="sb-card">
+      <div class="sb-hdr">CIAC Rankings</div>
+      <iframe src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-" style="background:#fff"></iframe>
     </div>
-  </div>
-
-</div>
-
-<!-- ===== ADMIN MODAL ===== -->
-<div class="modal-overlay" id="adminModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">⚙ Admin Console</div>
-      <button class="modal-close" onclick="closeAdmin()">✕</button>
-    </div>
-
-    <!-- Lock Screen -->
-    <div id="adminLock" class="modal-body">
-      <div class="admin-lock">
-        <div class="admin-lock-title">Enter Admin PIN</div>
-        <div class="admin-pin-input" id="pinInputs">
-          <input type="password" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]">
-          <input type="password" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]">
-          <input type="password" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]">
-          <input type="password" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]">
-        </div>
-        <div class="pin-error" id="pinError">Incorrect PIN. Try again.</div>
-        <button class="unlock-btn" onclick="checkPin()">Unlock</button>
-      </div>
-    </div>
-
-    <!-- Admin Content (hidden until unlocked) -->
-    <div id="adminContent" style="display:none;">
-      <div class="modal-tabs">
-        <div class="modal-tab active" data-atab="master">Master Schedule</div>
-        <div class="modal-tab" data-atab="submissions">Submissions</div>
-      </div>
-
-      <!-- MASTER SCHEDULE TAB -->
-      <div class="modal-body" id="atab-master">
-        <div class="admin-section-title">
-          Scheduled Games
-          <button class="add-game-btn" onclick="toggleNewGameForm()">+ Add Game</button>
-        </div>
-
-        <!-- New Game Form -->
-        <div class="new-game-form" id="newGameForm">
-          <div class="ng-grid">
-            <div class="ng-group"><label>Header</label><input type="text" id="ng-header" placeholder="CIAC Boys Basketball"></div>
-            <div class="ng-group"><label>Home Team</label><input type="text" id="ng-home"></div>
-            <div class="ng-group"><label>Away Team</label><input type="text" id="ng-away"></div>
-            <div class="ng-group"><label>Home Rank</label><input type="text" id="ng-home-rank" placeholder="NR"></div>
-            <div class="ng-group"><label>Away Rank</label><input type="text" id="ng-away-rank" placeholder="NR"></div>
-            <div class="ng-group"><label>Home Record</label><input type="text" id="ng-home-rec" placeholder="0-0"></div>
-            <div class="ng-group"><label>Away Record</label><input type="text" id="ng-away-rec" placeholder="0-0"></div>
-            <div class="ng-group"><label>Date &amp; Time</label><input type="datetime-local" id="ng-datetime"></div>
-          </div>
-          <div class="ng-actions">
-            <button class="add-game-btn" onclick="addNewGame()">✓ Add to Schedule</button>
-            <button class="tbl-action-btn" onclick="toggleNewGameForm()">Cancel</button>
-          </div>
-        </div>
-
-        <div class="admin-table-wrap">
-          <table class="admin-tbl" id="masterTable">
-            <thead>
-              <tr>
-                <th>ID</th><th>Header</th><th>Home</th><th>Away</th>
-                <th>H Rank</th><th>A Rank</th><th>H Score</th><th>A Score</th>
-                <th>H Rec</th><th>A Rec</th><th>Date/Time</th>
-                <th>Caption</th><th>Status</th><th>IG Posted</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="masterTableBody"></tbody>
-          </table>
-        </div>
-
-        <div class="admin-save-bar">
-          <button class="export-btn" onclick="exportMasterCSV()">⬇ Export CSV</button>
-          <button class="save-btn" onclick="saveMasterChanges()">Save Changes</button>
-        </div>
-      </div>
-
-      <!-- SUBMISSIONS TAB -->
-      <div class="modal-body" id="atab-submissions" style="display:none;">
-        <div class="admin-section-title">Pending Score Submissions</div>
-        <div class="admin-table-wrap">
-          <table class="admin-tbl" id="submissionsTable">
-            <thead>
-              <tr>
-                <th>Sub ID</th><th>Game</th><th>Scores</th><th>Image</th>
-                <th>Submitted</th><th>Status</th><th>Admin Notes</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="submissionsTableBody"></tbody>
-          </table>
-        </div>
-        <div class="admin-save-bar">
-          <button class="export-btn" onclick="exportSubmissionsCSV()">⬇ Export CSV</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
 
-<!-- ===== SCRIPT ===== -->
 <script>
-// =============================================
-// DATA STORE (loaded from CSVs in production;
-// seeded here for demo — in a real deployment
-// master_games.csv and submitted_scores.csv
-// are fetched from the same origin)
-// =============================================
+let games=[], preds={};
+const uv=JSON.parse(sessionStorage.getItem("uv")||"{}");
+const vid=sessionStorage.getItem("vid")||(()=>{const i=Math.random().toString(36).slice(2);sessionStorage.setItem("vid",i);return i})();
 
-let masterGames = [];
-let submissions = [];
-let predictions = {}; // gameId -> { home: n, away: n }
-let userVotes = {}; // gameId -> 'home'|'away'
-
-// Admin PIN (change this!)
-const ADMIN_PIN = "2025";
-
-// Voter fingerprint (simple session-based)
-const VOTER_ID = Math.random().toString(36).slice(2);
-
-// =============================================
-// CSV PARSING
-// =============================================
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  const headers = lines[0].split(",").map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const vals = line.split(",").map(v => v.trim());
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = vals[i] || "");
-    return obj;
+function parseCSV(t){
+  const ls=t.split(/\r?\n/).filter(l=>l.trim());
+  const hs=ls[0].split(",").map(h=>h.trim());
+  return ls.slice(1).map(line=>{
+    const vs=csvSplit(line),o={};
+    hs.forEach((h,i)=>o[h]=(vs[i]||"").trim());
+    return o;
   });
 }
-
-function csvEscape(val) {
-  if (val == null) return "";
-  val = String(val);
-  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-    return '"' + val.replace(/"/g, '""') + '"';
+function csvSplit(l){
+  const r=[];let c="",q=false;
+  for(let i=0;i<l.length;i++){
+    if(l[i]==='"'){q=!q;continue}
+    if(l[i]===","&&!q){r.push(c);c="";continue}
+    c+=l[i];
   }
-  return val;
+  r.push(c);return r;
 }
 
-function toCSV(rows, headers) {
-  const lines = [headers.join(",")];
-  rows.forEach(row => {
-    lines.push(headers.map(h => csvEscape(row[h] || "")).join(","));
-  });
-  return lines.join("\n");
-}
-
-// =============================================
-// LOAD DATA
-// =============================================
-async function loadData() {
-  try {
-    const [mgRes, subRes, predRes] = await Promise.allSettled([
-      fetch("master_games.csv"),
-      fetch("submitted_scores.csv"),
-      fetch("predictions.csv")
-    ]);
-
-    if (mgRes.status === "fulfilled" && mgRes.value.ok) {
-      const text = await mgRes.value.text();
-      masterGames = parseCSV(text);
-    } else {
-      masterGames = getSeedGames();
+async function loadData(){
+  try{
+    const[mr,pr]=await Promise.allSettled([fetch("master_games.csv?"+Date.now()),fetch("predictions.csv?"+Date.now())]);
+    if(mr.status==="fulfilled"&&mr.value.ok){const t=await mr.value.text();games=parseCSV(t).filter(r=>r.game_id);}
+    else games=seed();
+    if(pr.status==="fulfilled"&&pr.value.ok){
+      const vs=parseCSV(await pr.value.text()).filter(r=>r.vote_id);
+      vs.forEach(v=>{if(!preds[v.game_id])preds[v.game_id]={home:0,away:0};preds[v.game_id][v.predicted_winner]==(preds[v.game_id][v.predicted_winner]||0)+1;if(v.predicted_winner==="home")preds[v.game_id].home++;else preds[v.game_id].away++;});
     }
+  }catch(e){games=seed();}
+  buildSel();
+  const today=new Date();
+  document.getElementById("gameDate").valueAsDate=today;
+  renderScores(today);renderTicker();
+}
 
-    if (subRes.status === "fulfilled" && subRes.value.ok) {
-      const text = await subRes.value.text();
-      submissions = parseCSV(text).filter(r => r.submission_id);
-    }
+function seed(){return[
+  {game_id:"g1",header:"CIAC Boys Basketball",home_team:"Daniel Hand",away_team:"Wilbur Cross",home_rank:"NR",away_rank:"NR",home_score:"59",away_score:"53",home_record:"10-12",away_record:"8-14",game_datetime:"03/04/2026 18:00:00",status:"final",caption:"FINAL"},
+  {game_id:"g2",header:"CIAC Boys Basketball",home_team:"Bristol Eastern",away_team:"Foran",home_rank:"NR",away_rank:"NR",home_score:"47",away_score:"50",home_record:"8-13",away_record:"9-13",game_datetime:"03/04/2026 18:30:00",status:"final",caption:"FINAL"},
+  {game_id:"g3",header:"CIAC Boys Basketball",home_team:"Staples",away_team:"Ridgefield",home_rank:"2",away_rank:"NR",home_score:"62",away_score:"48",home_record:"23-0",away_record:"17-6",game_datetime:"03/04/2026 19:30:00",status:"final",caption:"FINAL"},
+  {game_id:"g4",header:"CIAC Boys Basketball",home_team:"Shelton",away_team:"Amity Regional",home_rank:"NR",away_rank:"3",home_score:"",away_score:"",home_record:"14-8",away_record:"18-4",game_datetime:"03/06/2026 19:00:00",status:"scheduled",caption:""},
+  {game_id:"g5",header:"CIAC Boys Basketball",home_team:"Glastonbury",away_team:"South Windsor",home_rank:"1",away_rank:"NR",home_score:"",away_score:"",home_record:"20-2",away_record:"16-6",game_datetime:"03/06/2026 19:30:00",status:"scheduled",caption:""},
+];}
 
-    if (predRes.status === "fulfilled" && predRes.value.ok) {
-      const text = await predRes.value.text();
-      const votes = parseCSV(text).filter(r => r.vote_id);
-      votes.forEach(v => {
-        if (!predictions[v.game_id]) predictions[v.game_id] = { home: 0, away: 0 };
-        if (v.predicted_winner === "home") predictions[v.game_id].home++;
-        else predictions[v.game_id].away++;
-      });
-    }
+function parseGD(s){
+  if(!s)return null;s=s.trim();
+  const[dp,tp="00:00"]=s.split(" ");
+  const[m,d,y]=dp.split("/");const[h,mn]=tp.split(":");
+  return new Date(+y,+m-1,+d,+h,+mn);
+}
+function tds(d){return d.toISOString().slice(0,10)}
+function fmtT(d){let h=d.getHours(),m=d.getMinutes(),ap=h>=12?"PM":"AM";h=h%12||12;return`${h}:${m.toString().padStart(2,"0")} ${ap}`}
+function voteOpen(g){
+  if(g.status!=="scheduled")return false;
+  const gt=parseGD(g.game_datetime);if(!gt)return false;
+  const now=new Date();return now>=new Date(gt-48*3600000)&&now<gt;
+}
 
-  } catch (e) {
-    masterGames = getSeedGames();
+function renderScores(date){
+  const ctr=document.getElementById("scoresCtr");ctr.innerHTML="";
+  const ds=tds(date);
+  const gs=games.filter(g=>{const d=parseGD(g.game_datetime);return d&&tds(d)===ds;});
+  if(!gs.length){ctr.innerHTML=`<div class="no-games">No games scheduled for this date.</div>`;return;}
+  const hdr=document.createElement("div");hdr.className="date-hdr";
+  hdr.textContent=date.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  ctr.appendChild(hdr);
+  gs.forEach(g=>renderCard(g,ctr));
+}
+
+function renderCard(g,ctr){
+  const fin=g.status==="final";
+  const hs=parseInt(g.home_score)||0,as=parseInt(g.away_score)||0;
+  const hw=fin&&hs>as,aw=fin&&as>hs;
+  const gd=parseGD(g.game_datetime);
+  const vo=voteOpen(g);
+  const p=preds[g.game_id]||{home:0,away:0};
+  const tot=p.home+p.away;
+  const hp=tot?Math.round(p.home/tot*100):50,ap=100-hp;
+
+  const card=document.createElement("div");
+  card.className="game-card"+(g.status==="scheduled"?" sched":"");
+  card.dataset.gid=g.game_id;
+
+  const hr=g.home_rank&&g.home_rank!=="NR"?`<span class="rank-b">#${g.home_rank}</span>`:"";
+  const ar=g.away_rank&&g.away_rank!=="NR"?`<span class="rank-b">#${g.away_rank}</span>`:"";
+
+  let ctr2="";
+  if(fin){
+    const cap=g.caption?`<div class="cap-b">${g.caption}</div>`:"";
+    ctr2=`<div class="scores-row"><div class="score-n ${hw?"W":"L"}">${hs}</div><div class="score-div">Final</div><div class="score-n ${aw?"W":"L"}">${as}</div></div>${cap}`;
+  }else{
+    ctr2=`<div class="time-b">${gd?fmtT(gd):"TBD"}</div><div class="sport-sub">${g.header||""}</div>`;
   }
 
-  buildGameSelect();
-  renderScores(new Date());
-  renderTicker();
-}
+  card.innerHTML=`<div class="card-inner">
+    <div class="team-col"><div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${g.home_team}</div><div class="team-rec">${g.home_record||""}</div></div>
+    <div class="score-ctr">${ctr2}</div>
+    <div class="team-col right"><div class="team-name ${aw?"W":hw?"L":"N"}">${g.away_team}${ar}</div><div class="team-rec">${g.away_record||""}</div></div>
+  </div>`;
 
-function getSeedGames() {
-  return [
-    { game_id:"game_001", header:"CIAC Boys Basketball", home_team:"Daniel Hand", away_team:"Wilbur Cross", home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", home_record:"10-12", away_record:"8-14", game_datetime:"03/04/2026 18:00:00", status:"final", posted_to_instagram:"false", caption:"FINAL" },
-    { game_id:"game_002", header:"CIAC Boys Basketball", home_team:"Bristol Eastern", away_team:"Foran", home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", home_record:"8-13", away_record:"9-13", game_datetime:"03/04/2026 18:30:00", status:"final", posted_to_instagram:"false", caption:"FINAL" },
-    { game_id:"game_003", header:"CIAC Boys Basketball", home_team:"Old Lyme", away_team:"Cromwell", home_rank:"NR", away_rank:"NR", home_score:"58", away_score:"42", home_record:"21-2", away_record:"19-4", game_datetime:"03/04/2026 19:00:00", status:"final", posted_to_instagram:"false", caption:"BELT" },
-    { game_id:"game_004", header:"CIAC Boys Basketball", home_team:"Staples", away_team:"Ridgefield", home_rank:"2", away_rank:"NR", home_score:"62", away_score:"48", home_record:"23-0", away_record:"17-6", game_datetime:"03/04/2026 19:30:00", status:"final", posted_to_instagram:"false", caption:"FINAL" },
-    { game_id:"game_005", header:"CIAC Boys Basketball", home_team:"Abbott Tech", away_team:"Grasso Tech", home_rank:"NR", away_rank:"NR", home_score:"58", away_score:"55", home_record:"19-4", away_record:"19-4", game_datetime:"03/04/2026 19:00:00", status:"final", posted_to_instagram:"false", caption:"FINAL" },
-    { game_id:"game_006", header:"CIAC Boys Basketball", home_team:"Shelton", away_team:"Amity Regional", home_rank:"NR", away_rank:"3", home_score:"", away_score:"", home_record:"14-8", away_record:"18-4", game_datetime:"03/06/2026 19:00:00", status:"scheduled", posted_to_instagram:"false", caption:"" },
-    { game_id:"game_007", header:"CIAC Boys Basketball", home_team:"Glastonbury", away_team:"South Windsor", home_rank:"1", away_rank:"NR", home_score:"", away_score:"", home_record:"20-2", away_record:"16-6", game_datetime:"03/06/2026 19:30:00", status:"scheduled", posted_to_instagram:"false", caption:"" },
-    { game_id:"game_008", header:"CIAC Girls Basketball", home_team:"Mercy", away_team:"Guilford", home_rank:"NR", away_rank:"NR", home_score:"", away_score:"", home_record:"12-10", away_record:"14-8", game_datetime:"03/07/2026 18:00:00", status:"scheduled", posted_to_instagram:"false", caption:"" },
-  ];
-}
-
-// =============================================
-// DATE HELPERS
-// =============================================
-function parseGameDate(str) {
-  if (!str) return null;
-  str = str.trim();
-  const [datePart, timePart] = str.split(" ");
-  const [month, day, year] = datePart.split("/");
-  const [hours, minutes] = (timePart || "00:00").split(":");
-  return new Date(year, month - 1, day, hours, minutes);
-}
-
-function toDateStr(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function formatTime(date) {
-  let h = date.getHours(), m = date.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${m.toString().padStart(2, "0")} ${ampm}`;
-}
-
-// =============================================
-// VOTE WINDOW: open 48h before, close at start
-// =============================================
-function isVoteOpen(game) {
-  if (game.status !== "scheduled") return false;
-  const gameTime = parseGameDate(game.game_datetime);
-  if (!gameTime) return false;
-  const now = new Date();
-  const openTime = new Date(gameTime.getTime() - 48 * 60 * 60 * 1000);
-  return now >= openTime && now < gameTime;
-}
-
-// =============================================
-// RENDER SCORES
-// =============================================
-function renderScores(selectedDate) {
-  const container = document.getElementById("scoresContainer");
-  container.innerHTML = "";
-  const dateStr = toDateStr(selectedDate);
-
-  const games = masterGames.filter(g => {
-    if (!g.game_datetime) return false;
-    const d = parseGameDate(g.game_datetime);
-    return d && toDateStr(d) === dateStr;
-  });
-
-  if (!games.length) {
-    container.innerHTML = `<div class="no-games">No games scheduled for this date.</div>`;
-    return;
-  }
-
-  const header = document.createElement("div");
-  header.className = "game-date-header";
-  header.textContent = selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  container.appendChild(header);
-
-  games.forEach(g => renderGameCard(g, container));
-}
-
-function renderGameCard(g, container) {
-  const isFinal = g.status === "final";
-  const hs = parseInt(g.home_score) || 0;
-  const as = parseInt(g.away_score) || 0;
-  const homeWon = isFinal && hs > as;
-  const awayWon = isFinal && as > hs;
-  const gDate = parseGameDate(g.game_datetime);
-  const voteOpen = isVoteOpen(g);
-
-  // Build vote data
-  const pred = predictions[g.game_id] || { home: 0, away: 0 };
-  const totalVotes = pred.home + pred.away;
-  const homePct = totalVotes ? Math.round((pred.home / totalVotes) * 100) : 50;
-  const awayPct = 100 - homePct;
-
-  const card = document.createElement("div");
-  card.className = `game-card ${g.status}`;
-  card.dataset.gameId = g.game_id;
-
-  let captionHtml = "";
-  if (g.caption && isFinal) captionHtml = `<div class="caption-badge">${g.caption}</div>`;
-
-  const homeRankHtml = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-badge">#${g.home_rank}</span> ` : "";
-  const awayRankHtml = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-badge">#${g.away_rank}</span> ` : "";
-
-  let centerHtml = "";
-  if (isFinal) {
-    centerHtml = `
-      <div class="scores-row">
-        <div class="score-num ${homeWon ? 'winner' : 'loser'}">${hs}</div>
-        <div class="score-divider">Final</div>
-        <div class="score-num ${awayWon ? 'winner' : 'loser'}">${as}</div>
-      </div>
-      ${captionHtml}`;
-  } else {
-    centerHtml = `
-      <div class="time-badge">${gDate ? formatTime(gDate) : "TBD"}</div>
-      <div style="font-family:var(--font-display);font-size:0.7rem;color:var(--gray);letter-spacing:1px;margin-top:4px;text-transform:uppercase;">${g.header}</div>`;
-  }
-
-  card.innerHTML = `
-    <div class="game-card-inner">
-      <div class="team-col left-team">
-        <div class="team-name ${homeWon ? 'winner' : awayWon ? 'loser' : ''}">${homeRankHtml}${g.home_team}</div>
-        <div class="team-record">${g.home_record}</div>
-      </div>
-      <div class="score-center">${centerHtml}</div>
-      <div class="team-col right-team">
-        <div class="team-name ${awayWon ? 'winner' : homeWon ? 'loser' : ''}">${awayRankHtml}${g.away_team}</div>
-        <div class="team-record">${g.away_record}</div>
-      </div>
-    </div>`;
-
-  // Vote strip
-  if (voteOpen || (g.status === "scheduled" && totalVotes > 0)) {
-    const userVote = userVotes[g.game_id];
-    const voteStrip = document.createElement("div");
-    voteStrip.className = "vote-strip";
-    voteStrip.innerHTML = `
-      <span class="vote-label">🗳 Predict</span>
+  if(vo||(g.status==="scheduled"&&tot>0)){
+    const uvc=uv[g.game_id];
+    const hs2=g.home_team.split(" ").pop(),as2=g.away_team.split(" ").pop();
+    const vs=document.createElement("div");vs.className="vote-strip";
+    vs.innerHTML=`<span class="vote-lbl">🗳 Pick</span>
       <div class="vote-bars">
-        <div class="vote-team-label" style="text-align:right">${g.home_team.split(" ").pop()}</div>
-        <div class="bar-track">
-          <div class="bar-home" style="width:${homePct}%"></div>
-          <div class="bar-away" style="width:${awayPct}%"></div>
-        </div>
-        <div class="vote-team-label">${g.away_team.split(" ").pop()}</div>
+        <div class="vote-team-lbl">${hs2}</div>
+        <div class="bar-track"><div class="bar-h" style="width:${hp}%"></div><div class="bar-a" style="width:${ap}%"></div></div>
+        <div class="vote-team-lbl" style="text-align:right">${as2}</div>
       </div>
-      <div class="vote-pcts">${homePct}% — ${awayPct}%</div>
-      ${voteOpen ? `
-        <button class="vote-btn ${userVote === 'home' ? 'voted-home' : ''}" onclick="castVote('${g.game_id}', 'home')" id="vbh-${g.game_id}">${g.home_team.split(" ").pop()}</button>
-        <button class="vote-btn ${userVote === 'away' ? 'voted-away' : ''}" onclick="castVote('${g.game_id}', 'away')" id="vba-${g.game_id}">${g.away_team.split(" ").pop()}</button>
-      ` : `<div style="font-family:var(--font-display);font-size:0.7rem;color:var(--gray);letter-spacing:1px;">${totalVotes} VOTES</div>`}
-    `;
-    card.appendChild(voteStrip);
+      <div class="vote-pcts">${hp}%–${ap}%</div>
+      ${vo?`<button class="vote-btn${uvc==="home"?" vh":""}" onclick="vote('${g.game_id}','home')">${hs2}</button><button class="vote-btn${uvc==="away"?" va":""}" onclick="vote('${g.game_id}','away')">${as2}</button>`:`<span style="font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px">${tot} VOTES</span>`}`;
+    card.appendChild(vs);
   }
-
-  container.appendChild(card);
+  ctr.appendChild(card);
 }
 
-// =============================================
-// VOTING
-// =============================================
-function castVote(gameId, team) {
-  if (userVotes[gameId]) {
-    // Already voted — change vote
-    const old = userVotes[gameId];
-    predictions[gameId][old]--;
-  } else {
-    if (!predictions[gameId]) predictions[gameId] = { home: 0, away: 0 };
-  }
-  userVotes[gameId] = team;
-  predictions[gameId][team]++;
-
-  // Persist vote to CSV (append via GitHub Actions in production;
-  // here we store in sessionStorage as a fallback)
-  const voteRecord = {
-    vote_id: "v_" + Date.now(),
-    game_id: gameId,
-    predicted_winner: team,
-    voted_at: new Date().toISOString(),
-    voter_fingerprint: VOTER_ID
-  };
-  const stored = JSON.parse(sessionStorage.getItem("pendingVotes") || "[]");
-  stored.push(voteRecord);
-  sessionStorage.setItem("pendingVotes", JSON.stringify(stored));
-
-  // Re-render card in place
-  const card = document.querySelector(`[data-game-id="${gameId}"]`);
-  if (card) {
-    const game = masterGames.find(g => g.game_id === gameId);
-    const parent = card.parentElement;
-    card.remove();
-    // Quick re-render trick: insert new card before next sibling
-    const tmpContainer = document.createElement("div");
-    renderGameCard(game, tmpContainer);
-    parent.insertBefore(tmpContainer.firstChild, parent.children[Array.from(parent.children).findIndex(c => c.className === "no-games") >= 0 ? 0 : parent.children.length]);
-  }
+function vote(gid,team){
+  if(!preds[gid])preds[gid]={home:0,away:0};
+  const prev=uv[gid];
+  if(prev)preds[gid][prev]--;
+  uv[gid]=team;preds[gid][team]++;
+  sessionStorage.setItem("uv",JSON.stringify(uv));
+  const old=document.querySelector(`[data-gid="${gid}"]`);
+  if(old){const g=games.find(x=>x.game_id===gid);const p=old.parentElement;const n=old.nextSibling;old.remove();const t=document.createElement("div");renderCard(g,t);p.insertBefore(t.firstChild,n);}
 }
 
-// =============================================
-// TICKER
-// =============================================
-function renderTicker() {
-  const ticker = document.getElementById("scoreTicker");
-  ticker.innerHTML = "";
-  const todayStr = toDateStr(new Date());
-  const todayGames = masterGames.filter(g => {
-    if (!g.game_datetime || g.status !== "final") return false;
-    const d = parseGameDate(g.game_datetime);
-    return d && toDateStr(d) === todayStr;
-  });
-
-  if (!todayGames.length) {
-    // Show upcoming
-    masterGames.filter(g => g.status === "scheduled").slice(0, 4).forEach(g => {
-      const item = document.createElement("div");
-      item.className = "ticker-item";
-      const d = parseGameDate(g.game_datetime);
-      item.textContent = `${g.home_team} vs ${g.away_team} — ${d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "TBD"}`;
-      ticker.appendChild(item);
-    });
-  } else {
-    todayGames.forEach(g => {
-      const hs = parseInt(g.home_score), as = parseInt(g.away_score);
-      const item = document.createElement("div");
-      item.className = "ticker-item";
-      item.innerHTML = `<span class="${hs > as ? 'winner' : ''}">${g.home_team}</span> ${hs} — ${as} <span class="${as > hs ? 'winner' : ''}">${g.away_team}</span>`;
-      ticker.appendChild(item);
-      // duplicate for seamless loop
-    });
-    ticker.innerHTML += ticker.innerHTML;
-  }
-}
-
-// =============================================
-// TAB SWITCHING
-// =============================================
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const section = tab.dataset.section;
-    document.getElementById("section-scores").style.display = section === "scores" ? "block" : "none";
-    document.getElementById("section-submit").style.display = section === "submit" ? "block" : "none";
-    document.getElementById("section-livestreams").style.display = section === "livestreams" ? "block" : "none";
-    if (section === "livestreams") renderLivestreams();
-  });
-});
-
-// ===== Date picker =====
-const dateInput = document.getElementById("gameDate");
-dateInput.valueAsDate = new Date();
-dateInput.addEventListener("change", e => {
-  const [y, m, d] = e.target.value.split("-").map(Number);
-  renderScores(new Date(y, m - 1, d));
-});
-
-// =============================================
-// GAME SELECT FOR SUBMISSION
-// =============================================
-function buildGameSelect() {
-  const sel = document.getElementById("gameSelect");
-  sel.innerHTML = `<option value="">— Select a game —</option>`;
-  masterGames
-    .filter(g => g.status === "scheduled" || g.status === "final")
-    .forEach(g => {
-      const d = parseGameDate(g.game_datetime);
-      const dateStr = d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-      const opt = document.createElement("option");
-      opt.value = g.game_id;
-      opt.textContent = `${dateStr} — ${g.home_team} vs ${g.away_team}`;
-      sel.appendChild(opt);
-    });
-}
-
-document.getElementById("gameSelect").addEventListener("change", e => {
-  const gameId = e.target.value;
-  const show = !!gameId;
-  document.getElementById("scoreInputGroup").style.display = show ? "block" : "none";
-  document.getElementById("imageUploadGroup").style.display = show ? "block" : "none";
-  document.getElementById("submitScoreBtn").style.display = show ? "block" : "none";
-  if (gameId) {
-    const g = masterGames.find(x => x.game_id === gameId);
-    if (g) {
-      document.getElementById("homeTeamLabel").textContent = g.home_team;
-      document.getElementById("awayTeamLabel").textContent = g.away_team;
+// TICKER — today's games only
+function renderTicker(){
+  const tk=document.getElementById("ticker");tk.innerHTML="";
+  const ds=tds(new Date());
+  const tg=games.filter(g=>{const d=parseGD(g.game_datetime);return d&&tds(d)===ds;});
+  if(!tg.length)return;
+  const items=tg.map(g=>{
+    const el=document.createElement("div");el.className="ticker-item";
+    if(g.status==="final"){
+      const hs=parseInt(g.home_score)||0,as=parseInt(g.away_score)||0;
+      el.innerHTML=`<span class="${hs>as?"tw":""}">${g.home_team}</span> ${hs} — ${as} <span class="${as>hs?"tw":""}">${g.away_team}</span>`;
+    }else{
+      const d=parseGD(g.game_datetime);
+      el.innerHTML=`<span class="upc">${g.home_team} vs ${g.away_team}${d?" "+fmtT(d):""}</span>`;
     }
-  }
-});
-
-// =============================================
-// FILE DROP
-// =============================================
-const fileDrop = document.getElementById("fileDrop");
-const fileInput = document.getElementById("fileInput");
-let selectedFile = null;
-
-fileDrop.addEventListener("click", () => fileInput.click());
-fileDrop.addEventListener("dragover", e => { e.preventDefault(); fileDrop.classList.add("drag-over"); });
-fileDrop.addEventListener("dragleave", () => fileDrop.classList.remove("drag-over"));
-fileDrop.addEventListener("drop", e => {
-  e.preventDefault();
-  fileDrop.classList.remove("drag-over");
-  handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
-
-function handleFile(file) {
-  if (!file || !file.type.startsWith("image/")) {
-    document.getElementById("imageError").classList.add("show");
-    return;
-  }
-  document.getElementById("imageError").classList.remove("show");
-  selectedFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById("previewImg").src = e.target.result;
-    document.getElementById("previewName").textContent = file.name;
-    document.getElementById("filePreview").style.display = "block";
-  };
-  reader.readAsDataURL(file);
+    return el;
+  });
+  // Duplicate for seamless loop
+  [...items,...items.map(i=>i.cloneNode(true))].forEach(i=>tk.appendChild(i));
 }
 
-// =============================================
-// SUBMISSION VALIDATION & SAVE
-// =============================================
-document.getElementById("submitScoreBtn").addEventListener("click", () => {
-  let valid = true;
-
-  // Validate scores
-  const hs = document.getElementById("homeScoreInput").value;
-  const as = document.getElementById("awayScoreInput").value;
-  const hsNum = parseInt(hs), asNum = parseInt(as);
-  const scoreErr = document.getElementById("scoreError");
-  if (hs === "" || as === "" || isNaN(hsNum) || isNaN(asNum) || hsNum < 0 || asNum < 0 || hsNum > 999 || asNum > 999 || !Number.isInteger(hsNum) || !Number.isInteger(asNum)) {
-    scoreErr.classList.add("show");
-    valid = false;
-  } else {
-    scoreErr.classList.remove("show");
-  }
-
-  // Validate image
-  const imgErr = document.getElementById("imageError");
-  if (!selectedFile) {
-    imgErr.textContent = "Please upload a game photo.";
-    imgErr.classList.add("show");
-    valid = false;
-  } else {
-    imgErr.classList.remove("show");
-  }
-
-  if (!valid) return;
-
-  const gameId = document.getElementById("gameSelect").value;
-  const subId = "sub_" + Date.now();
-  const sub = {
-    submission_id: subId,
-    game_id: gameId,
-    home_score: hsNum,
-    away_score: asNum,
-    image_url: "[uploaded]:" + selectedFile.name,
-    submitter_note: "",
-    submitted_at: new Date().toISOString(),
-    status: "pending",
-    admin_notes: ""
-  };
-
-  submissions.push(sub);
-  const stored = JSON.parse(sessionStorage.getItem("pendingSubmissions") || "[]");
-  stored.push(sub);
-  sessionStorage.setItem("pendingSubmissions", JSON.stringify(stored));
-
-  document.getElementById("submitSuccess").classList.add("show");
-  document.getElementById("submitScoreBtn").disabled = true;
-  setTimeout(() => {
-    document.getElementById("submitSuccess").classList.remove("show");
-    document.getElementById("submitScoreBtn").disabled = false;
-    document.getElementById("gameSelect").value = "";
-    document.getElementById("homeScoreInput").value = "";
-    document.getElementById("awayScoreInput").value = "";
-    document.getElementById("filePreview").style.display = "none";
-    selectedFile = null;
-    document.getElementById("scoreInputGroup").style.display = "none";
-    document.getElementById("imageUploadGroup").style.display = "none";
-    document.getElementById("submitScoreBtn").style.display = "none";
-  }, 4000);
+// TABS
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    const s=t.dataset.s;
+    ["scores","submit","livestreams"].forEach(id=>document.getElementById("sec-"+id).style.display=id===s?"block":"none");
+    if(s==="livestreams")renderLive();
+  });
 });
 
-// =============================================
-// LIVESTREAMS
-// =============================================
-const channels = [
-  { name: "Staples Boys Basketball", url: "https://www.youtube.com/@staplesboysbasketball" },
-  { name: "The Day CT", url: "https://www.youtube.com/@thedayct" },
-  { name: "TB860LIVE", url: "https://www.youtube.com/@TB860LIVE" },
-  { name: "WHCI", url: "https://www.youtube.com/@whci" },
-  { name: "Newington High School", url: "https://www.youtube.com/@NewingtonHighSchool605" },
-  { name: "Project Purple Sports", url: "https://www.youtube.com/@ProjectPurpleSports" },
-  { name: "Waterbury Public Schools", url: "https://www.youtube.com/@waterburypublicschoolsathl9870" }
+const di=document.getElementById("gameDate");
+di.addEventListener("change",e=>{const[y,m,d]=e.target.value.split("-").map(Number);renderScores(new Date(y,m-1,d));});
+
+function buildSel(){
+  const sel=document.getElementById("gameSelect");
+  sel.innerHTML=`<option value="">— Select a game —</option>`;
+  games.forEach(g=>{
+    const d=parseGD(g.game_datetime);
+    const ds=d?d.toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
+    const o=document.createElement("option");o.value=g.game_id;
+    o.textContent=`${ds} — ${g.home_team} vs ${g.away_team}`;sel.appendChild(o);
+  });
+}
+
+document.getElementById("gameSelect").addEventListener("change",e=>{
+  const gid=e.target.value;const show=!!gid;
+  ["scoreGrp","photoGrp"].forEach(id=>document.getElementById(id).style.display=show?"block":"none");
+  document.getElementById("subBtn").style.display=show?"block":"none";
+  if(gid){const g=games.find(x=>x.game_id===gid);if(g){document.getElementById("homeL").textContent=g.home_team;document.getElementById("awayL").textContent=g.away_team;}}
+});
+
+// File drop
+let selFile=null;
+const fd=document.getElementById("fileDrop"),fi=document.getElementById("fileInput");
+fd.addEventListener("click",()=>fi.click());
+fd.addEventListener("dragover",e=>{e.preventDefault();fd.classList.add("dov")});
+fd.addEventListener("dragleave",()=>fd.classList.remove("dov"));
+fd.addEventListener("drop",e=>{e.preventDefault();fd.classList.remove("dov");hf(e.dataTransfer.files[0])});
+fi.addEventListener("change",e=>hf(e.target.files[0]));
+function hf(f){
+  if(!f||!f.type.startsWith("image/")){document.getElementById("photoErr").classList.add("show");return;}
+  document.getElementById("photoErr").classList.remove("show");selFile=f;
+  const r=new FileReader();r.onload=e=>{document.getElementById("prevImg").src=e.target.result;document.getElementById("prevName").textContent=f.name;document.getElementById("fprev").style.display="block";};r.readAsDataURL(f);
+}
+
+document.getElementById("subBtn").addEventListener("click",()=>{
+  let ok=true;
+  const hs=document.getElementById("homeS").value,as=document.getElementById("awayS").value;
+  const se=document.getElementById("scoreErr");
+  if(!hs||!as||isNaN(+hs)||isNaN(+as)||!Number.isInteger(+hs)||!Number.isInteger(+as)||+hs<0||+as<0||+hs>999||+as>999){se.classList.add("show");ok=false;}else se.classList.remove("show");
+  const pe=document.getElementById("photoErr");
+  if(!selFile){pe.classList.add("show");ok=false;}else pe.classList.remove("show");
+  if(!ok)return;
+  const gid=document.getElementById("gameSelect").value;
+  const sub={submission_id:"sub_"+Date.now(),game_id:gid,home_score:+hs,away_score:+as,image_url:"[uploaded]:"+selFile.name,submitter_note:"",submitted_at:new Date().toISOString(),status:"pending",admin_notes:""};
+  const p=JSON.parse(sessionStorage.getItem("ps")||"[]");p.push(sub);sessionStorage.setItem("ps",JSON.stringify(p));
+  const btn=document.getElementById("subBtn");btn.disabled=true;
+  document.getElementById("successMsg").classList.add("show");
+  setTimeout(()=>{
+    document.getElementById("successMsg").classList.remove("show");btn.disabled=false;
+    document.getElementById("gameSelect").value="";document.getElementById("homeS").value="";document.getElementById("awayS").value="";
+    document.getElementById("fprev").style.display="none";selFile=null;
+    ["scoreGrp","photoGrp","subBtn"].forEach(id=>document.getElementById(id).style.display="none");
+  },4000);
+});
+
+// Livestreams
+const channels=[
+  {name:"Staples Boys Basketball",url:"https://www.youtube.com/@staplesboysbasketball"},
+  {name:"The Day CT",url:"https://www.youtube.com/@thedayct"},
+  {name:"TB860LIVE",url:"https://www.youtube.com/@TB860LIVE"},
+  {name:"WHCI",url:"https://www.youtube.com/@whci"},
+  {name:"Newington High School",url:"https://www.youtube.com/@NewingtonHighSchool605"},
+  {name:"Project Purple Sports",url:"https://www.youtube.com/@ProjectPurpleSports"},
+  {name:"Waterbury Public Schools",url:"https://www.youtube.com/@waterburypublicschoolsathl9870"}
 ];
-
-function renderLivestreams() {
-  const list = document.getElementById("channelList");
-  list.innerHTML = "";
-  channels.forEach(ch => {
-    const row = document.createElement("div");
-    row.style.cssText = "display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:10px;gap:16px;";
-    row.innerHTML = `
-      <div style="flex:1;">
-        <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">${ch.name}</div>
-        <div style="font-size:0.8rem;color:var(--gray);">YouTube</div>
-      </div>
-      <a href="${ch.url}" target="_blank" style="background:var(--blue-bright);color:white;font-family:var(--font-display);font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 16px;border-radius:5px;text-decoration:none;">Watch</a>`;
-    list.appendChild(row);
+function renderLive(){
+  const l=document.getElementById("chList");l.innerHTML="";
+  channels.forEach(ch=>{
+    const r=document.createElement("div");r.className="ch-row";
+    r.innerHTML=`<div class="ch-info"><div class="ch-name">${ch.name}</div><div class="ch-sub">YouTube</div></div><a class="watch-btn" href="${ch.url}" target="_blank" rel="noopener">Watch</a>`;
+    l.appendChild(r);
   });
 }
 
-// =============================================
-// ADMIN MODAL
-// =============================================
-let adminUnlocked = false;
+setInterval(()=>{const v=document.getElementById("gameDate").value;if(v){const[y,m,d]=v.split("-").map(Number);renderScores(new Date(y,m-1,d));}renderTicker();},120000);
 
-function openAdmin() {
-  document.getElementById("adminModal").classList.add("open");
-  if (!adminUnlocked) {
-    document.getElementById("adminLock").style.display = "block";
-    document.getElementById("adminContent").style.display = "none";
-  }
-}
-
-function closeAdmin() {
-  document.getElementById("adminModal").classList.remove("open");
-  // Clear PIN fields
-  document.querySelectorAll(".pin-digit").forEach(i => i.value = "");
-  document.getElementById("pinError").classList.remove("show");
-}
-
-// PIN auto-advance
-document.querySelectorAll(".pin-digit").forEach((input, idx, all) => {
-  input.addEventListener("input", () => {
-    if (input.value.length === 1 && idx < all.length - 1) all[idx + 1].focus();
-    if (input.value.length === 1 && idx === all.length - 1) checkPin();
-  });
-  input.addEventListener("keydown", e => {
-    if (e.key === "Backspace" && !input.value && idx > 0) all[idx - 1].focus();
-  });
-});
-
-function checkPin() {
-  const pin = Array.from(document.querySelectorAll(".pin-digit")).map(i => i.value).join("");
-  if (pin === ADMIN_PIN) {
-    adminUnlocked = true;
-    document.getElementById("adminLock").style.display = "none";
-    document.getElementById("adminContent").style.display = "block";
-    renderMasterTable();
-    renderSubmissionsTable();
-  } else {
-    document.getElementById("pinError").classList.add("show");
-    document.querySelectorAll(".pin-digit").forEach(i => i.value = "");
-    document.querySelector(".pin-digit").focus();
-  }
-}
-
-document.querySelectorAll(".modal-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const which = tab.dataset.atab;
-    document.getElementById("atab-master").style.display = which === "master" ? "block" : "none";
-    document.getElementById("atab-submissions").style.display = which === "submissions" ? "block" : "none";
-  });
-});
-
-// =============================================
-// MASTER TABLE RENDER
-// =============================================
-function renderMasterTable() {
-  const tbody = document.getElementById("masterTableBody");
-  tbody.innerHTML = "";
-  masterGames.forEach((g, idx) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td style="color:var(--gray);font-size:0.72rem;">${g.game_id}</td>
-      <td><input value="${g.header || ""}" onchange="masterGames[${idx}].header=this.value" style="min-width:160px;"></td>
-      <td><input value="${g.home_team || ""}" onchange="masterGames[${idx}].home_team=this.value"></td>
-      <td><input value="${g.away_team || ""}" onchange="masterGames[${idx}].away_team=this.value"></td>
-      <td><input value="${g.home_rank || ""}" style="width:50px;" onchange="masterGames[${idx}].home_rank=this.value"></td>
-      <td><input value="${g.away_rank || ""}" style="width:50px;" onchange="masterGames[${idx}].away_rank=this.value"></td>
-      <td><input type="number" value="${g.home_score || ""}" style="width:60px;" onchange="masterGames[${idx}].home_score=this.value" min="0"></td>
-      <td><input type="number" value="${g.away_score || ""}" style="width:60px;" onchange="masterGames[${idx}].away_score=this.value" min="0"></td>
-      <td><input value="${g.home_record || ""}" style="width:60px;" onchange="masterGames[${idx}].home_record=this.value"></td>
-      <td><input value="${g.away_record || ""}" style="width:60px;" onchange="masterGames[${idx}].away_record=this.value"></td>
-      <td><input value="${g.game_datetime || ""}" style="min-width:140px;" onchange="masterGames[${idx}].game_datetime=this.value"></td>
-      <td><input value="${g.caption || ""}" style="min-width:80px;" onchange="masterGames[${idx}].caption=this.value"></td>
-      <td>
-        <select onchange="masterGames[${idx}].status=this.value">
-          <option value="scheduled" ${g.status==="scheduled"?"selected":""}>Scheduled</option>
-          <option value="final" ${g.status==="final"?"selected":""}>Final</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="masterGames[${idx}].posted_to_instagram=this.value">
-          <option value="false" ${g.posted_to_instagram!=="true"?"selected":""}>No</option>
-          <option value="true" ${g.posted_to_instagram==="true"?"selected":""}>Yes</option>
-        </select>
-      </td>
-      <td>
-        <button class="tbl-action-btn danger" onclick="deleteGame(${idx})">Delete</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function deleteGame(idx) {
-  if (confirm("Delete this game?")) {
-    masterGames.splice(idx, 1);
-    renderMasterTable();
-  }
-}
-
-let newGameFormOpen = false;
-function toggleNewGameForm() {
-  newGameFormOpen = !newGameFormOpen;
-  document.getElementById("newGameForm").classList.toggle("open", newGameFormOpen);
-}
-
-function addNewGame() {
-  const get = id => document.getElementById(id).value.trim();
-  const homeTeam = get("ng-home"), awayTeam = get("ng-away");
-  if (!homeTeam || !awayTeam) { alert("Home and away team are required."); return; }
-
-  const dtRaw = get("ng-datetime");
-  let dtFormatted = "";
-  if (dtRaw) {
-    const dt = new Date(dtRaw);
-    dtFormatted = `${(dt.getMonth()+1).toString().padStart(2,"0")}/${dt.getDate().toString().padStart(2,"0")}/${dt.getFullYear()} ${dt.getHours().toString().padStart(2,"0")}:${dt.getMinutes().toString().padStart(2,"0")}:00`;
-  }
-
-  const newId = "game_" + String(masterGames.length + 1).padStart(3, "0") + "_" + Date.now();
-  masterGames.push({
-    game_id: newId,
-    header: get("ng-header") || "CIAC Sports",
-    home_team: homeTeam,
-    away_team: awayTeam,
-    home_rank: get("ng-home-rank") || "NR",
-    away_rank: get("ng-away-rank") || "NR",
-    home_score: "",
-    away_score: "",
-    home_record: get("ng-home-rec"),
-    away_record: get("ng-away-rec"),
-    game_datetime: dtFormatted,
-    status: "scheduled",
-    posted_to_instagram: "false",
-    caption: ""
-  });
-
-  ["ng-header","ng-home","ng-away","ng-home-rank","ng-away-rank","ng-home-rec","ng-away-rec","ng-datetime"]
-    .forEach(id => document.getElementById(id).value = "");
-
-  toggleNewGameForm();
-  renderMasterTable();
-  buildGameSelect();
-}
-
-function saveMasterChanges() {
-  exportMasterCSV();
-  alert("Changes exported as CSV. Replace docs/master_games.csv in your repo with this file.");
-}
-
-function exportMasterCSV() {
-  const headers = ["game_id","header","home_team","away_team","home_rank","away_rank","home_score","away_score","home_record","away_record","bg_image","photo_cred","game_datetime","status","posted_to_instagram","caption"];
-  const csv = toCSV(masterGames, headers);
-  downloadFile("master_games.csv", csv, "text/csv");
-}
-
-// =============================================
-// SUBMISSIONS TABLE
-// =============================================
-function renderSubmissionsTable() {
-  const tbody = document.getElementById("submissionsTableBody");
-  tbody.innerHTML = "";
-
-  const allSubs = [
-    ...submissions,
-    ...JSON.parse(sessionStorage.getItem("pendingSubmissions") || "[]")
-  ];
-
-  const unique = [];
-  const seen = new Set();
-  allSubs.forEach(s => { if (!seen.has(s.submission_id)) { seen.add(s.submission_id); unique.push(s); } });
-
-  if (!unique.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--gray);padding:30px;">No submissions yet.</td></tr>`;
-    return;
-  }
-
-  unique.forEach((s, idx) => {
-    const game = masterGames.find(g => g.game_id === s.game_id);
-    const gameLabel = game ? `${game.home_team} vs ${game.away_team}` : s.game_id;
-    const imgUrl = s.image_url || "";
-    const imgHtml = imgUrl.startsWith("[uploaded]:")
-      ? `<span style="color:var(--gray);font-size:0.75rem;">📎 ${imgUrl.slice(11)}</span>`
-      : imgUrl ? `<img class="sub-img" src="${imgUrl}" onclick="window.open('${imgUrl}')">` : "—";
-
-    const statusClass = { pending: "pending", approved: "approved", rejected: "rejected" }[s.status] || "pending";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td style="color:var(--gray);font-size:0.72rem;">${s.submission_id}</td>
-      <td style="white-space:nowrap;">${gameLabel}</td>
-      <td style="white-space:nowrap;font-family:var(--font-display);font-size:1rem;font-weight:700;">${s.home_score} — ${s.away_score}</td>
-      <td>${imgHtml}</td>
-      <td style="white-space:nowrap;font-size:0.75rem;">${new Date(s.submitted_at).toLocaleString()}</td>
-      <td><span class="status-pill ${statusClass}">${s.status}</span></td>
-      <td><input value="${s.admin_notes || ""}" placeholder="Notes..." onchange="unique[${idx}].admin_notes=this.value" style="min-width:120px;"></td>
-      <td style="white-space:nowrap;">
-        <button class="tbl-action-btn approve" onclick="approveSubmission('${s.submission_id}')">Approve</button>
-        <button class="tbl-action-btn reject" onclick="rejectSubmission('${s.submission_id}')">Reject</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function approveSubmission(subId) {
-  const sub = submissions.find(s => s.submission_id === subId)
-    || JSON.parse(sessionStorage.getItem("pendingSubmissions") || "[]").find(s => s.submission_id === subId);
-  if (!sub) return;
-
-  sub.status = "approved";
-
-  // Apply score to master game
-  const game = masterGames.find(g => g.game_id === sub.game_id);
-  if (game) {
-    game.home_score = String(sub.home_score);
-    game.away_score = String(sub.away_score);
-    game.status = "final";
-    game.caption = "FINAL";
-    renderMasterTable();
-    renderScores(new Date(dateInput.value));
-    buildGameSelect();
-    renderTicker();
-  }
-
-  renderSubmissionsTable();
-}
-
-function rejectSubmission(subId) {
-  const sub = submissions.find(s => s.submission_id === subId);
-  if (sub) sub.status = "rejected";
-  renderSubmissionsTable();
-}
-
-function exportSubmissionsCSV() {
-  const allSubs = [...submissions, ...JSON.parse(sessionStorage.getItem("pendingSubmissions") || "[]")];
-  const headers = ["submission_id","game_id","home_score","away_score","image_url","submitter_note","submitted_at","status","admin_notes"];
-  const csv = toCSV(allSubs, headers);
-  downloadFile("submitted_scores.csv", csv, "text/csv");
-}
-
-// =============================================
-// UTILS
-// =============================================
-function downloadFile(filename, content, type) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], { type }));
-  a.download = filename;
-  a.click();
-}
-
-// Close modal on overlay click
-document.getElementById("adminModal").addEventListener("click", e => {
-  if (e.target === document.getElementById("adminModal")) closeAdmin();
-});
-
-// =============================================
-// AUTO REFRESH every 2 min
-// =============================================
-setInterval(() => {
-  renderScores(new Date(dateInput.value + "T12:00:00"));
-  renderTicker();
-}, 2 * 60 * 1000);
-
-// =============================================
-// INIT
-// =============================================
 loadData();
 </script>
 </body>

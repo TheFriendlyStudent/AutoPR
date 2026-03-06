@@ -1,1 +1,6 @@
 .env
+secrets/
+admin_console.py
+__pycache__/
+*.pyc
+*.pyo

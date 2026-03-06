@@ -6,3 +6,4 @@ boto3
 pytz
 python-dotenv
 facebook-business
+beautifulsoup4
