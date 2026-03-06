@@ -1051,17 +1051,6 @@ document.getElementById("subBtn").addEventListener("click",()=>{
   },4000);
 });
 
-// Livestreams
-const channels=[
-  {name:"Staples Boys Basketball",url:"https://www.youtube.com/@staplesboysbasketball"},
-  {name:"The Day CT",url:"https://www.youtube.com/@thedayct"},
-  {name:"TB860LIVE",url:"https://www.youtube.com/@TB860LIVE"},
-  {name:"WHCI",url:"https://www.youtube.com/@whci"},
-  {name:"Newington High School",url:"https://www.youtube.com/@NewingtonHighSchool605"},
-  {name:"Project Purple Sports",url:"https://www.youtube.com/@ProjectPurpleSports"},
-  {name:"Waterbury Public Schools",url:"https://www.youtube.com/@waterburypublicschoolsathl9870"}
-];
-
 setInterval(()=>{const v=document.getElementById("gameDate").value;if(v){const[y,m,d]=v.split("-").map(Number);renderScores(new Date(y,m-1,d));}renderTicker();},120000);
 
 loadData();
