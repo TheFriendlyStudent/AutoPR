@@ -106,8 +106,6 @@ async function fetchChannelData(channelId, apiKey, keywords = []) {
 // ── RSS live detection (no API key, no quota) ────────────────────────────────
 // YouTube exposes a public Atom feed for every channel. Live videos appear in
 // the feed with a <yt:isLiveContent> element. We grab the feed and scan for it.
-// keywords: optional array of strings — if provided, only live entries whose
-// title contains at least one keyword (case-insensitive) will match.
 async function detectLiveViaRSS(channelId, keywords = []) {
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
   const res = await fetch(feedUrl, {
@@ -121,6 +119,8 @@ async function detectLiveViaRSS(channelId, keywords = []) {
   const nowMs = Date.now();
   const hasKeywords = keywords.length > 0;
 
+  // Collect candidate videos: published within 12 hours, 0 views
+  const candidates = [];
   for (const [, entry] of entries) {
     const videoIdMatch   = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
     const titleMatch     = entry.match(/<title>([\s\S]*?)<\/title>/);
@@ -129,50 +129,67 @@ async function detectLiveViaRSS(channelId, keywords = []) {
 
     if (!videoIdMatch || !publishedMatch) continue;
 
-    const publishedMs = new Date(publishedMatch[1]).getTime();
-    const ageHours    = (nowMs - publishedMs) / 3_600_000;
-    const views       = viewsMatch ? parseInt(viewsMatch[1], 10) : -1;
-    const title       = titleMatch?.[1] ?? "";
+    const ageHours = (nowMs - new Date(publishedMatch[1]).getTime()) / 3_600_000;
+    const views    = viewsMatch ? parseInt(viewsMatch[1], 10) : -1;
+    const title    = titleMatch?.[1] ?? "";
 
-    const likelyLive = ageHours <= 12 && views === 0;
-    if (!likelyLive) continue;
+    if (ageHours > 12 || views !== 0) continue;
 
-    // If keywords are set, skip entries whose title doesn't match any of them
     if (hasKeywords) {
-      const titleLower = title.toLowerCase();
-      const matched = keywords.some(kw => titleLower.includes(kw.toLowerCase()));
-      if (!matched) {
-        console.log(JSON.stringify({
-          level: "DEBUG",
-          channelId,
-          signal: "keyword-skip",
-          videoId: videoIdMatch[1],
-          title: title.slice(0, 80),
-          keywords,
-        }));
-        continue;
-      }
+      const matched = keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
+      if (!matched) continue;
     }
 
+    candidates.push({ videoId: videoIdMatch[1], title });
+  }
+
+  // For each candidate, verify it is actually live right now by checking
+  // the video page for "isLive":true in YouTube's embedded page data.
+  for (const { videoId, title } of candidates) {
+    const isActuallyLive = await verifyLive(videoId);
     console.log(JSON.stringify({
       level: "DEBUG",
       channelId,
-      signal: "live-heuristic",
-      videoId: videoIdMatch[1],
-      ageHours: ageHours.toFixed(2),
-      views,
+      videoId,
       title: title.slice(0, 80),
-      keywordsApplied: hasKeywords,
+      isActuallyLive,
     }));
-
-    return {
-      isLive: true,
-      videoId:   videoIdMatch[1],
-      liveTitle: title.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">") ?? null,
-    };
+    if (isActuallyLive) {
+      return {
+        isLive: true,
+        videoId,
+        liveTitle: title.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">"),
+      };
+    }
   }
 
   return { isLive: false, videoId: null, liveTitle: null };
+}
+
+// Fetch the YouTube watch page and look for isLive/isLiveBroadcast signals
+// in the page's inline JSON. No API key required.
+async function verifyLive(videoId) {
+  try {
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; NutmegSports/1.0)",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    if (!res.ok) return false;
+    const html = await res.text();
+
+    // YouTube embeds page state as JSON in a <script> block.
+    // "isLive":true only appears when the stream is actively broadcasting.
+    if (/"isLive"\s*:\s*true/.test(html)) return true;
+    // Fallback: liveBroadcastDetails with isLiveNow
+    if (/"isLiveNow"\s*:\s*true/.test(html)) return true;
+
+    return false;
+  } catch (e) {
+    console.log(JSON.stringify({ level: "WARN", message: `verifyLive failed for ${videoId}: ${e.message}` }));
+    return false;
+  }
 }
 
 // ── Channel metadata via API (name + thumbnail, 1 unit per channel) ──────────
