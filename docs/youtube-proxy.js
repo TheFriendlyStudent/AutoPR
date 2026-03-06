@@ -109,37 +109,36 @@ async function detectLiveViaRSS(channelId) {
   const xml = await res.text();
 
   const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
-
-  // Log a digest of every entry for this channel so we can see what signals
-  // are present — video IDs, titles, and every live-related attribute.
-  const digest = entries.map(([, entry]) => {
-    const videoId    = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/)?.[1] ?? "?";
-    const title      = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.slice(0,60) ?? "?";
-    const isLiveTag  = /<yt:isLiveContent>1<\/yt:isLiveContent>/i.test(entry);
-    const mediaState = entry.match(/media:status[^>]*state="([^"]+)"/)?.[1] ?? null;
-    const liveBroadcastContent = entry.match(/liveBroadcastContent[^>]*>([^<]+)/)?.[1] ?? null;
-    return { videoId, title, isLiveTag, mediaState, liveBroadcastContent };
-  });
-
-  console.log(JSON.stringify({
-    level: "DEBUG",
-    channelId,
-    entryCount: entries.length,
-    digest,
-    // Also log the raw first 2000 chars of the feed in case the structure is unexpected
-    rawSnippet: xml.slice(0, 2000),
-  }));
+  const nowMs = Date.now();
 
   for (const [, entry] of entries) {
-    const isLive = /<yt:isLiveContent>1<\/yt:isLiveContent>/i.test(entry)
-                || /<media:status state="active"[^>]*>/i.test(entry);
+    const videoIdMatch  = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
+    const titleMatch    = entry.match(/<title>([\s\S]*?)<\/title>/);
+    const publishedMatch= entry.match(/<published>([\s\S]*?)<\/published>/);
+    const viewsMatch    = entry.match(/<media:statistics views="(\d+)"/);
 
-    if (isLive) {
-      const videoIdMatch = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
-      const titleMatch   = entry.match(/<title>([\s\S]*?)<\/title>/);
+    if (!videoIdMatch || !publishedMatch) continue;
+
+    const publishedMs = new Date(publishedMatch[1]).getTime();
+    const ageHours    = (nowMs - publishedMs) / 3_600_000;
+    const views       = viewsMatch ? parseInt(viewsMatch[1], 10) : -1;
+
+    // Heuristic: published within the last 12 hours AND view count is 0
+    // (YouTube doesn't update view counts on active live streams)
+    const likelyLive = ageHours <= 12 && views === 0;
+
+    if (likelyLive) {
+      console.log(JSON.stringify({
+        level: "DEBUG",
+        channelId,
+        signal: "live-heuristic",
+        videoId: videoIdMatch[1],
+        ageHours: ageHours.toFixed(2),
+        views,
+      }));
       return {
         isLive: true,
-        videoId:   videoIdMatch?.[1] ?? null,
+        videoId:   videoIdMatch[1],
         liveTitle: titleMatch?.[1]?.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">") ?? null,
       };
     }
