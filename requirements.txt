@@ -7,3 +7,5 @@ pytz
 python-dotenv
 facebook-business
 beautifulsoup4
+selenium
+webdriver-manager
