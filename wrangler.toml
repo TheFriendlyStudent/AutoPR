@@ -1,0 +1,9 @@
+name = "nutmeg-youtube-proxy"
+main = "youtube-proxy.js"
+compatibility_date = "2024-01-01"
+
+# Secrets are set via CLI — never put real keys here:
+#   wrangler secret put YOUTUBE_API_KEY
+#
+# After deploy, your worker URL will be:
+#   https://nutmeg-youtube-proxy.<your-subdomain>.workers.dev

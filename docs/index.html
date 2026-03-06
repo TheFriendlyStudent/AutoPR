@@ -150,6 +150,321 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   .score-row{gap:5px}
   input[type="number"].si{width:58px;font-size:1.05rem}
 }
+
+
+/* ── Multi-stream section wrapper ─────────────────────────────────────── */
+#sec-livestreams {
+  display: none; /* shown by tab logic — keep as-is */
+}
+
+.ms-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+}
+
+.ms-toolbar-title {
+  font-family: var(--fd);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+  white-space: nowrap;
+}
+
+.ms-count-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ms-count-btn {
+  background: var(--navy-mid);
+  border: 1px solid var(--bdr);
+  border-radius: 5px;
+  color: var(--gray-l);
+  font-family: var(--fd);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ms-count-btn:hover { background: var(--surf2); color: var(--white); }
+.ms-count-btn.active {
+  background: var(--blue-b);
+  border-color: var(--blue-b);
+  color: #fff;
+}
+
+.ms-launch-btn {
+  background: var(--blue-b);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-family: var(--fd);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background .15s;
+  margin-left: auto;
+  touch-action: manipulation;
+}
+.ms-launch-btn:hover { background: #1a50b8; }
+
+/* ── Grid container ───────────────────────────────────────────────────── */
+.ms-grid {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.ms-grid[data-cols="1"] { grid-template-columns: 1fr; }
+.ms-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+.ms-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
+.ms-grid[data-cols="4"] { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* ── Individual stream cell ───────────────────────────────────────────── */
+.ms-cell {
+  position: relative;
+  background: var(--navy-mid);
+  border: 2px solid var(--bdr);
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.ms-cell.active-audio {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(240,180,41,.25);
+}
+.ms-cell iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: none;
+  pointer-events: none; /* clicks go to our overlay */
+}
+
+/* Placeholder (offline / not live) */
+.ms-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--navy-mid);
+}
+.ms-placeholder-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surf2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  opacity: .5;
+}
+.ms-placeholder-name {
+  font-family: var(--fd);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gray);
+  text-align: center;
+  padding: 0 10px;
+}
+.ms-placeholder-status {
+  font-size: .66rem;
+  color: var(--gray);
+  opacity: .6;
+  letter-spacing: .5px;
+}
+
+/* Click overlay — absorbs taps to handle audio switching */
+.ms-click-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: pointer;
+  /* invisible */
+}
+.ms-click-overlay:active { background: rgba(255,255,255,.04); }
+
+/* Audio indicator badge */
+.ms-audio-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 11;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: var(--fd);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 3px;
+  display: none;
+  pointer-events: none;
+}
+.ms-cell.active-audio .ms-audio-badge { display: block; }
+
+/* Channel name label (bottom of cell) */
+.ms-cell-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  background: linear-gradient(transparent, rgba(10,22,40,.9));
+  padding: 18px 10px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.ms-cell-name {
+  font-family: var(--fd);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gray-l);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 75%;
+}
+.ms-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Channel list (below grid) ────────────────────────────────────────── */
+.ms-channel-list {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ms-ch-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--fd);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gray-l);
+  transition: all .15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ms-ch-chip:hover { border-color: rgba(255,255,255,.18); color: var(--white); }
+.ms-ch-chip.selected {
+  background: var(--blue-b);
+  border-color: var(--blue-b);
+  color: #fff;
+}
+.ms-ch-chip .chip-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: blink 1.6s ease-in-out infinite;
+}
+.ms-ch-chip .chip-offline {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gray);
+  opacity: .4;
+}
+
+/* Loading state */
+.ms-loading {
+  text-align: center;
+  padding: 32px 0;
+  font-family: var(--fd);
+  font-size: .78rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+.ms-loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--gray);
+  border-top-color: var(--blue-b);
+  border-radius: 50%;
+  margin-left: 10px;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Status bar */
+.ms-status {
+  font-family: var(--fd);
+  font-size: .66rem;
+  color: var(--gray);
+  letter-spacing: 1px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gray);
+  flex-shrink: 0;
+}
+.ms-status-dot.ok { background: #4ade80; }
+.ms-status-dot.err { background: var(--red); }
+
+@media(max-width:600px) {
+  .ms-grid[data-cols="3"],
+  .ms-grid[data-cols="4"] { grid-template-columns: 1fr 1fr; }
+  .ms-toolbar { gap: 8px; padding: 10px 12px; }
+}
+@media(max-width:380px) {
+  .ms-grid[data-cols="2"],
+  .ms-grid[data-cols="3"],
+  .ms-grid[data-cols="4"] { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -217,9 +532,323 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       </div>
     </div>
 
-    <div id="sec-livestreams" style="display:none">
-      <div id="chList"></div>
+<div id="sec-livestreams" style="display:none">
+
+  <!-- Toolbar: how many streams + launch button -->
+  <div class="ms-toolbar">
+    <span class="ms-toolbar-title">Streams</span>
+    <div class="ms-count-group" id="msCountGroup">
+      <button class="ms-count-btn active" data-n="1">1</button>
+      <button class="ms-count-btn" data-n="2">2</button>
+      <button class="ms-count-btn" data-n="3">3</button>
+      <button class="ms-count-btn" data-n="4">4</button>
     </div>
+    <span class="ms-toolbar-title" style="margin-left:8px">Audio</span>
+    <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
+    <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
+  </div>
+
+  <!-- Loading indicator (shown while fetching live status) -->
+  <div class="ms-loading" id="msLoading">Checking live status</div>
+
+  <!-- Stream grid (populated by JS) -->
+  <div class="ms-grid" id="msGrid" data-cols="1" style="display:none"></div>
+
+  <!-- Status bar -->
+  <div class="ms-status" id="msStatusBar" style="display:none">
+    <div class="ms-status-dot" id="msStatusDot"></div>
+    <span id="msStatusTxt"></span>
+  </div>
+
+  <!-- Channel selector chips (shown below grid) -->
+  <div class="ms-channel-list" id="msChipList" style="display:none"></div>
+
+</div><!-- /sec-livestreams -->
+
+
+<!-- ═══════════ ADD TO YOUR <script> BLOCK (before loadData()) ═══════════ -->
+<script id="MULTISTREAM_SCRIPT">
+(function () {
+
+  // ── CONFIG ──────────────────────────────────────────────────────────────
+  // Set this to your deployed Cloudflare Worker URL.
+  // Leave empty ("") to skip live-detection and show all channels as placeholders.
+  const PROXY_BASE = "";   // e.g. "https://nutmeg-youtube-proxy.yourname.workers.dev"
+
+  // Channel definitions — add/remove as needed.
+  // channelId: the part after /channel/ on YouTube (or use the @ handle lookup below)
+  const CHANNELS = [
+    { name: "Staples Boys Basketball", channelId: "UCvWbpYUuSdpQ4yuvkYV3B3g", url: "https://www.youtube.com/@staplesboysbasketball" },
+    { name: "The Day CT",              channelId: "UCpXEAt82SDbHqHVJ3nl0dWg", url: "https://www.youtube.com/@thedayct" },
+    { name: "TB860LIVE",               channelId: "UCnCfzEW5Aor1HVmW3C9YxKg", url: "https://www.youtube.com/@TB860LIVE" },
+    { name: "WHCI",                    channelId: "UCU0LnXBHHb16JkVRcYZ3dag", url: "https://www.youtube.com/@whci" },
+    { name: "Newington High School",   channelId: "UCE4T7nWIAb9i5GkNioBH5MA", url: "https://www.youtube.com/@NewingtonHighSchool605" },
+    { name: "Project Purple Sports",   channelId: "UCuBD7Qq-CY0nO1K-MpYK3mA", url: "https://www.youtube.com/@ProjectPurpleSports" },
+    { name: "Waterbury Public Schools",channelId: "UCWT9Dh6pUmq8GJzUuBO3K6Q", url: "https://www.youtube.com/@waterburypublicschoolsathl9870" },
+    { name: "Fairfield Prep Athletics:", channelId: "UCGecTgvH_28YBQJx-YW2OIg", url: "https://www.youtube.com/@fairfieldprepjesuits"}
+  ];
+
+  // ── STATE ────────────────────────────────────────────────────────────────
+  let channelData   = CHANNELS.map(c => ({ ...c, isLive: false, videoId: null, liveTitle: null, thumb: null }));
+  let maxStreams     = 1;        // how many cells to show
+  let selectedIds   = [];       // channelIds currently shown in grid (ordered)
+  let activeAudioId = null;     // channelId whose audio is unmuted
+  let fetchError    = false;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────
+  const elGrid      = document.getElementById("msGrid");
+  const elLoading   = document.getElementById("msLoading");
+  const elChips     = document.getElementById("msChipList");
+  const elAudioLbl  = document.getElementById("msAudioLbl");
+  const elStatus    = document.getElementById("msStatusBar");
+  const elStatusDot = document.getElementById("msStatusDot");
+  const elStatusTxt = document.getElementById("msStatusTxt");
+
+  // ── Count buttons ─────────────────────────────────────────────────────────
+  document.getElementById("msCountGroup").addEventListener("click", e => {
+    const btn = e.target.closest(".ms-count-btn");
+    if (!btn) return;
+    maxStreams = parseInt(btn.dataset.n, 10);
+    document.querySelectorAll(".ms-count-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    trimSelection();
+    renderGrid();
+    renderChips();
+  });
+
+  document.getElementById("msRefreshBtn").addEventListener("click", () => {
+    fetchLiveStatus();
+  });
+
+  // ── Fetch live status from proxy ─────────────────────────────────────────
+  async function fetchLiveStatus() {
+    elLoading.style.display = "block";
+    elGrid.style.display    = "none";
+    elStatus.style.display  = "none";
+    fetchError = false;
+
+    if (!PROXY_BASE) {
+      // No proxy configured — skip API, treat all as offline placeholders
+      setStatus(false, "No proxy configured — showing placeholder tiles (set PROXY_BASE to enable live detection)");
+      finishLoad();
+      return;
+    }
+
+    const ids = CHANNELS.map(c => c.channelId).join(",");
+    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}`;
+
+    try {
+      const res  = await fetch(endpoint);
+      if (!res.ok) throw new Error(`Proxy responded ${res.status}`);
+      const data = await res.json();
+
+      if (data.channels) {
+        data.channels.forEach(remote => {
+          const local = channelData.find(c => c.channelId === remote.channelId);
+          if (local) {
+            local.isLive    = remote.isLive;
+            local.videoId   = remote.videoId;
+            local.liveTitle = remote.liveTitle;
+            local.thumb     = remote.thumb;
+          }
+        });
+      }
+
+      const liveCount = channelData.filter(c => c.isLive).length;
+      setStatus(true, `${liveCount} channel${liveCount !== 1 ? "s" : ""} live · updated ${new Date().toLocaleTimeString()}`);
+    } catch (err) {
+      fetchError = true;
+      console.error("[MultiStream] Proxy fetch failed:", err.message);
+      setStatus(false, `Live check failed: ${err.message}`);
+    }
+
+    finishLoad();
+  }
+
+  function finishLoad() {
+    elLoading.style.display = "none";
+    // Auto-select up to maxStreams live channels, then fill with offline
+    selectedIds = [];
+    const live    = channelData.filter(c => c.isLive).map(c => c.channelId);
+    const offline = channelData.filter(c => !c.isLive).map(c => c.channelId);
+    selectedIds = [...live, ...offline].slice(0, maxStreams);
+
+    // Default audio to first live channel (or first selected if none live)
+    if (!activeAudioId || !selectedIds.includes(activeAudioId)) {
+      activeAudioId = live[0] ?? selectedIds[0] ?? null;
+    }
+
+    renderGrid();
+    renderChips();
+    elGrid.style.display   = "grid";
+    elChips.style.display  = "flex";
+    elStatus.style.display = "flex";
+  }
+
+  // ── Grid render ──────────────────────────────────────────────────────────
+  function renderGrid() {
+    const cols = Math.min(maxStreams, selectedIds.length);
+    elGrid.setAttribute("data-cols", cols || 1);
+    elGrid.innerHTML = "";
+
+    selectedIds.slice(0, maxStreams).forEach(id => {
+      const ch  = channelData.find(c => c.channelId === id);
+      if (!ch) return;
+      const cell = buildCell(ch);
+      elGrid.appendChild(cell);
+    });
+
+    // Fill empty slots up to maxStreams with empty placeholder
+    for (let i = selectedIds.length; i < maxStreams; i++) {
+      const empty = document.createElement("div");
+      empty.className = "ms-cell";
+      empty.innerHTML = `<div class="ms-placeholder">
+        <div class="ms-placeholder-icon">📺</div>
+        <div class="ms-placeholder-name">Select a channel</div>
+        <div class="ms-placeholder-status">Use chips below</div>
+      </div>`;
+      elGrid.appendChild(empty);
+    }
+  }
+
+  function buildCell(ch) {
+    const isAudio = ch.channelId === activeAudioId;
+    const cell = document.createElement("div");
+    cell.className = "ms-cell" + (isAudio ? " active-audio" : "");
+    cell.dataset.cid = ch.channelId;
+
+    let inner = "";
+
+    if (ch.isLive && ch.videoId) {
+      // Live iframe — muted unless this is the active audio channel
+      const mute = isAudio ? "0" : "1";
+      const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
+      inner += `<iframe src="${src}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    } else {
+      // Placeholder — channel is offline or unknown
+      inner += `<div class="ms-placeholder">
+        <div class="ms-placeholder-icon">📡</div>
+        <div class="ms-placeholder-name">${esc(ch.name)}</div>
+        <div class="ms-placeholder-status">Not currently live</div>
+      </div>`;
+    }
+
+    // Audio badge
+    inner += `<div class="ms-audio-badge">🔊 Audio</div>`;
+
+    // Bottom label
+    inner += `<div class="ms-cell-label">
+      <span class="ms-cell-name">${esc(ch.name)}</span>
+      ${ch.isLive ? '<div class="ms-live-dot"></div>' : ''}
+    </div>`;
+
+    // Click overlay (for audio switching)
+    inner += `<div class="ms-click-overlay" title="Tap to hear this stream's audio"></div>`;
+
+    cell.innerHTML = inner;
+
+    // Click → switch audio to this cell
+    cell.querySelector(".ms-click-overlay").addEventListener("click", () => {
+      if (!ch.isLive) return; // can't unmute a placeholder
+      switchAudio(ch.channelId);
+    });
+
+    return cell;
+  }
+
+  // ── Switch audio: rebuild iframes with new mute states ───────────────────
+  function switchAudio(channelId) {
+    if (activeAudioId === channelId) return;
+    activeAudioId = channelId;
+    elAudioLbl.textContent = channelData.find(c => c.channelId === channelId)?.name ?? "";
+    renderGrid(); // re-render iframes with updated mute params
+    renderChips();
+  }
+
+  // ── Chip list ─────────────────────────────────────────────────────────────
+  function renderChips() {
+    elChips.innerHTML = "";
+    channelData.forEach(ch => {
+      const chip = document.createElement("div");
+      chip.className = "ms-ch-chip" + (selectedIds.includes(ch.channelId) ? " selected" : "");
+      chip.dataset.cid = ch.channelId;
+      chip.innerHTML = `
+        <div class="${ch.isLive ? "chip-live" : "chip-offline"}"></div>
+        ${esc(ch.name)}
+      `;
+      chip.addEventListener("click", () => toggleChannel(ch.channelId));
+      elChips.appendChild(chip);
+    });
+  }
+
+  function toggleChannel(channelId) {
+    if (selectedIds.includes(channelId)) {
+      // Deselect
+      selectedIds = selectedIds.filter(id => id !== channelId);
+      if (activeAudioId === channelId) {
+        activeAudioId = selectedIds[0] ?? null;
+        elAudioLbl.textContent = activeAudioId
+          ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "")
+          : "— tap a stream —";
+      }
+    } else {
+      // Select (respect max)
+      if (selectedIds.length >= maxStreams) {
+        // Replace the last selected
+        selectedIds[selectedIds.length - 1] = channelId;
+      } else {
+        selectedIds.push(channelId);
+      }
+      // Auto-give audio if nothing active
+      if (!activeAudioId) {
+        const ch = channelData.find(c => c.channelId === channelId);
+        if (ch?.isLive) {
+          activeAudioId = channelId;
+          elAudioLbl.textContent = ch.name;
+        }
+      }
+    }
+    renderGrid();
+    renderChips();
+  }
+
+  function trimSelection() {
+    if (selectedIds.length > maxStreams) {
+      selectedIds = selectedIds.slice(0, maxStreams);
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setStatus(ok, msg) {
+    elStatusDot.className = "ms-status-dot " + (ok ? "ok" : "err");
+    elStatusTxt.textContent = msg;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // ── Init: kick off when Livestreams tab is activated ──────────────────────
+  // Hook into your existing tab listener — when 's === "livestreams"', call init.
+  // OR call msInit() directly if you prefer.
+  let msInitialized = false;
+  window.msInit = function () {
+    if (msInitialized) return;
+    msInitialized = true;
+    fetchLiveStatus();
+  };
+
+  // Auto-refresh every 3 minutes while tab is visible
+  setInterval(() => {
+    const tab = document.getElementById("sec-livestreams");
+    if (tab && tab.style.display !== "none" && msInitialized) {
+      fetchLiveStatus();
+    }
+  }, 3 * 60 * 1000);
+
+})();
+</script>
+
   </div>
 
   <div class="sidebar">
