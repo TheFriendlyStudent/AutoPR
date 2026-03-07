@@ -614,7 +614,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     const kwParam = Object.keys(keywordsMap).length
       ? "&keywords=" + encodeURIComponent(JSON.stringify(keywordsMap))
       : "";
-    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}`;
+    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}&t=${Date.now()}`;
 
     try {
       const res  = await fetch(endpoint);

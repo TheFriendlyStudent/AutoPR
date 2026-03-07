@@ -143,12 +143,11 @@ async function detectLiveViaRSS(channelId, keywords = []) {
       return { isLive: false, videoId: null, liveTitle: null };
     }
 
-    // Extract the video ID — take the first match that appears after channelId
-    // to avoid picking up IDs from unrelated recommended content in the page.
-    const channelPos = html.indexOf(channelId);
-    const htmlFromChannel = html.slice(channelPos);
-    const videoIdMatch = htmlFromChannel.match(/"videoId"\s*:\s*"([\w-]{11})"/)
-                      || html.match(/watch\?v=([\w-]{11})/);
+    // Extract video ID from the canonical watch URL in the page.
+    // This is more reliable than matching "videoId" in JSON which can
+    // pick up UUIDs or other non-video-ID strings.
+    const videoIdMatch = html.match(/watch\?v=([\w-]{11})(?:[^-\w]|$)/)
+                      || html.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})(?:[^a-zA-Z0-9_-])/);
     const videoId = videoIdMatch?.[1] ?? null;
 
     // Extract title
@@ -214,3 +213,4 @@ function simpleHash(str) {
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
   return (h >>> 0).toString(16);
 }
+
