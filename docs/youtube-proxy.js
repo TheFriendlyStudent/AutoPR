@@ -107,88 +107,77 @@ async function fetchChannelData(channelId, apiKey, keywords = []) {
 // YouTube exposes a public Atom feed for every channel. Live videos appear in
 // the feed with a <yt:isLiveContent> element. We grab the feed and scan for it.
 async function detectLiveViaRSS(channelId, keywords = []) {
-  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  const res = await fetch(feedUrl, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; NutmegSports/1.0)" },
-  });
+  const livePageUrl = `https://www.youtube.com/channel/${channelId}/live`;
 
-  if (!res.ok) throw new Error(`RSS ${res.status} for ${channelId}`);
-  const xml = await res.text();
-
-  const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
-  const nowMs = Date.now();
-  const hasKeywords = keywords.length > 0;
-
-  // Collect candidate videos: published within 12 hours, 0 views
-  const candidates = [];
-  for (const [, entry] of entries) {
-    const videoIdMatch   = entry.match(/<yt:videoId>([\w-]+)<\/yt:videoId>/);
-    const titleMatch     = entry.match(/<title>([\s\S]*?)<\/title>/);
-    const publishedMatch = entry.match(/<published>([\s\S]*?)<\/published>/);
-    const viewsMatch     = entry.match(/<media:statistics views="(\d+)"/);
-
-    if (!videoIdMatch || !publishedMatch) continue;
-
-    const ageHours = (nowMs - new Date(publishedMatch[1]).getTime()) / 3_600_000;
-    const views    = viewsMatch ? parseInt(viewsMatch[1], 10) : -1;
-    const title    = titleMatch?.[1] ?? "";
-
-    if (ageHours > 12 || views !== 0) continue;
-
-    if (hasKeywords) {
-      const matched = keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
-      if (!matched) continue;
-    }
-
-    candidates.push({ videoId: videoIdMatch[1], title });
-  }
-
-  // For each candidate, verify it is actually live right now by checking
-  // the video page for "isLive":true in YouTube's embedded page data.
-  for (const { videoId, title } of candidates) {
-    const isActuallyLive = await verifyLive(videoId);
-    console.log(JSON.stringify({
-      level: "DEBUG",
-      channelId,
-      videoId,
-      title: title.slice(0, 80),
-      isActuallyLive,
-    }));
-    if (isActuallyLive) {
-      return {
-        isLive: true,
-        videoId,
-        liveTitle: title.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">"),
-      };
-    }
-  }
-
-  return { isLive: false, videoId: null, liveTitle: null };
-}
-
-// Fetch the YouTube watch page and look for isLive/isLiveBroadcast signals
-// in the page's inline JSON. No API key required.
-async function verifyLive(videoId) {
   try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    const res = await fetch(livePageUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; NutmegSports/1.0)",
         "Accept-Language": "en-US,en;q=0.9",
       },
+      redirect: "follow",
     });
-    if (!res.ok) return false;
+
+    if (!res.ok) throw new Error(`live page ${res.status}`);
     const html = await res.text();
 
-    // YouTube embeds page state as JSON in a <script> block.
-    // "isLive":true only appears when the stream is actively broadcasting.
-    if (/"isLive"\s*:\s*true/.test(html)) return true;
-    // Fallback: liveBroadcastDetails with isLiveNow
-    if (/"isLiveNow"\s*:\s*true/.test(html)) return true;
+    // Verify this page actually belongs to the channel we requested.
+    // YouTube can redirect /live to unrelated content.
+    if (!html.includes(channelId)) {
+      console.log(JSON.stringify({ level: "DEBUG", channelId, signal: "channel-mismatch" }));
+      return { isLive: false, videoId: null, liveTitle: null };
+    }
 
-    return false;
+    // "isLive":true appears for both active and scheduled streams.
+    // "isLiveNow":true is only active broadcasts but isn't always present in HTML.
+    // Use isLive as primary signal, but cross-check with absence of "isUpcoming":true
+    // which YouTube sets on scheduled-but-not-started streams.
+    const isLive     = /"isLive"\s*:\s*true/.test(html);
+    const isUpcoming = /"isUpcoming"\s*:\s*true/.test(html);
+    const isLiveNow  = /"isLiveNow"\s*:\s*true/.test(html);
+
+    const liveNow = (isLive && !isUpcoming) || isLiveNow;
+
+    if (!liveNow) {
+      console.log(JSON.stringify({ level: "DEBUG", channelId, signal: "not-live-now", isLive, isUpcoming, isLiveNow }));
+      return { isLive: false, videoId: null, liveTitle: null };
+    }
+
+    // Extract the video ID — take the first match that appears after channelId
+    // to avoid picking up IDs from unrelated recommended content in the page.
+    const channelPos = html.indexOf(channelId);
+    const htmlFromChannel = html.slice(channelPos);
+    const videoIdMatch = htmlFromChannel.match(/"videoId"\s*:\s*"([\w-]{11})"/)
+                      || html.match(/watch\?v=([\w-]{11})/);
+    const videoId = videoIdMatch?.[1] ?? null;
+
+    // Extract title
+    const titleMatch = html.match(/"title"\s*:\s*\{"runs"\s*:\s*\[\{"text"\s*:\s*"([^"]+)"/)
+                    || html.match(/<title>([^<|]+)/);
+    const title = (titleMatch?.[1] ?? "").trim()
+      .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">");
+
+    // Apply keyword filter
+    if (keywords.length > 0) {
+      const matched = keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
+      if (!matched) {
+        console.log(JSON.stringify({
+          level: "DEBUG", channelId, signal: "keyword-skip",
+          videoId, title: title.slice(0, 80), keywords,
+        }));
+        return { isLive: false, videoId: null, liveTitle: null };
+      }
+    }
+
+    console.log(JSON.stringify({
+      level: "DEBUG", channelId, signal: "live-confirmed",
+      videoId, title: title.slice(0, 80),
+    }));
+
+    return { isLive: true, videoId, liveTitle: title };
+
   } catch (e) {
-    console.log(JSON.stringify({ level: "WARN", message: `verifyLive failed for ${videoId}: ${e.message}` }));
-    return false;
+    throw new Error(`live page check failed for ${channelId}: ${e.message}`);
   }
 }
 
@@ -225,4 +214,3 @@ function simpleHash(str) {
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
   return (h >>> 0).toString(16);
 }
-
