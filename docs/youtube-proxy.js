@@ -1,9 +1,9 @@
 /**
  * youtube-proxy.js — Cloudflare Worker
  *
- * Detects live streams using YouTube's public RSS feeds — no search.list calls,
- * no quota burn. Only channels.list is used (1 unit per channel) for channel
- * name + thumbnail. Live detection is completely quota-free via RSS.
+ * Detects live streams using YouTube's public /channel/<id>/live page —
+ * no search.list calls, no quota burn. Only channels.list is used
+ * (1 unit per channel) for channel name + thumbnail.
  *
  * DEPLOY STEPS:
  *   1. npm install -g wrangler
@@ -56,10 +56,11 @@ export default {
 
       try {
         const results = [];
+        // Sequential to avoid Cloudflare subrequest deadlocks
         for (const id of channelIds) {
           results.push(await fetchChannelData(id, apiKey, keywordsMap[id] ?? []));
         }
-        log("OK", `Fetched ${channelIds.length} channels (RSS live detection)`, request);
+        log("OK", `Fetched ${channelIds.length} channels`, request);
         return Response.json({ channels: results }, { headers: cors });
       } catch (err) {
         log("ERROR", err.message, request);
@@ -72,22 +73,18 @@ export default {
 };
 
 // ── Fetch channel data ───────────────────────────────────────────────────────
-// Live detection: parses the channel's public RSS feed for <yt:isLiveContent> flags.
-// No quota used. Channel name + thumbnail: one channels.list call (1 unit).
 async function fetchChannelData(channelId, apiKey, keywords = []) {
 
-  // Run RSS (quota-free) and channel metadata (1 unit) in parallel
   const [liveResult, metaResult] = await Promise.allSettled([
-    detectLiveViaRSS(channelId, keywords),
+    detectLiveViaPageScrape(channelId, keywords),
     fetchChannelMeta(channelId, apiKey),
   ]);
 
   const live = liveResult.status === "fulfilled" ? liveResult.value : { isLive: false, videoId: null, liveTitle: null };
   const meta = metaResult.status === "fulfilled" ? metaResult.value : { name: channelId, thumb: null };
 
-  // Log individual failures without aborting the whole request
   if (liveResult.status === "rejected") {
-    console.log(JSON.stringify({ level: "WARN", message: `RSS failed for ${channelId}: ${liveResult.reason}` }));
+    console.log(JSON.stringify({ level: "WARN", message: `Live check failed for ${channelId}: ${liveResult.reason}` }));
   }
   if (metaResult.status === "rejected") {
     console.log(JSON.stringify({ level: "WARN", message: `Meta failed for ${channelId}: ${metaResult.reason}` }));
@@ -103,10 +100,8 @@ async function fetchChannelData(channelId, apiKey, keywords = []) {
   };
 }
 
-// ── RSS live detection (no API key, no quota) ────────────────────────────────
-// YouTube exposes a public Atom feed for every channel. Live videos appear in
-// the feed with a <yt:isLiveContent> element. We grab the feed and scan for it.
-async function detectLiveViaRSS(channelId, keywords = []) {
+// ── Live detection via page scrape (no API key, no quota) ────────────────────
+async function detectLiveViaPageScrape(channelId, keywords = []) {
   const livePageUrl = `https://www.youtube.com/channel/${channelId}/live`;
 
   try {
@@ -129,9 +124,8 @@ async function detectLiveViaRSS(channelId, keywords = []) {
     }
 
     // "isLive":true appears for both active and scheduled streams.
-    // "isLiveNow":true is only active broadcasts but isn't always present in HTML.
-    // Use isLive as primary signal, but cross-check with absence of "isUpcoming":true
-    // which YouTube sets on scheduled-but-not-started streams.
+    // "isUpcoming":true is set on scheduled-but-not-started streams.
+    // "isLiveNow":true is only set for active broadcasts (not always present).
     const isLive     = /"isLive"\s*:\s*true/.test(html);
     const isUpcoming = /"isUpcoming"\s*:\s*true/.test(html);
     const isLiveNow  = /"isLiveNow"\s*:\s*true/.test(html);
@@ -143,18 +137,31 @@ async function detectLiveViaRSS(channelId, keywords = []) {
       return { isLive: false, videoId: null, liveTitle: null };
     }
 
-    // Extract video ID from the canonical watch URL in the page.
-    // This is more reliable than matching "videoId" in JSON which can
-    // pick up UUIDs or other non-video-ID strings.
-    const videoIdMatch = html.match(/watch\?v=([\w-]{11})(?:[^-\w]|$)/)
-                      || html.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})(?:[^a-zA-Z0-9_-])/);
-    const videoId = videoIdMatch?.[1] ?? null;
+    // Try multiple extraction methods in order of reliability.
+    // YouTube's server-rendered page may omit the canonical tag,
+    // so we fall back to progressively looser matches.
+    const videoId =
+      // 1. Canonical link tag
+      html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/)?.[1] ??
+      // 2. og:url meta tag
+      html.match(/<meta property="og:url" content="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/)?.[1] ??
+      // 3. watch?v= anywhere in the page
+      html.match(/watch\?v=([\w-]{11})(?:[^-\w]|$)/)?.[1] ??
+      // 4. "videoId":"..." in page JSON (last resort — may rarely match non-live IDs)
+      html.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/)?.[1] ??
+      null;
+
+    if (!videoId) {
+      console.log(JSON.stringify({ level: "WARN", message: `Could not extract videoId for ${channelId}` }));
+      // Still return isLive:true — frontend will show a fallback link to the channel
+      return { isLive: true, videoId: null, liveTitle: null };
+    }
 
     // Extract title
     const titleMatch = html.match(/"title"\s*:\s*\{"runs"\s*:\s*\[\{"text"\s*:\s*"([^"]+)"/)
                     || html.match(/<title>([^<|]+)/);
     const title = (titleMatch?.[1] ?? "").trim()
-      .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">");
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
     // Apply keyword filter
     if (keywords.length > 0) {
@@ -213,4 +220,3 @@ function simpleHash(str) {
   for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
   return (h >>> 0).toString(16);
 }
-

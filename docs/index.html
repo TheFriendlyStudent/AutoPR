@@ -151,7 +151,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   input[type="number"].si{width:58px;font-size:1.05rem}
 }
 
-
 /* ── Multi-stream section wrapper ─────────────────────────────────────── */
 #sec-livestreams {
   display: none; /* shown by tab logic — keep as-is */
@@ -179,7 +178,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   white-space: nowrap;
 }
 
-
 .ms-launch-btn {
   background: var(--blue-b);
   border: none;
@@ -203,10 +201,8 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   display: grid;
   gap: 6px;
   width: 100%;
-  /* 2 columns always; rows grow automatically as channels are added */
   grid-template-columns: repeat(2, 1fr);
 }
-/* Single stream gets full width */
 .ms-grid.solo { grid-template-columns: 1fr; }
 
 @media(max-width:500px) {
@@ -233,7 +229,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   height: 100%;
   display: block;
   border: none;
-  pointer-events: none; /* clicks go to our overlay */
+  pointer-events: none;
 }
 
 /* Placeholder (offline / not live) */
@@ -275,13 +271,12 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   letter-spacing: .5px;
 }
 
-/* Click overlay — absorbs taps to handle audio switching */
+/* Click overlay */
 .ms-click-overlay {
   position: absolute;
   inset: 0;
   z-index: 10;
   cursor: pointer;
-  /* invisible */
 }
 .ms-click-overlay:active { background: rgba(255,255,255,.04); }
 
@@ -504,70 +499,73 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
         <div class="success" id="successMsg">✓ Submitted! Your score will be reviewed and published shortly.</div>
       </div>
     </div>
-  </div>
-<div id="sec-livestreams" style="display:none">
 
-  <!-- Toolbar: audio indicator + refresh -->
-  <div class="ms-toolbar">
-    <span class="ms-toolbar-title">🔊 Audio</span>
-    <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
-    <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
-  </div>
+  </div><!-- /content -->
 
-  <!-- Loading indicator (shown while fetching live status) -->
-  <div class="ms-loading" id="msLoading">Checking live status</div>
+  <div id="sec-livestreams" style="display:none">
 
-  <!-- Stream grid (populated by JS) -->
-  <div class="ms-grid" id="msGrid" data-cols="1" style="display:none"></div>
+    <!-- Toolbar: audio indicator + refresh -->
+    <div class="ms-toolbar">
+      <span class="ms-toolbar-title">🔊 Audio</span>
+      <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
+      <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
+    </div>
 
-  <!-- Status bar -->
-  <div class="ms-status" id="msStatusBar" style="display:none">
-    <div class="ms-status-dot" id="msStatusDot"></div>
-    <span id="msStatusTxt"></span>
-  </div>
+    <!-- Loading indicator -->
+    <div class="ms-loading" id="msLoading">Checking live status</div>
 
-  <!-- Channel selector chips (shown below grid) -->
-  <div class="ms-channel-list" id="msChipList" style="display:none"></div>
+    <!-- Stream grid -->
+    <div class="ms-grid" id="msGrid" style="display:none"></div>
 
-</div><!-- /sec-livestreams -->
+    <!-- Status bar -->
+    <div class="ms-status" id="msStatusBar" style="display:none">
+      <div class="ms-status-dot" id="msStatusDot"></div>
+      <span id="msStatusTxt"></span>
+    </div>
 
+    <!-- Channel selector chips -->
+    <div class="ms-channel-list" id="msChipList" style="display:none"></div>
 
-<!-- ═══════════ ADD TO YOUR <script> BLOCK (before loadData()) ═══════════ -->
+  </div><!-- /sec-livestreams -->
+
   <div class="sidebar">
     <div class="sb-card">
       <div class="sb-hdr">CIAC Rankings</div>
       <iframe src="https://states.maxpreps.com/widgets/ciac/singlesport.php?singlesport=boys-basketball-season-winter-category-" style="background:#fff"></iframe>
     </div>
   </div>
-</div>
+</div><!-- /layout -->
 
-<!-- ═══════════ ADD TO YOUR <script> BLOCK (before loadData()) ═══════════ -->
 <script>
+// ── Globals ──────────────────────────────────────────────────────────────────
+let games = [], preds = {}, uv = JSON.parse(sessionStorage.getItem("uv") || "{}");
+
+// ── Multi-stream widget ───────────────────────────────────────────────────────
 (function () {
 
-  // ── CONFIG ──────────────────────────────────────────────────────────────
-  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";   // e.g. "https://nutmeg-youtube-proxy.yourname.workers.dev"
+  // CONFIG
+  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";
 
   const CHANNELS = [
-    { name: "Staples Boys Basketball", channelId: "UC04Jzrsn-GdX21cCbVdB2xg", url: "https://www.youtube.com/@staplesboysbasketball"},
-    { name: "The Day CT",              channelId: "UC5w-uRIutST34hir01q1iSQ", url: "https://www.youtube.com/@thedayct" },
-    { name: "TB860LIVE",               channelId: "UCEfE3f3VVgWbFU7ephKOHuA", url: "https://www.youtube.com/@TB860LIVE"},
-    { name: "WHCI",                    channelId: "UCa3sHmUhm7-2Dep_Yy3LarA", url: "https://www.youtube.com/@whci", keywords: ["basketball"] },
-    { name: "Newington High School",   channelId: "UCRAbTG5A7YsSp_uUXwlPG4A", url: "https://www.youtube.com/@NewingtonHighSchool605"},
-    { name: "Project Purple Sports",   channelId: "UC0Qv-RCIYZZJNeA7Ra8IsFg", url: "https://www.youtube.com/@ProjectPurpleSports"},
-    { name: "Waterbury Public Schools",channelId: "UC3msaxLNUfUTipfx2BoRLNg", url: "https://www.youtube.com/@waterburypublicschoolsathl9870"},
-    { name: "Fairfield Prep Athletics", channelId: "UCGecTgvH_28YBQJx-YW2OIg", url: "https://www.youtube.com/@fairfieldprepjesuits"},
-    { name: "Fairfield Ludlowe Live", channelId: "UCuI4_F2ZyNbGWkwBZNkkJhQ", url: "https://www.youtube.com/@flhslive"},
-    { name: "New Canaan Athletics", channelId: "UCdtLggb1RcyKQWuRpMp8u9A", url: "https://www.youtube.com/@newcanaanhighschoolathleti3780"}
+    { name: "Staples Boys Basketball",  channelId: "UC04Jzrsn-GdX21cCbVdB2xg", url: "https://www.youtube.com/@staplesboysbasketball" },
+    { name: "The Day CT",               channelId: "UC5w-uRIutST34hir01q1iSQ",  url: "https://www.youtube.com/@thedayct" },
+    { name: "TB860LIVE",                channelId: "UCEfE3f3VVgWbFU7ephKOHuA",  url: "https://www.youtube.com/@TB860LIVE" },
+    { name: "WHCI",                     channelId: "UCa3sHmUhm7-2Dep_Yy3LarA",  url: "https://www.youtube.com/@whci", keywords: ["basketball"] },
+    { name: "Newington High School",    channelId: "UCRAbTG5A7YsSp_uUXwlPG4A",  url: "https://www.youtube.com/@NewingtonHighSchool605" },
+    { name: "Project Purple Sports",    channelId: "UC0Qv-RCIYZZJNeA7Ra8IsFg",  url: "https://www.youtube.com/@ProjectPurpleSports" },
+    { name: "Waterbury Public Schools", channelId: "UC3msaxLNUfUTipfx2BoRLNg",  url: "https://www.youtube.com/@waterburypublicschoolsathl9870" },
+    { name: "Fairfield Prep Athletics", channelId: "UCGecTgvH_28YBQJx-YW2OIg",  url: "https://www.youtube.com/@fairfieldprepjesuits" },
+    { name: "Fairfield Ludlowe Live",   channelId: "UCuI4_F2ZyNbGWkwBZNkkJhQ",  url: "https://www.youtube.com/@flhslive" },
+    { name: "New Canaan Athletics",     channelId: "UCdtLggb1RcyKQWuRpMp8u9A",  url: "https://www.youtube.com/@newcanaanhighschoolathleti3780" },
   ];
 
-  // ── STATE ────────────────────────────────────────────────────────────────
+  // STATE
   let channelData   = CHANNELS.map(c => ({ ...c, isLive: false, videoId: null, liveTitle: null, thumb: null }));
-  let selectedIds   = [];       // channelIds currently shown in grid (ordered)
-  let activeAudioId = null;     // channelId whose audio is unmuted
+  let selectedIds   = [];
+  let activeAudioId = null;
   let fetchError    = false;
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────
+  // DOM refs
   const elGrid      = document.getElementById("msGrid");
   const elLoading   = document.getElementById("msLoading");
   const elChips     = document.getElementById("msChipList");
@@ -576,8 +574,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   const elStatusDot = document.getElementById("msStatusDot");
   const elStatusTxt = document.getElementById("msStatusTxt");
 
-  // ── Event delegation on the grid — handles audio switching ───────────────
-  // Using delegation means it works even after iframes are rebuilt.
+  // Event delegation on grid for audio switching
   elGrid.addEventListener("click", e => {
     const overlay = e.target.closest(".ms-click-overlay");
     if (!overlay) return;
@@ -590,11 +587,9 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     switchAudio(cid);
   });
 
-  document.getElementById("msRefreshBtn").addEventListener("click", () => {
-    fetchLiveStatus();
-  });
+  document.getElementById("msRefreshBtn").addEventListener("click", fetchLiveStatus);
 
-  // ── Fetch live status from proxy ─────────────────────────────────────────
+  // Fetch live status from proxy
   async function fetchLiveStatus() {
     elLoading.style.display = "block";
     elGrid.style.display    = "none";
@@ -602,13 +597,12 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     fetchError = false;
 
     if (!PROXY_BASE) {
-      setStatus(false, "No proxy configured — showing placeholder tiles (set PROXY_BASE to enable live detection)");
+      setStatus(false, "No proxy configured — showing placeholder tiles");
       finishLoad();
       return;
     }
 
     const ids = CHANNELS.map(c => c.channelId).join(",");
-    // Build a keywords map — only include channels that have keywords defined
     const keywordsMap = {};
     CHANNELS.forEach(c => { if (c.keywords?.length) keywordsMap[c.channelId] = c.keywords; });
     const kwParam = Object.keys(keywordsMap).length
@@ -647,14 +641,12 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   function finishLoad() {
     elLoading.style.display = "none";
 
-    // On first load, pre-select all live channels (up to all channels)
     if (selectedIds.length === 0) {
       const live    = channelData.filter(c => c.isLive).map(c => c.channelId);
       const offline = channelData.filter(c => !c.isLive).map(c => c.channelId);
       selectedIds = [...live, ...offline];
     }
 
-    // Set default audio to first live channel
     if (!activeAudioId || !selectedIds.includes(activeAudioId)) {
       const firstLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
       activeAudioId = firstLive?.channelId ?? selectedIds[0] ?? null;
@@ -670,9 +662,8 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     elStatus.style.display = "flex";
   }
 
-  // ── Grid render ──────────────────────────────────────────────────────────
+  // Grid render
   function renderGrid() {
-    // solo class makes 1-stream layout full width
     elGrid.classList.toggle("solo", selectedIds.length === 1);
     elGrid.innerHTML = "";
 
@@ -703,11 +694,19 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     let inner = "";
 
     if (ch.isLive && ch.videoId) {
-      // mute=0 for active audio, mute=1 for all others
+      // Live with a video ID — embed the stream
       const mute = isAudio ? "0" : "1";
       const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
       inner += `<iframe src="${src}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    } else if (ch.isLive && !ch.videoId) {
+      // Live but couldn't extract video ID — link directly to channel live page
+      inner += `<div class="ms-placeholder">
+        <div class="ms-placeholder-icon">🔴</div>
+        <div class="ms-placeholder-name">${esc(ch.name)}</div>
+        <div class="ms-placeholder-status"><a href="${esc(ch.url)}/live" target="_blank" rel="noopener" style="color:var(--gold)">Watch on YouTube ↗</a></div>
+      </div>`;
     } else {
+      // Not live
       inner += `<div class="ms-placeholder">
         <div class="ms-placeholder-icon">📡</div>
         <div class="ms-placeholder-name">${esc(ch.name)}</div>
@@ -720,16 +719,13 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       <span class="ms-cell-name">${esc(ch.name)}</span>
       ${ch.isLive ? '<div class="ms-live-dot"></div>' : ''}
     </div>`;
-    // Overlay catches clicks for audio switching (delegation handles the event)
     inner += `<div class="ms-click-overlay" title="${ch.isLive ? 'Tap to hear this stream' : 'Not live'}"></div>`;
 
     cell.innerHTML = inner;
     return cell;
   }
 
-  // ── Switch audio ─────────────────────────────────────────────────────────
-  // Swaps mute state by rebuilding only the two affected iframes (not full grid)
-  // to avoid reloading every stream on every audio switch.
+  // Switch audio — only rebuilds two affected iframes
   function switchAudio(channelId) {
     if (activeAudioId === channelId) return;
 
@@ -737,7 +733,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     activeAudioId = channelId;
     elAudioLbl.textContent = channelData.find(c => c.channelId === channelId)?.name ?? "";
 
-    // Update only the two changed cells instead of rebuilding the whole grid
     [prevId, channelId].forEach(cid => {
       if (!cid) return;
       const cell = elGrid.querySelector(`.ms-cell[data-cid="${cid}"]`);
@@ -748,7 +743,6 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       const isNowAudio = cid === channelId;
       cell.classList.toggle("active-audio", isNowAudio);
 
-      // Rebuild iframe with correct mute param
       if (ch.isLive && ch.videoId) {
         const existing = cell.querySelector("iframe");
         const mute = isNowAudio ? "0" : "1";
@@ -768,7 +762,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     renderChips();
   }
 
-  // ── Chip list ─────────────────────────────────────────────────────────────
+  // Chip list
   function renderChips() {
     elChips.innerHTML = "";
     channelData.forEach(ch => {
@@ -787,10 +781,8 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
   function toggleChannel(channelId) {
     if (selectedIds.includes(channelId)) {
-      // Deselect
       selectedIds = selectedIds.filter(id => id !== channelId);
       if (activeAudioId === channelId) {
-        // Pass audio to next live selected channel, or first selected
         const nextLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
         activeAudioId = nextLive?.channelId ?? selectedIds[0] ?? null;
         elAudioLbl.textContent = activeAudioId
@@ -798,9 +790,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
           : "— tap a stream —";
       }
     } else {
-      // Add to end — no max, rows grow naturally
       selectedIds.push(channelId);
-      // Auto-give audio if nothing active yet
       if (!activeAudioId) {
         const ch = channelData.find(c => c.channelId === channelId);
         if (ch?.isLive) {
@@ -813,7 +803,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     renderChips();
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // Helpers
   function setStatus(ok, msg) {
     elStatusDot.className = "ms-status-dot " + (ok ? "ok" : "err");
     elStatusTxt.textContent = msg;
@@ -823,7 +813,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────
+  // Init
   let msInitialized = false;
   window.msInit = function () {
     if (msInitialized) return;
@@ -831,7 +821,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
     fetchLiveStatus();
   };
 
-  // Auto-refresh every 3 minutes while tab is open
+  // Auto-refresh every 3 minutes while livestreams tab is visible
   setInterval(() => {
     const tab = document.getElementById("sec-livestreams");
     if (tab && tab.style.display !== "none" && msInitialized) {
@@ -841,202 +831,280 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 })();
 
-async function loadData(){
-  try{
-    const[mr,pr]=await Promise.allSettled([fetch("master_games.csv?"+Date.now()),fetch("predictions.csv?"+Date.now())]);
-    if(mr.status==="fulfilled"&&mr.value.ok){const t=await mr.value.text();games=parseCSV(t).filter(r=>r.game_id);}
-    else games=seed();
-    if(pr.status==="fulfilled"&&pr.value.ok){
-      const vs=parseCSV(await pr.value.text()).filter(r=>r.vote_id);
-      vs.forEach(v=>{if(!preds[v.game_id])preds[v.game_id]={home:0,away:0};preds[v.game_id][v.predicted_winner]==(preds[v.game_id][v.predicted_winner]||0)+1;if(v.predicted_winner==="home")preds[v.game_id].home++;else preds[v.game_id].away++;});
+// ── Scores / submit / ticker ──────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [mr, pr] = await Promise.allSettled([
+      fetch("master_games.csv?" + Date.now()),
+      fetch("predictions.csv?" + Date.now()),
+    ]);
+    if (mr.status === "fulfilled" && mr.value.ok) {
+      const t = await mr.value.text();
+      games = parseCSV(t).filter(r => r.game_id);
+    } else {
+      games = seed();
     }
-  }catch(e){games=seed();}
+    if (pr.status === "fulfilled" && pr.value.ok) {
+      const vs = parseCSV(await pr.value.text()).filter(r => r.vote_id);
+      vs.forEach(v => {
+        if (!preds[v.game_id]) preds[v.game_id] = { home: 0, away: 0 };
+        if (v.predicted_winner === "home") preds[v.game_id].home++;
+        else preds[v.game_id].away++;
+      });
+    }
+  } catch (e) {
+    games = seed();
+  }
   buildSel();
-  const today=new Date();
-  document.getElementById("gameDate").valueAsDate=today;
-  renderScores(today);renderTicker();
+  const today = new Date();
+  document.getElementById("gameDate").valueAsDate = today;
+  renderScores(today);
+  renderTicker();
 }
 
-function seed(){return[
-  {game_id:"g1",header:"CIAC Boys Basketball",home_team:"Daniel Hand",away_team:"Wilbur Cross",home_rank:"NR",away_rank:"NR",home_score:"59",away_score:"53",home_record:"10-12",away_record:"8-14",game_datetime:"03/04/2026 18:00:00",status:"final",caption:"FINAL"},
-  {game_id:"g2",header:"CIAC Boys Basketball",home_team:"Bristol Eastern",away_team:"Foran",home_rank:"NR",away_rank:"NR",home_score:"47",away_score:"50",home_record:"8-13",away_record:"9-13",game_datetime:"03/04/2026 18:30:00",status:"final",caption:"FINAL"},
-  {game_id:"g3",header:"CIAC Boys Basketball",home_team:"Staples",away_team:"Ridgefield",home_rank:"2",away_rank:"NR",home_score:"62",away_score:"48",home_record:"23-0",away_record:"17-6",game_datetime:"03/04/2026 19:30:00",status:"final",caption:"FINAL"},
-  {game_id:"g4",header:"CIAC Boys Basketball",home_team:"Shelton",away_team:"Amity Regional",home_rank:"NR",away_rank:"3",home_score:"",away_score:"",home_record:"14-8",away_record:"18-4",game_datetime:"03/06/2026 19:00:00",status:"scheduled",caption:""},
-  {game_id:"g5",header:"CIAC Boys Basketball",home_team:"Glastonbury",away_team:"South Windsor",home_rank:"1",away_rank:"NR",home_score:"",away_score:"",home_record:"20-2",away_record:"16-6",game_datetime:"03/06/2026 19:30:00",status:"scheduled",caption:""},
-];}
-
-function parseGD(s){
-  if(!s)return null;s=s.trim();
-  const[dp,tp="00:00"]=s.split(" ");
-  const[m,d,y]=dp.split("/");const[h,mn]=tp.split(":");
-  return new Date(+y,+m-1,+d,+h,+mn);
-}
-function tds(d){return d.toISOString().slice(0,10)}
-function fmtT(d){let h=d.getHours(),m=d.getMinutes(),ap=h>=12?"PM":"AM";h=h%12||12;return`${h}:${m.toString().padStart(2,"0")} ${ap}`}
-function voteOpen(g){
-  if(g.status!=="scheduled")return false;
-  const gt=parseGD(g.game_datetime);if(!gt)return false;
-  const now=new Date();return now>=new Date(gt-48*3600000)&&now<gt;
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  if (!lines.length) return [];
+  const headers = lines[0].split(",").map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(",");
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i] || "").trim());
+    return obj;
+  });
 }
 
-function renderScores(date){
-  const ctr=document.getElementById("scoresCtr");ctr.innerHTML="";
-  const ds=tds(date);
-  const gs=games.filter(g=>{const d=parseGD(g.game_datetime);return d&&tds(d)===ds;});
-  if(!gs.length){ctr.innerHTML=`<div class="no-games">No games scheduled for this date.</div>`;return;}
-  const hdr=document.createElement("div");hdr.className="date-hdr";
-  hdr.textContent=date.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+function seed() {
+  return [
+    { game_id:"g1", header:"CIAC Boys Basketball", home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", home_record:"10-12", away_record:"8-14",  game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
+    { game_id:"g2", header:"CIAC Boys Basketball", home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", home_record:"8-13",  away_record:"9-13",  game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g3", header:"CIAC Boys Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", home_record:"23-0",  away_record:"17-6",  game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g4", header:"CIAC Boys Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   home_record:"14-8",  away_record:"18-4",  game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
+    { game_id:"g5", header:"CIAC Boys Basketball", home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   home_record:"20-2",  away_record:"16-6",  game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
+  ];
+}
+
+function parseGD(s) {
+  if (!s) return null;
+  s = s.trim();
+  const [dp, tp = "00:00"] = s.split(" ");
+  const [m, d, y] = dp.split("/");
+  const [h, mn] = tp.split(":");
+  return new Date(+y, +m - 1, +d, +h, +mn);
+}
+function tds(d) { return d.toISOString().slice(0, 10); }
+function fmtT(d) { let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return `${h}:${m.toString().padStart(2, "0")} ${ap}`; }
+function voteOpen(g) {
+  if (g.status !== "scheduled") return false;
+  const gt = parseGD(g.game_datetime);
+  if (!gt) return false;
+  const now = new Date();
+  return now >= new Date(gt - 48 * 3600000) && now < gt;
+}
+
+function renderScores(date) {
+  const ctr = document.getElementById("scoresCtr");
+  ctr.innerHTML = "";
+  const ds = tds(date);
+  const gs = games.filter(g => { const d = parseGD(g.game_datetime); return d && tds(d) === ds; });
+  if (!gs.length) { ctr.innerHTML = `<div class="no-games">No games scheduled for this date.</div>`; return; }
+  const hdr = document.createElement("div");
+  hdr.className = "date-hdr";
+  hdr.textContent = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   ctr.appendChild(hdr);
-  gs.forEach(g=>renderCard(g,ctr));
+  gs.forEach(g => renderCard(g, ctr));
 }
 
-function renderCard(g,ctr){
-  const fin=g.status==="final";
-  const hs=parseInt(g.home_score)||0,as=parseInt(g.away_score)||0;
-  const hw=fin&&hs>as,aw=fin&&as>hs;
-  const gd=parseGD(g.game_datetime);
-  const vo=voteOpen(g);
-  const p=preds[g.game_id]||{home:0,away:0};
-  const tot=p.home+p.away;
-  const hp=tot?Math.round(p.home/tot*100):50,ap=100-hp;
+function renderCard(g, ctr) {
+  const fin = g.status === "final";
+  const hs = parseInt(g.home_score) || 0, as = parseInt(g.away_score) || 0;
+  const hw = fin && hs > as, aw = fin && as > hs;
+  const gd = parseGD(g.game_datetime);
+  const vo = voteOpen(g);
+  const p = preds[g.game_id] || { home: 0, away: 0 };
+  const tot = p.home + p.away;
+  const hp = tot ? Math.round(p.home / tot * 100) : 50, ap = 100 - hp;
 
-  const card=document.createElement("div");
-  card.className="game-card"+(g.status==="scheduled"?" sched":"");
-  card.dataset.gid=g.game_id;
+  const card = document.createElement("div");
+  card.className = "game-card" + (g.status === "scheduled" ? " sched" : "");
+  card.dataset.gid = g.game_id;
 
-  const hr=g.home_rank&&g.home_rank!=="NR"?`<span class="rank-b">#${g.home_rank}</span>`:"";
-  const ar=g.away_rank&&g.away_rank!=="NR"?`<span class="rank-b">#${g.away_rank}</span>`:"";
+  const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${g.home_rank}</span>` : "";
+  const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${g.away_rank}</span>` : "";
 
-  let ctr2="";
-  if(fin){
-    const cap=g.caption?`<div class="cap-b">${g.caption}</div>`:"";
-    ctr2=`<div class="scores-row"><div class="score-n ${hw?"W":"L"}">${hs}</div><div class="score-div">Final</div><div class="score-n ${aw?"W":"L"}">${as}</div></div>${cap}`;
-  }else{
-    ctr2=`<div class="time-b">${gd?fmtT(gd):"TBD"}</div><div class="sport-sub">${g.header||""}</div>`;
+  let ctr2 = "";
+  if (fin) {
+    const cap = g.caption ? `<div class="cap-b">${g.caption}</div>` : "";
+    ctr2 = `<div class="scores-row"><div class="score-n ${hw ? "W" : "L"}">${hs}</div><div class="score-div">Final</div><div class="score-n ${aw ? "W" : "L"}">${as}</div></div>${cap}`;
+  } else {
+    ctr2 = `<div class="time-b">${gd ? fmtT(gd) : "TBD"}</div><div class="sport-sub">${g.header || ""}</div>`;
   }
 
-  card.innerHTML=`<div class="card-inner">
-    <div class="team-col"><div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${g.home_team}</div><div class="team-rec">${g.home_record||""}</div></div>
+  card.innerHTML = `<div class="card-inner">
+    <div class="team-col"><div class="team-name ${hw ? "W" : aw ? "L" : "N"}">${hr}${g.home_team}</div><div class="team-rec">${g.home_record || ""}</div></div>
     <div class="score-ctr">${ctr2}</div>
-    <div class="team-col right"><div class="team-name ${aw?"W":hw?"L":"N"}">${g.away_team}${ar}</div><div class="team-rec">${g.away_record||""}</div></div>
+    <div class="team-col right"><div class="team-name ${aw ? "W" : hw ? "L" : "N"}">${g.away_team}${ar}</div><div class="team-rec">${g.away_record || ""}</div></div>
   </div>`;
 
-  if(vo||(g.status==="scheduled"&&tot>0)){
-    const uvc=uv[g.game_id];
-    const hs2=g.home_team.split(" ").pop(),as2=g.away_team.split(" ").pop();
-    const vs=document.createElement("div");vs.className="vote-strip";
-    vs.innerHTML=`<span class="vote-lbl">🗳 Pick</span>
+  if (vo || (g.status === "scheduled" && tot > 0)) {
+    const uvc = uv[g.game_id];
+    const hs2 = g.home_team.split(" ").pop(), as2 = g.away_team.split(" ").pop();
+    const vs = document.createElement("div");
+    vs.className = "vote-strip";
+    vs.innerHTML = `<span class="vote-lbl">🗳 Pick</span>
       <div class="vote-bars">
         <div class="vote-team-lbl">${hs2}</div>
         <div class="bar-track"><div class="bar-h" style="width:${hp}%"></div><div class="bar-a" style="width:${ap}%"></div></div>
         <div class="vote-team-lbl" style="text-align:right">${as2}</div>
       </div>
       <div class="vote-pcts">${hp}%–${ap}%</div>
-      ${vo?`<button class="vote-btn${uvc==="home"?" vh":""}" onclick="vote('${g.game_id}','home')">${hs2}</button><button class="vote-btn${uvc==="away"?" va":""}" onclick="vote('${g.game_id}','away')">${as2}</button>`:`<span style="font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px">${tot} VOTES</span>`}`;
+      ${vo ? `<button class="vote-btn${uvc === "home" ? " vh" : ""}" onclick="vote('${g.game_id}','home')">${hs2}</button><button class="vote-btn${uvc === "away" ? " va" : ""}" onclick="vote('${g.game_id}','away')">${as2}</button>` : `<span style="font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px">${tot} VOTES</span>`}`;
     card.appendChild(vs);
   }
   ctr.appendChild(card);
 }
 
-function vote(gid,team){
-  if(!preds[gid])preds[gid]={home:0,away:0};
-  const prev=uv[gid];
-  if(prev)preds[gid][prev]--;
-  uv[gid]=team;preds[gid][team]++;
-  sessionStorage.setItem("uv",JSON.stringify(uv));
-  const old=document.querySelector(`[data-gid="${gid}"]`);
-  if(old){const g=games.find(x=>x.game_id===gid);const p=old.parentElement;const n=old.nextSibling;old.remove();const t=document.createElement("div");renderCard(g,t);p.insertBefore(t.firstChild,n);}
+function vote(gid, team) {
+  if (!preds[gid]) preds[gid] = { home: 0, away: 0 };
+  const prev = uv[gid];
+  if (prev) preds[gid][prev]--;
+  uv[gid] = team;
+  preds[gid][team]++;
+  sessionStorage.setItem("uv", JSON.stringify(uv));
+  const old = document.querySelector(`[data-gid="${gid}"]`);
+  if (old) {
+    const g = games.find(x => x.game_id === gid);
+    const p = old.parentElement;
+    const n = old.nextSibling;
+    old.remove();
+    const t = document.createElement("div");
+    renderCard(g, t);
+    p.insertBefore(t.firstChild, n);
+  }
 }
 
-// TICKER — today's games only
-function renderTicker(){
-  const tk=document.getElementById("ticker");tk.innerHTML="";
-  const ds=tds(new Date());
-  const tg=games.filter(g=>{const d=parseGD(g.game_datetime);return d&&tds(d)===ds;});
-  if(!tg.length)return;
-  const items=tg.map(g=>{
-    const el=document.createElement("div");el.className="ticker-item";
-    if(g.status==="final"){
-      const hs=parseInt(g.home_score)||0,as=parseInt(g.away_score)||0;
-      el.innerHTML=`<span class="${hs>as?"tw":""}">${g.home_team}</span> ${hs} — ${as} <span class="${as>hs?"tw":""}">${g.away_team}</span>`;
-    }else{
-      const d=parseGD(g.game_datetime);
-      el.innerHTML=`<span class="upc">${g.home_team} vs ${g.away_team}${d?" "+fmtT(d):""}</span>`;
+function renderTicker() {
+  const tk = document.getElementById("ticker");
+  tk.innerHTML = "";
+  const ds = tds(new Date());
+  const tg = games.filter(g => { const d = parseGD(g.game_datetime); return d && tds(d) === ds; });
+  if (!tg.length) return;
+  const items = tg.map(g => {
+    const el = document.createElement("div");
+    el.className = "ticker-item";
+    if (g.status === "final") {
+      const hs = parseInt(g.home_score) || 0, as = parseInt(g.away_score) || 0;
+      el.innerHTML = `<span class="${hs > as ? "tw" : ""}">${g.home_team}</span> ${hs} — ${as} <span class="${as > hs ? "tw" : ""}">${g.away_team}</span>`;
+    } else {
+      const d = parseGD(g.game_datetime);
+      el.innerHTML = `<span class="upc">${g.home_team} vs ${g.away_team}${d ? " " + fmtT(d) : ""}</span>`;
     }
     return el;
   });
-  // Duplicate for seamless loop
-  [...items,...items.map(i=>i.cloneNode(true))].forEach(i=>tk.appendChild(i));
+  [...items, ...items.map(i => i.cloneNode(true))].forEach(i => tk.appendChild(i));
 }
 
-// TABS
-document.querySelectorAll(".tab").forEach(t=>{
-  t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+// Tabs
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
     t.classList.add("active");
-    const s=t.dataset.s;
-    ["scores","submit","livestreams"].forEach(id=>document.getElementById("sec-"+id).style.display=id===s?"block":"none");
-    if(s==="livestreams") msInit();
+    const s = t.dataset.s;
+    ["scores", "submit", "livestreams"].forEach(id => {
+      document.getElementById("sec-" + id).style.display = id === s ? "block" : "none";
+    });
+    if (s === "livestreams") msInit();
   });
 });
 
-const di=document.getElementById("gameDate");
-di.addEventListener("change",e=>{const[y,m,d]=e.target.value.split("-").map(Number);renderScores(new Date(y,m-1,d));});
+document.getElementById("gameDate").addEventListener("change", e => {
+  const [y, m, d] = e.target.value.split("-").map(Number);
+  renderScores(new Date(y, m - 1, d));
+});
 
-function buildSel(){
-  const sel=document.getElementById("gameSelect");
-  sel.innerHTML=`<option value="">— Select a game —</option>`;
-  games.forEach(g=>{
-    const d=parseGD(g.game_datetime);
-    const ds=d?d.toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
-    const o=document.createElement("option");o.value=g.game_id;
-    o.textContent=`${ds} — ${g.home_team} vs ${g.away_team}`;sel.appendChild(o);
+function buildSel() {
+  const sel = document.getElementById("gameSelect");
+  sel.innerHTML = `<option value="">— Select a game —</option>`;
+  games.forEach(g => {
+    const d = parseGD(g.game_datetime);
+    const ds = d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+    const o = document.createElement("option");
+    o.value = g.game_id;
+    o.textContent = `${ds} — ${g.home_team} vs ${g.away_team}`;
+    sel.appendChild(o);
   });
 }
 
-document.getElementById("gameSelect").addEventListener("change",e=>{
-  const gid=e.target.value;const show=!!gid;
-  ["scoreGrp","photoGrp"].forEach(id=>document.getElementById(id).style.display=show?"block":"none");
-  document.getElementById("subBtn").style.display=show?"block":"none";
-  if(gid){const g=games.find(x=>x.game_id===gid);if(g){document.getElementById("homeL").textContent=g.home_team;document.getElementById("awayL").textContent=g.away_team;}}
+document.getElementById("gameSelect").addEventListener("change", e => {
+  const gid = e.target.value;
+  const show = !!gid;
+  ["scoreGrp", "photoGrp"].forEach(id => document.getElementById(id).style.display = show ? "block" : "none");
+  document.getElementById("subBtn").style.display = show ? "block" : "none";
+  if (gid) {
+    const g = games.find(x => x.game_id === gid);
+    if (g) {
+      document.getElementById("homeL").textContent = g.home_team;
+      document.getElementById("awayL").textContent = g.away_team;
+    }
+  }
 });
 
 // File drop
-let selFile=null;
-const fd=document.getElementById("fileDrop"),fi=document.getElementById("fileInput");
-fd.addEventListener("click",()=>fi.click());
-fd.addEventListener("dragover",e=>{e.preventDefault();fd.classList.add("dov")});
-fd.addEventListener("dragleave",()=>fd.classList.remove("dov"));
-fd.addEventListener("drop",e=>{e.preventDefault();fd.classList.remove("dov");hf(e.dataTransfer.files[0])});
-fi.addEventListener("change",e=>hf(e.target.files[0]));
-function hf(f){
-  if(!f||!f.type.startsWith("image/")){document.getElementById("photoErr").classList.add("show");return;}
-  document.getElementById("photoErr").classList.remove("show");selFile=f;
-  const r=new FileReader();r.onload=e=>{document.getElementById("prevImg").src=e.target.result;document.getElementById("prevName").textContent=f.name;document.getElementById("fprev").style.display="block";};r.readAsDataURL(f);
+let selFile = null;
+const fd = document.getElementById("fileDrop"), fi = document.getElementById("fileInput");
+fd.addEventListener("click", () => fi.click());
+fd.addEventListener("dragover", e => { e.preventDefault(); fd.classList.add("dov"); });
+fd.addEventListener("dragleave", () => fd.classList.remove("dov"));
+fd.addEventListener("drop", e => { e.preventDefault(); fd.classList.remove("dov"); hf(e.dataTransfer.files[0]); });
+fi.addEventListener("change", e => hf(e.target.files[0]));
+function hf(f) {
+  if (!f || !f.type.startsWith("image/")) { document.getElementById("photoErr").classList.add("show"); return; }
+  document.getElementById("photoErr").classList.remove("show");
+  selFile = f;
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById("prevImg").src = e.target.result;
+    document.getElementById("prevName").textContent = f.name;
+    document.getElementById("fprev").style.display = "block";
+  };
+  r.readAsDataURL(f);
 }
 
-document.getElementById("subBtn").addEventListener("click",()=>{
-  let ok=true;
-  const hs=document.getElementById("homeS").value,as=document.getElementById("awayS").value;
-  const se=document.getElementById("scoreErr");
-  if(!hs||!as||isNaN(+hs)||isNaN(+as)||!Number.isInteger(+hs)||!Number.isInteger(+as)||+hs<0||+as<0||+hs>999||+as>999){se.classList.add("show");ok=false;}else se.classList.remove("show");
-  const pe=document.getElementById("photoErr");
-  if(!selFile){pe.classList.add("show");ok=false;}else pe.classList.remove("show");
-  if(!ok)return;
-  const gid=document.getElementById("gameSelect").value;
-  const sub={submission_id:"sub_"+Date.now(),game_id:gid,home_score:+hs,away_score:+as,image_url:"[uploaded]:"+selFile.name,submitter_note:"",submitted_at:new Date().toISOString(),status:"pending",admin_notes:""};
-  const p=JSON.parse(sessionStorage.getItem("ps")||"[]");p.push(sub);sessionStorage.setItem("ps",JSON.stringify(p));
-  const btn=document.getElementById("subBtn");btn.disabled=true;
+document.getElementById("subBtn").addEventListener("click", () => {
+  let ok = true;
+  const hs = document.getElementById("homeS").value, as = document.getElementById("awayS").value;
+  const se = document.getElementById("scoreErr");
+  if (!hs || !as || isNaN(+hs) || isNaN(+as) || !Number.isInteger(+hs) || !Number.isInteger(+as) || +hs < 0 || +as < 0 || +hs > 999 || +as > 999) {
+    se.classList.add("show"); ok = false;
+  } else { se.classList.remove("show"); }
+  const pe = document.getElementById("photoErr");
+  if (!selFile) { pe.classList.add("show"); ok = false; } else { pe.classList.remove("show"); }
+  if (!ok) return;
+  const gid = document.getElementById("gameSelect").value;
+  const sub = { submission_id: "sub_" + Date.now(), game_id: gid, home_score: +hs, away_score: +as, image_url: "[uploaded]:" + selFile.name, submitter_note: "", submitted_at: new Date().toISOString(), status: "pending", admin_notes: "" };
+  const p = JSON.parse(sessionStorage.getItem("ps") || "[]");
+  p.push(sub);
+  sessionStorage.setItem("ps", JSON.stringify(p));
+  const btn = document.getElementById("subBtn");
+  btn.disabled = true;
   document.getElementById("successMsg").classList.add("show");
-  setTimeout(()=>{
-    document.getElementById("successMsg").classList.remove("show");btn.disabled=false;
-    document.getElementById("gameSelect").value="";document.getElementById("homeS").value="";document.getElementById("awayS").value="";
-    document.getElementById("fprev").style.display="none";selFile=null;
-    ["scoreGrp","photoGrp","subBtn"].forEach(id=>document.getElementById(id).style.display="none");
-  },4000);
+  setTimeout(() => {
+    document.getElementById("successMsg").classList.remove("show");
+    btn.disabled = false;
+    document.getElementById("gameSelect").value = "";
+    document.getElementById("homeS").value = "";
+    document.getElementById("awayS").value = "";
+    document.getElementById("fprev").style.display = "none";
+    selFile = null;
+    ["scoreGrp", "photoGrp", "subBtn"].forEach(id => document.getElementById(id).style.display = "none");
+  }, 4000);
 });
 
-setInterval(()=>{const v=document.getElementById("gameDate").value;if(v){const[y,m,d]=v.split("-").map(Number);renderScores(new Date(y,m-1,d));}renderTicker();},120000);
+setInterval(() => {
+  const v = document.getElementById("gameDate").value;
+  if (v) { const [y, m, d] = v.split("-").map(Number); renderScores(new Date(y, m - 1, d)); }
+  renderTicker();
+}, 120000);
 
 loadData();
 </script>
