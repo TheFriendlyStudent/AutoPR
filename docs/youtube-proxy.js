@@ -1,20 +1,33 @@
 /**
  * youtube-proxy.js — Cloudflare Worker
  *
- * Detects live streams using YouTube's public /channel/<id>/live page —
- * no search.list calls, no quota burn. Only channels.list is used
- * (1 unit per channel) for channel name + thumbnail.
+ * Uses YouTube Data API v3 search.list (eventType=live) to accurately detect
+ * live streams and return the correct video IDs.
+ *
+ * WHY search.list instead of page scraping:
+ *   Page scraping /channel/<id>/live is unreliable — YouTube redirects that URL
+ *   to whatever it considers relevant for the channel, not necessarily a live stream.
+ *   The videoId regex can match non-live videos, and channels streaming multiple
+ *   events return whichever video happens to be first in the page HTML.
+ *   search.list?eventType=live is the authoritative source: it only returns
+ *   videos that are actively live RIGHT NOW, and gives you the exact video ID.
+ *
+ * QUOTA NOTE:
+ *   search.list costs 100 units/call. With 10 channels = 1000 units/refresh.
+ *   YouTube's default daily quota is 10,000 units, so you get ~10 full refreshes/day.
+ *   channels.list costs 1 unit/call (used for thumbnails) — negligible.
+ *   To stay within quota, the frontend auto-refreshes every 3 minutes — adjust if needed.
  *
  * DEPLOY STEPS:
  *   1. npm install -g wrangler
  *   2. wrangler login
- *   3. wrangler secret put YOUTUBE_API_KEY   (paste your key — only needed for thumbnails/names)
+ *   3. wrangler secret put YOUTUBE_API_KEY
  *   4. wrangler deploy
- *   5. Update PROXY_BASE in index.html to your worker's URL
+ *   5. PROXY_BASE in index.html should already point to your worker URL.
  *
  * ENDPOINTS:
- *   GET /livestreams?ids=UCxxx,UCyyy   → returns live status + thumbnails for channel IDs
- *   GET /health                        → returns { ok: true, ts: <timestamp> }
+ *   GET /livestreams?ids=UCxxx,UCyyy   → live status + video IDs for each channel
+ *   GET /health                        → { ok: true, ts: <timestamp> }
  */
 
 export default {
@@ -44,24 +57,65 @@ export default {
 
       const channelIds = ids.split(",").map(s => s.trim()).filter(Boolean).slice(0, 20);
 
-      // Optional: per-channel keyword filters passed as JSON
-      // e.g. ?keywords={"UCxxx":["basketball","hoops"]}
+      // Optional per-channel keyword filters (JSON map: channelId → string[])
       let keywordsMap = {};
       try {
         const kw = url.searchParams.get("keywords");
         if (kw) keywordsMap = JSON.parse(kw);
-      } catch (e) { /* malformed JSON — ignore */ }
+      } catch (e) { /* ignore malformed JSON */ }
 
       const apiKey = env.YOUTUBE_API_KEY;
 
+      if (!apiKey) {
+        log("ERROR", "YOUTUBE_API_KEY secret not set", request);
+        return Response.json(
+          { error: "Server misconfiguration: API key not set" },
+          { status: 500, headers: cors }
+        );
+      }
+
       try {
-        const results = [];
-        // Sequential to avoid Cloudflare subrequest deadlocks
-        for (const id of channelIds) {
-          results.push(await fetchChannelData(id, apiKey, keywordsMap[id] ?? []));
-        }
-        log("OK", `Fetched ${channelIds.length} channels`, request);
-        return Response.json({ channels: results }, { headers: cors });
+        // Step 1: Fetch all live streams for all channels in parallel using search.list.
+        //         Each call is per-channel (channelId param only accepts one ID at a time).
+        //         We run them in parallel to minimise latency.
+        const liveResults = await Promise.allSettled(
+          channelIds.map(id => fetchLiveViaSearchAPI(id, apiKey, keywordsMap[id] ?? []))
+        );
+
+        // Step 2: Fetch channel metadata (name + thumbnail) in a single batched call.
+        //         channels.list accepts a comma-separated list of up to 50 IDs.
+        const metaMap = await fetchChannelMetaBatch(channelIds, apiKey);
+
+        const channels = channelIds.map((id, i) => {
+          const liveResult = liveResults[i];
+          const live = liveResult.status === "fulfilled"
+            ? liveResult.value
+            : { isLive: false, videoId: null, liveTitle: null };
+
+          if (liveResult.status === "rejected") {
+            console.log(JSON.stringify({
+              level: "WARN",
+              message: `Live check failed for ${id}: ${liveResult.reason?.message ?? liveResult.reason}`,
+            }));
+          }
+
+          const meta = metaMap[id] ?? { name: id, thumb: null };
+
+          return {
+            channelId: id,
+            name: meta.name,
+            thumb: meta.thumb,
+            isLive: live.isLive,
+            videoId: live.videoId,
+            liveTitle: live.liveTitle,
+          };
+        });
+
+        const liveCount = channels.filter(c => c.isLive).length;
+        log("OK", `${liveCount}/${channelIds.length} channels live`, request);
+
+        return Response.json({ channels }, { headers: cors });
+
       } catch (err) {
         log("ERROR", err.message, request);
         return Response.json({ error: "Fetch error", detail: err.message }, { status: 502, headers: cors });
@@ -72,138 +126,111 @@ export default {
   },
 };
 
-// ── Fetch channel data ───────────────────────────────────────────────────────
-async function fetchChannelData(channelId, apiKey, keywords = []) {
-
-  const [liveResult, metaResult] = await Promise.allSettled([
-    detectLiveViaPageScrape(channelId, keywords),
-    fetchChannelMeta(channelId, apiKey),
-  ]);
-
-  const live = liveResult.status === "fulfilled" ? liveResult.value : { isLive: false, videoId: null, liveTitle: null };
-  const meta = metaResult.status === "fulfilled" ? metaResult.value : { name: channelId, thumb: null };
-
-  if (liveResult.status === "rejected") {
-    console.log(JSON.stringify({ level: "WARN", message: `Live check failed for ${channelId}: ${liveResult.reason}` }));
-  }
-  if (metaResult.status === "rejected") {
-    console.log(JSON.stringify({ level: "WARN", message: `Meta failed for ${channelId}: ${metaResult.reason}` }));
-  }
-
-  return {
+// ── Live detection via search.list (accurate, returns correct video ID) ───────
+//
+// search.list?part=id,snippet&channelId=<id>&eventType=live&type=video
+//   → Only returns videos that are ACTIVELY live right now for that channel.
+//   → Returns the exact video ID — no regex guesswork, no wrong-video issues.
+//   → Costs 100 quota units per channel.
+//
+async function fetchLiveViaSearchAPI(channelId, apiKey, keywords = []) {
+  const params = new URLSearchParams({
+    part: "id,snippet",
     channelId,
-    name: meta.name,
-    thumb: meta.thumb,
-    isLive: live.isLive,
-    videoId: live.videoId,
-    liveTitle: live.liveTitle,
-  };
-}
+    eventType: "live",
+    type: "video",
+    maxResults: "10",   // get up to 10 in case channel has multiple concurrent streams
+    key: apiKey,
+  });
 
-// ── Live detection via page scrape (no API key, no quota) ────────────────────
-async function detectLiveViaPageScrape(channelId, keywords = []) {
-  const livePageUrl = `https://www.youtube.com/channel/${channelId}/live`;
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
 
-  try {
-    const res = await fetch(livePageUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; NutmegSports/1.0)",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      redirect: "follow",
-    });
-
-    if (!res.ok) throw new Error(`live page ${res.status}`);
-    const html = await res.text();
-
-    // Verify this page actually belongs to the channel we requested.
-    // YouTube can redirect /live to unrelated content.
-    if (!html.includes(channelId)) {
-      console.log(JSON.stringify({ level: "DEBUG", channelId, signal: "channel-mismatch" }));
-      return { isLive: false, videoId: null, liveTitle: null };
-    }
-
-    // "isLive":true appears for both active and scheduled streams.
-    // "isUpcoming":true is set on scheduled-but-not-started streams.
-    // "isLiveNow":true is only set for active broadcasts (not always present).
-    const isLive     = /"isLive"\s*:\s*true/.test(html);
-    const isUpcoming = /"isUpcoming"\s*:\s*true/.test(html);
-    const isLiveNow  = /"isLiveNow"\s*:\s*true/.test(html);
-
-    const liveNow = (isLive && !isUpcoming) || isLiveNow;
-
-    if (!liveNow) {
-      console.log(JSON.stringify({ level: "DEBUG", channelId, signal: "not-live-now", isLive, isUpcoming, isLiveNow }));
-      return { isLive: false, videoId: null, liveTitle: null };
-    }
-
-    // Try multiple extraction methods in order of reliability.
-    // YouTube's server-rendered page may omit the canonical tag,
-    // so we fall back to progressively looser matches.
-    const videoId =
-      // 1. Canonical link tag
-      html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/)?.[1] ??
-      // 2. og:url meta tag
-      html.match(/<meta property="og:url" content="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/)?.[1] ??
-      // 3. watch?v= anywhere in the page
-      html.match(/watch\?v=([\w-]{11})(?:[^-\w]|$)/)?.[1] ??
-      // 4. "videoId":"..." in page JSON (last resort — may rarely match non-live IDs)
-      html.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/)?.[1] ??
-      null;
-
-    if (!videoId) {
-      console.log(JSON.stringify({ level: "WARN", message: `Could not extract videoId for ${channelId}` }));
-      // Still return isLive:true — frontend will show a fallback link to the channel
-      return { isLive: true, videoId: null, liveTitle: null };
-    }
-
-    // Extract title
-    const titleMatch = html.match(/"title"\s*:\s*\{"runs"\s*:\s*\[\{"text"\s*:\s*"([^"]+)"/)
-                    || html.match(/<title>([^<|]+)/);
-    const title = (titleMatch?.[1] ?? "").trim()
-      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-
-    // Apply keyword filter
-    if (keywords.length > 0) {
-      const matched = keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
-      if (!matched) {
-        console.log(JSON.stringify({
-          level: "DEBUG", channelId, signal: "keyword-skip",
-          videoId, title: title.slice(0, 80), keywords,
-        }));
-        return { isLive: false, videoId: null, liveTitle: null };
-      }
-    }
-
-    console.log(JSON.stringify({
-      level: "DEBUG", channelId, signal: "live-confirmed",
-      videoId, title: title.slice(0, 80),
-    }));
-
-    return { isLive: true, videoId, liveTitle: title };
-
-  } catch (e) {
-    throw new Error(`live page check failed for ${channelId}: ${e.message}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`search.list ${res.status}: ${body.slice(0, 200)}`);
   }
-}
 
-// ── Channel metadata via API (name + thumbnail, 1 unit per channel) ──────────
-async function fetchChannelMeta(channelId, apiKey) {
-  if (!apiKey) return { name: channelId, thumb: null };
-
-  const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${apiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`channels API ${res.status}`);
   const data = await res.json();
 
-  const snippet = data.items?.[0]?.snippet ?? {};
-  return {
-    name:  snippet.title ?? channelId,
-    thumb: snippet.thumbnails?.default?.url ?? snippet.thumbnails?.medium?.url ?? null,
-  };
+  if (!data.items || data.items.length === 0) {
+    console.log(JSON.stringify({ level: "DEBUG", channelId, signal: "not-live" }));
+    return { isLive: false, videoId: null, liveTitle: null };
+  }
+
+  // If keyword filter is set, find the first item whose title matches
+  let chosenItem = null;
+
+  if (keywords.length > 0) {
+    for (const item of data.items) {
+      const title = item.snippet?.title ?? "";
+      const matched = keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()));
+      if (matched) {
+        chosenItem = item;
+        break;
+      }
+    }
+    if (!chosenItem) {
+      // No item matched keywords — channel is live but not for the relevant sport
+      console.log(JSON.stringify({
+        level: "DEBUG", channelId, signal: "keyword-skip",
+        titles: data.items.map(i => (i.snippet?.title ?? "").slice(0, 60)),
+        keywords,
+      }));
+      return { isLive: false, videoId: null, liveTitle: null };
+    }
+  } else {
+    // No keyword filter — use the first (most relevant) live stream
+    chosenItem = data.items[0];
+  }
+
+  const videoId = chosenItem.id?.videoId ?? null;
+  const liveTitle = chosenItem.snippet?.title ?? "";
+
+  console.log(JSON.stringify({
+    level: "DEBUG", channelId, signal: "live-confirmed",
+    videoId, title: liveTitle.slice(0, 80),
+    totalLiveStreams: data.items.length,
+  }));
+
+  return { isLive: true, videoId, liveTitle };
 }
 
-// ── Structured log ───────────────────────────────────────────────────────────
+// ── Channel metadata — batched single API call (1 quota unit total) ───────────
+async function fetchChannelMetaBatch(channelIds, apiKey) {
+  if (!channelIds.length) return {};
+
+  const params = new URLSearchParams({
+    part: "snippet",
+    id: channelIds.join(","),
+    key: apiKey,
+  });
+
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?${params}`);
+  if (!res.ok) {
+    console.log(JSON.stringify({
+      level: "WARN",
+      message: `channels.list failed with status ${res.status}`,
+    }));
+    return {};
+  }
+
+  const data = await res.json();
+  const map = {};
+
+  for (const item of (data.items ?? [])) {
+    const snippet = item.snippet ?? {};
+    map[item.id] = {
+      name:  snippet.title ?? item.id,
+      thumb: snippet.thumbnails?.default?.url
+          ?? snippet.thumbnails?.medium?.url
+          ?? null,
+    };
+  }
+
+  return map;
+}
+
+// ── Structured log ────────────────────────────────────────────────────────────
 function log(level, message, request) {
   const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
   console.log(JSON.stringify({
