@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
+:root{
   --navy:#0a1628;--navy-mid:#0f2040;--blue:#1a4fa0;--blue-b:#2563d4;
   --red:#d42525;--gold:#f0b429;--white:#f0f4ff;--gray:#8a9ab5;
   --gray-l:#c8d3e8;--surf:#111d33;--surf2:#192540;
@@ -48,15 +48,18 @@ body{font-family:var(--fb);background:var(--navy);color:var(--white);min-height:
 .date-lbl{font-family:var(--fd);font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
 input[type="date"]{background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--white);font-family:var(--fb);font-size:.88rem;padding:7px 12px;outline:none;cursor:pointer;transition:border-color .2s;-webkit-appearance:none;appearance:none;min-width:0}
 input[type="date"]:focus{border-color:var(--blue-b)}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.5}
 
 /* DATE HEADER */
 .date-hdr{font-family:var(--fd);font-size:1.05rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin:18px 0 10px;display:flex;align-items:center;gap:10px}
 .date-hdr::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
 /* GAME CARD */
-.game-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:transform .15s,box-shadow .15s}
-.game-card:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.4);border-color:rgba(255,255,255,.14)}
-.card-inner{padding:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.game-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
+.game-card:hover{border-color:rgba(255,255,255,.14)}
+
+/* Card header row — clickable */
+.card-inner{padding:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .team-col{display:flex;flex-direction:column;gap:2px}
 .team-col.right{text-align:right;align-items:flex-end}
 .team-name{font-family:var(--fd);font-size:clamp(.85rem,2.5vw,1.08rem);font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1.2}
@@ -71,6 +74,48 @@ input[type="date"]:focus{border-color:var(--blue-b)}
 .cap-b{background:var(--red);color:#fff;font-family:var(--fd);font-size:.63rem;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:1.5px;text-transform:uppercase}
 .time-b{background:var(--navy-mid);border:1px solid var(--bdr);color:var(--gray-l);font-family:var(--fd);font-size:.83rem;font-weight:600;padding:4px 12px;border-radius:4px}
 .sport-sub{font-family:var(--fd);font-size:.62rem;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* EXPAND CHEVRON */
+.expand-row{background:var(--navy-mid);border-top:1px solid var(--bdr);padding:5px 0;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.expand-row .chevron{font-size:.6rem;color:var(--gray);font-family:var(--fd);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
+.expand-row:hover .chevron{color:var(--gray-l)}
+.game-card.expanded .expand-row .chevron::before{content:'▲  '}
+.game-card:not(.expanded) .expand-row .chevron::before{content:'▼  '}
+
+/* STATS PANEL */
+.stats-panel{border-top:1px solid var(--bdr);padding:16px 18px;display:none;background:var(--navy-mid)}
+.game-card.expanded .stats-panel{display:block}
+
+/* stat grid: two columns, one per team */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.stats-col{display:flex;flex-direction:column;gap:6px;padding:0 4px}
+.stats-col.left{border-right:1px solid var(--bdr)}
+.stat-row{display:flex;flex-direction:column;gap:1px}
+.stat-lbl{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
+.stat-val{font-family:var(--fd);font-size:.92rem;font-weight:700;color:var(--white)}
+.stats-col.right .stat-lbl,.stats-col.right .stat-val{text-align:right}
+
+/* comparison bar row */
+.cmp-row{margin-top:14px}
+.cmp-lbl{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);text-align:center;margin-bottom:6px}
+.cmp-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.cmp-team-lbl{font-family:var(--fd);font-size:.65rem;font-weight:700;text-transform:uppercase;color:var(--gray-l);white-space:nowrap;width:90px;overflow:hidden;text-overflow:ellipsis}
+.cmp-team-lbl.r{text-align:right}
+.cmp-track{flex:1;height:5px;background:var(--navy);border-radius:3px;overflow:hidden;display:flex}
+.cmp-h{background:var(--blue-b);height:100%;border-radius:3px 0 0 3px;transition:width .5s}
+.cmp-a{background:var(--red);height:100%;border-radius:0 3px 3px 0;transition:width .5s}
+.cmp-vals{font-family:var(--fd);font-size:.65rem;color:var(--gray);white-space:nowrap;width:90px;text-align:right}
+.cmp-vals.l{text-align:left}
+
+/* COMMON OPPONENTS */
+.stats-divider{margin:14px 0;border:none;border-top:1px solid var(--bdr)}
+.common-hdr{font-family:var(--fd);font-size:.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.common-list{display:flex;flex-direction:column;gap:5px}
+.common-item{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:7px 12px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px}
+.common-opp{font-family:var(--fd);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.common-result{font-family:var(--fd);font-size:.72rem;font-weight:700;white-space:nowrap}
+.common-result.W{color:#4ade80}.common-result.L{color:var(--red)}.common-result.N{color:var(--gray)}
+.no-common{font-size:.75rem;color:var(--gray);font-style:italic;padding:4px 0}
 
 /* VOTE STRIP */
 .vote-strip{background:var(--navy-mid);border-top:1px solid var(--bdr);padding:9px 18px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -120,20 +165,49 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 .sub-btn:hover{background:#1a50b8}.sub-btn:disabled{opacity:.5;cursor:not-allowed}
 .success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:8px;padding:13px 16px;color:#4ade80;font-family:var(--fd);font-size:.88rem;font-weight:700;letter-spacing:1px;display:none;margin-top:14px}.success.show{display:block}
 
-/* LIVESTREAMS */
-.ch-row{display:flex;align-items:center;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 16px;margin-bottom:10px;gap:14px;transition:transform .15s,box-shadow .15s}
-.ch-row:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.ch-info{flex:1;min-width:0}
-.ch-name{font-family:var(--fd);font-size:.98rem;font-weight:700}
-.ch-sub{font-size:.76rem;color:var(--gray);margin-top:2px}
-.watch-btn{background:var(--blue-b);color:#fff;font-family:var(--fd);font-size:.73rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 13px;border-radius:5px;text-decoration:none;white-space:nowrap;flex-shrink:0;transition:background .15s}
-.watch-btn:hover{background:#1a50b8}
+/* MULTI-STREAM */
+#sec-livestreams{display:none}
+.ms-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r)}
+.ms-toolbar-title{font-family:var(--fd);font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray);white-space:nowrap}
+.ms-launch-btn{background:var(--blue-b);border:none;border-radius:5px;color:#fff;font-family:var(--fd);font-size:.78rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;cursor:pointer;transition:background .15s;margin-left:auto;touch-action:manipulation}
+.ms-launch-btn:hover{background:#1a50b8}
+.ms-grid{display:grid;gap:6px;width:100%;grid-template-columns:repeat(2,1fr)}
+.ms-grid.solo{grid-template-columns:1fr}
+@media(max-width:500px){.ms-grid{grid-template-columns:1fr}}
+.ms-cell{position:relative;background:var(--navy-mid);border:2px solid var(--bdr);border-radius:8px;overflow:hidden;aspect-ratio:16/9;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.ms-cell.active-audio{border-color:var(--gold);box-shadow:0 0 0 2px rgba(240,180,41,.25)}
+.ms-cell iframe{width:100%;height:100%;display:block;border:none;pointer-events:none}
+.ms-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--navy-mid)}
+.ms-placeholder-icon{width:44px;height:44px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;opacity:.5}
+.ms-placeholder-name{font-family:var(--fd);font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gray);text-align:center;padding:0 10px}
+.ms-placeholder-status{font-size:.66rem;color:var(--gray);opacity:.6;letter-spacing:.5px}
+.ms-click-overlay{position:absolute;inset:0;z-index:10;cursor:pointer}
+.ms-click-overlay:active{background:rgba(255,255,255,.04)}
+.ms-audio-badge{position:absolute;top:8px;left:8px;z-index:11;background:var(--gold);color:var(--navy);font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 7px;border-radius:3px;display:none;pointer-events:none}
+.ms-cell.active-audio .ms-audio-badge{display:block}
+.ms-cell-label{position:absolute;bottom:0;left:0;right:0;z-index:11;background:linear-gradient(transparent,rgba(10,22,40,.9));padding:18px 10px 7px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+.ms-cell-name{font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gray-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75%}
+.ms-live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.ms-channel-list{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.ms-ch-chip{display:flex;align-items:center;gap:7px;background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gray-l);transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+.ms-ch-chip:hover{border-color:rgba(255,255,255,.18);color:var(--white)}
+.ms-ch-chip.selected{background:var(--blue-b);border-color:var(--blue-b);color:#fff}
+.ms-ch-chip .chip-live{width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.6s ease-in-out infinite}
+.ms-ch-chip .chip-offline{width:6px;height:6px;border-radius:50%;background:var(--gray);opacity:.4}
+.ms-loading{text-align:center;padding:32px 0;font-family:var(--fd);font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray)}
+.ms-loading::after{content:'';display:inline-block;width:12px;height:12px;border:2px solid var(--gray);border-top-color:var(--blue-b);border-radius:50%;margin-left:10px;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ms-status{font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px;margin-top:10px;display:flex;align-items:center;gap:8px}
+.ms-status-dot{width:6px;height:6px;border-radius:50%;background:var(--gray);flex-shrink:0}
+.ms-status-dot.ok{background:#4ade80}.ms-status-dot.err{background:var(--red)}
 
 /* RESPONSIVE */
 @media(max-width:860px){
   .layout{flex-direction:column;margin:14px auto}
   .sidebar{position:relative;top:0;width:100%;min-width:0}
   .sb-card iframe{height:480px}
+  #sec-livestreams{width:100%}
 }
 @media(max-width:480px){
   .hdr{padding:0 12px;height:52px}
@@ -149,289 +223,8 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   .form-card{padding:14px}
   .score-row{gap:5px}
   input[type="number"].si{width:58px;font-size:1.05rem}
-}
-
-/* ── Multi-stream section wrapper ─────────────────────────────────────── */
-#sec-livestreams {
-  display: none; /* shown by tab logic — keep as-is */
-}
-
-.ms-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding: 14px 18px;
-  background: var(--surf);
-  border: 1px solid var(--bdr);
-  border-radius: var(--r);
-}
-
-.ms-toolbar-title {
-  font-family: var(--fd);
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  white-space: nowrap;
-}
-
-.ms-launch-btn {
-  background: var(--blue-b);
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  font-family: var(--fd);
-  font-size: .78rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 7px 16px;
-  cursor: pointer;
-  transition: background .15s;
-  margin-left: auto;
-  touch-action: manipulation;
-}
-.ms-launch-btn:hover { background: #1a50b8; }
-
-/* ── Grid container ───────────────────────────────────────────────────── */
-.ms-grid {
-  display: grid;
-  gap: 6px;
-  width: 100%;
-  grid-template-columns: repeat(2, 1fr);
-}
-.ms-grid.solo { grid-template-columns: 1fr; }
-
-@media(max-width:500px) {
-  .ms-grid { grid-template-columns: 1fr; }
-}
-
-/* ── Individual stream cell ───────────────────────────────────────────── */
-.ms-cell {
-  position: relative;
-  background: var(--navy-mid);
-  border: 2px solid var(--bdr);
-  border-radius: 8px;
-  overflow: hidden;
-  aspect-ratio: 16 / 9;
-  cursor: pointer;
-  transition: border-color .2s, box-shadow .2s;
-}
-.ms-cell.active-audio {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(240,180,41,.25);
-}
-.ms-cell iframe {
-  width: 100%;
-  height: 100%;
-  display: block;
-  border: none;
-  pointer-events: none;
-}
-
-/* Placeholder (offline / not live) */
-.ms-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--navy-mid);
-}
-.ms-placeholder-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--surf2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  opacity: .5;
-}
-.ms-placeholder-name {
-  font-family: var(--fd);
-  font-size: .75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--gray);
-  text-align: center;
-  padding: 0 10px;
-}
-.ms-placeholder-status {
-  font-size: .66rem;
-  color: var(--gray);
-  opacity: .6;
-  letter-spacing: .5px;
-}
-
-/* Click overlay */
-.ms-click-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  cursor: pointer;
-}
-.ms-click-overlay:active { background: rgba(255,255,255,.04); }
-
-/* Audio indicator badge */
-.ms-audio-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 11;
-  background: var(--gold);
-  color: var(--navy);
-  font-family: var(--fd);
-  font-size: .6rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 3px 7px;
-  border-radius: 3px;
-  display: none;
-  pointer-events: none;
-}
-.ms-cell.active-audio .ms-audio-badge { display: block; }
-
-/* Channel name label (bottom of cell) */
-.ms-cell-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 11;
-  background: linear-gradient(transparent, rgba(10,22,40,.9));
-  padding: 18px 10px 7px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: none;
-}
-.ms-cell-name {
-  font-family: var(--fd);
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--gray-l);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 75%;
-}
-.ms-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--red);
-  flex-shrink: 0;
-  animation: blink 1.6s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-/* ── Channel list (below grid) ────────────────────────────────────────── */
-.ms-channel-list {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.ms-ch-chip {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--surf);
-  border: 1px solid var(--bdr);
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-family: var(--fd);
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--gray-l);
-  transition: all .15s;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.ms-ch-chip:hover { border-color: rgba(255,255,255,.18); color: var(--white); }
-.ms-ch-chip.selected {
-  background: var(--blue-b);
-  border-color: var(--blue-b);
-  color: #fff;
-}
-.ms-ch-chip .chip-live {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--red);
-  animation: blink 1.6s ease-in-out infinite;
-}
-.ms-ch-chip .chip-offline {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gray);
-  opacity: .4;
-}
-
-/* Loading state */
-.ms-loading {
-  text-align: center;
-  padding: 32px 0;
-  font-family: var(--fd);
-  font-size: .78rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-}
-.ms-loading::after {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--gray);
-  border-top-color: var(--blue-b);
-  border-radius: 50%;
-  margin-left: 10px;
-  animation: spin .7s linear infinite;
-  vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Status bar */
-.ms-status {
-  font-family: var(--fd);
-  font-size: .66rem;
-  color: var(--gray);
-  letter-spacing: 1px;
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ms-status-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--gray);
-  flex-shrink: 0;
-}
-.ms-status-dot.ok { background: #4ade80; }
-.ms-status-dot.err { background: var(--red); }
-
-@media(max-width:600px) {
-  .ms-toolbar { gap: 8px; padding: 10px 12px; }
-}
-@media(max-width:380px) {
-  .ms-grid { grid-template-columns: 1fr; }
+  .cmp-team-lbl,.cmp-vals{width:60px;font-size:.58rem}
+  .common-item{grid-template-columns:1fr auto auto;gap:6px}
 }
 </style>
 </head>
@@ -455,6 +248,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 <div class="layout">
   <div class="content">
 
+    <!-- SCORES -->
     <div id="sec-scores">
       <div class="ctrl-bar">
         <span class="date-lbl">Date</span>
@@ -463,6 +257,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       <div id="scoresCtr"></div>
     </div>
 
+    <!-- SUBMIT -->
     <div id="sec-submit" style="display:none">
       <div class="form-card">
         <div class="form-title">Submit a Score</div>
@@ -500,33 +295,23 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       </div>
     </div>
 
+    <!-- LIVESTREAMS (inside .content so sidebar stays fixed on desktop) -->
+    <div id="sec-livestreams" style="display:none">
+      <div class="ms-toolbar">
+        <span class="ms-toolbar-title">🔊 Audio</span>
+        <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
+        <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
+      </div>
+      <div class="ms-loading" id="msLoading">Checking live status</div>
+      <div class="ms-grid" id="msGrid" style="display:none"></div>
+      <div class="ms-status" id="msStatusBar" style="display:none">
+        <div class="ms-status-dot" id="msStatusDot"></div>
+        <span id="msStatusTxt"></span>
+      </div>
+      <div class="ms-channel-list" id="msChipList" style="display:none"></div>
+    </div>
+
   </div><!-- /content -->
-
-  <div id="sec-livestreams" style="display:none">
-
-    <!-- Toolbar: audio indicator + refresh -->
-    <div class="ms-toolbar">
-      <span class="ms-toolbar-title">🔊 Audio</span>
-      <span id="msAudioLbl" style="font-family:var(--fd);font-size:.68rem;color:var(--gold);letter-spacing:1px">— tap a stream —</span>
-      <button class="ms-launch-btn" id="msRefreshBtn">↺ Refresh</button>
-    </div>
-
-    <!-- Loading indicator -->
-    <div class="ms-loading" id="msLoading">Checking live status</div>
-
-    <!-- Stream grid -->
-    <div class="ms-grid" id="msGrid" style="display:none"></div>
-
-    <!-- Status bar -->
-    <div class="ms-status" id="msStatusBar" style="display:none">
-      <div class="ms-status-dot" id="msStatusDot"></div>
-      <span id="msStatusTxt"></span>
-    </div>
-
-    <!-- Channel selector chips -->
-    <div class="ms-channel-list" id="msChipList" style="display:none"></div>
-
-  </div><!-- /sec-livestreams -->
 
   <div class="sidebar">
     <div class="sb-card">
@@ -537,371 +322,153 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 </div><!-- /layout -->
 
 <script>
-// ── Globals ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════════════════════════════════════════════════
 let games = [], preds = {}, uv = JSON.parse(sessionStorage.getItem("uv") || "{}");
 
-// ── Multi-stream widget ───────────────────────────────────────────────────────
-(function () {
-
-  // CONFIG
-  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";
-
-  const CHANNELS = [
-    { name: "Staples Boys Basketball",  channelId: "UC04Jzrsn-GdX21cCbVdB2xg", url: "https://www.youtube.com/@staplesboysbasketball" },
-    { name: "The Day CT",               channelId: "UC5w-uRIutST34hir01q1iSQ",  url: "https://www.youtube.com/@thedayct" },
-    { name: "TB860LIVE",                channelId: "UCEfE3f3VVgWbFU7ephKOHuA",  url: "https://www.youtube.com/@TB860LIVE" },
-    { name: "WHCI",                     channelId: "UCa3sHmUhm7-2Dep_Yy3LarA",  url: "https://www.youtube.com/@whci", keywords: ["basketball"] },
-    { name: "Newington High School",    channelId: "UCRAbTG5A7YsSp_uUXwlPG4A",  url: "https://www.youtube.com/@NewingtonHighSchool605" },
-    { name: "Project Purple Sports",    channelId: "UC0Qv-RCIYZZJNeA7Ra8IsFg",  url: "https://www.youtube.com/@ProjectPurpleSports" },
-    { name: "Waterbury Public Schools", channelId: "UC3msaxLNUfUTipfx2BoRLNg",  url: "https://www.youtube.com/@waterburypublicschoolsathl9870" },
-    { name: "Fairfield Prep Athletics", channelId: "UCGecTgvH_28YBQJx-YW2OIg",  url: "https://www.youtube.com/@fairfieldprepjesuits" },
-    { name: "Fairfield Ludlowe Live",   channelId: "UCuI4_F2ZyNbGWkwBZNkkJhQ",  url: "https://www.youtube.com/@flhslive" },
-    { name: "New Canaan Athletics",     channelId: "UCdtLggb1RcyKQWuRpMp8u9A",  url: "https://www.youtube.com/@newcanaanhighschoolathleti3780" },
-  ];
-
-  // STATE
-  let channelData   = CHANNELS.map(c => ({ ...c, isLive: false, videoId: null, liveTitle: null, thumb: null }));
-  let selectedIds   = [];
-  let activeAudioId = null;
-  let fetchError    = false;
-
-  // DOM refs
-  const elGrid      = document.getElementById("msGrid");
-  const elLoading   = document.getElementById("msLoading");
-  const elChips     = document.getElementById("msChipList");
-  const elAudioLbl  = document.getElementById("msAudioLbl");
-  const elStatus    = document.getElementById("msStatusBar");
-  const elStatusDot = document.getElementById("msStatusDot");
-  const elStatusTxt = document.getElementById("msStatusTxt");
-
-  // Event delegation on grid for audio switching
-  elGrid.addEventListener("click", e => {
-    const overlay = e.target.closest(".ms-click-overlay");
-    if (!overlay) return;
-    const cell = overlay.closest(".ms-cell");
-    if (!cell) return;
-    const cid = cell.dataset.cid;
-    if (!cid) return;
-    const ch = channelData.find(c => c.channelId === cid);
-    if (!ch?.isLive) return;
-    switchAudio(cid);
-  });
-
-  document.getElementById("msRefreshBtn").addEventListener("click", fetchLiveStatus);
-
-  // Fetch live status from proxy
-  async function fetchLiveStatus() {
-    elLoading.style.display = "block";
-    elGrid.style.display    = "none";
-    elStatus.style.display  = "none";
-    fetchError = false;
-
-    if (!PROXY_BASE) {
-      setStatus(false, "No proxy configured — showing placeholder tiles");
-      finishLoad();
-      return;
-    }
-
-    const ids = CHANNELS.map(c => c.channelId).join(",");
-    const keywordsMap = {};
-    CHANNELS.forEach(c => { if (c.keywords?.length) keywordsMap[c.channelId] = c.keywords; });
-    const kwParam = Object.keys(keywordsMap).length
-      ? "&keywords=" + encodeURIComponent(JSON.stringify(keywordsMap))
-      : "";
-    const endpoint = `${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}&t=${Date.now()}`;
-
-    try {
-      const res  = await fetch(endpoint);
-      if (!res.ok) throw new Error(`Proxy responded ${res.status}`);
-      const data = await res.json();
-
-      if (data.channels) {
-        data.channels.forEach(remote => {
-          const local = channelData.find(c => c.channelId === remote.channelId);
-          if (local) {
-            local.isLive    = remote.isLive;
-            local.videoId   = remote.videoId;
-            local.liveTitle = remote.liveTitle;
-            local.thumb     = remote.thumb;
-          }
-        });
-      }
-
-      const liveCount = channelData.filter(c => c.isLive).length;
-      setStatus(true, `${liveCount} channel${liveCount !== 1 ? "s" : ""} live · updated ${new Date().toLocaleTimeString()}`);
-    } catch (err) {
-      fetchError = true;
-      console.error("[MultiStream] Proxy fetch failed:", err.message);
-      setStatus(false, `Live check failed: ${err.message}`);
-    }
-
-    finishLoad();
-  }
-
-  function finishLoad() {
-    elLoading.style.display = "none";
-
-    if (selectedIds.length === 0) {
-      const live    = channelData.filter(c => c.isLive).map(c => c.channelId);
-      const offline = channelData.filter(c => !c.isLive).map(c => c.channelId);
-      selectedIds = [...live, ...offline];
-    }
-
-    if (!activeAudioId || !selectedIds.includes(activeAudioId)) {
-      const firstLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
-      activeAudioId = firstLive?.channelId ?? selectedIds[0] ?? null;
-      elAudioLbl.textContent = activeAudioId
-        ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "")
-        : "— tap a stream —";
-    }
-
-    renderGrid();
-    renderChips();
-    elGrid.style.display   = "grid";
-    elChips.style.display  = "flex";
-    elStatus.style.display = "flex";
-  }
-
-  // Grid render
-  function renderGrid() {
-    elGrid.classList.toggle("solo", selectedIds.length === 1);
-    elGrid.innerHTML = "";
-
-    selectedIds.forEach(id => {
-      const ch = channelData.find(c => c.channelId === id);
-      if (!ch) return;
-      elGrid.appendChild(buildCell(ch));
-    });
-
-    if (selectedIds.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "ms-cell";
-      empty.innerHTML = `<div class="ms-placeholder">
-        <div class="ms-placeholder-icon">📺</div>
-        <div class="ms-placeholder-name">No channels selected</div>
-        <div class="ms-placeholder-status">Use chips below to add streams</div>
-      </div>`;
-      elGrid.appendChild(empty);
-    }
-  }
-
-  function buildCell(ch) {
-    const isAudio = ch.channelId === activeAudioId;
-    const cell = document.createElement("div");
-    cell.className = "ms-cell" + (isAudio ? " active-audio" : "");
-    cell.dataset.cid = ch.channelId;
-
-    let inner = "";
-
-    if (ch.isLive && ch.videoId) {
-      // Live with a video ID — embed the stream
-      const mute = isAudio ? "0" : "1";
-      const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
-      inner += `<iframe src="${src}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-    } else if (ch.isLive && !ch.videoId) {
-      // Live but couldn't extract video ID — link directly to channel live page
-      inner += `<div class="ms-placeholder">
-        <div class="ms-placeholder-icon">🔴</div>
-        <div class="ms-placeholder-name">${esc(ch.name)}</div>
-        <div class="ms-placeholder-status"><a href="${esc(ch.url)}/live" target="_blank" rel="noopener" style="color:var(--gold)">Watch on YouTube ↗</a></div>
-      </div>`;
-    } else {
-      // Not live
-      inner += `<div class="ms-placeholder">
-        <div class="ms-placeholder-icon">📡</div>
-        <div class="ms-placeholder-name">${esc(ch.name)}</div>
-        <div class="ms-placeholder-status">Not currently live</div>
-      </div>`;
-    }
-
-    inner += `<div class="ms-audio-badge">🔊 Audio</div>`;
-    inner += `<div class="ms-cell-label">
-      <span class="ms-cell-name">${esc(ch.name)}</span>
-      ${ch.isLive ? '<div class="ms-live-dot"></div>' : ''}
-    </div>`;
-    inner += `<div class="ms-click-overlay" title="${ch.isLive ? 'Tap to hear this stream' : 'Not live'}"></div>`;
-
-    cell.innerHTML = inner;
-    return cell;
-  }
-
-  // Switch audio — only rebuilds two affected iframes
-  function switchAudio(channelId) {
-    if (activeAudioId === channelId) return;
-
-    const prevId = activeAudioId;
-    activeAudioId = channelId;
-    elAudioLbl.textContent = channelData.find(c => c.channelId === channelId)?.name ?? "";
-
-    [prevId, channelId].forEach(cid => {
-      if (!cid) return;
-      const cell = elGrid.querySelector(`.ms-cell[data-cid="${cid}"]`);
-      if (!cell) return;
-      const ch = channelData.find(c => c.channelId === cid);
-      if (!ch) return;
-
-      const isNowAudio = cid === channelId;
-      cell.classList.toggle("active-audio", isNowAudio);
-
-      if (ch.isLive && ch.videoId) {
-        const existing = cell.querySelector("iframe");
-        const mute = isNowAudio ? "0" : "1";
-        const src  = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0`;
-        if (existing) {
-          existing.src = src;
-        } else {
-          const iframe = document.createElement("iframe");
-          iframe.src = src;
-          iframe.allow = "autoplay; encrypted-media";
-          iframe.allowFullscreen = true;
-          cell.insertBefore(iframe, cell.firstChild);
-        }
-      }
-    });
-
-    renderChips();
-  }
-
-  // Chip list
-  function renderChips() {
-    elChips.innerHTML = "";
-    channelData.forEach(ch => {
-      const isSelected = selectedIds.includes(ch.channelId);
-      const chip = document.createElement("div");
-      chip.className = "ms-ch-chip" + (isSelected ? " selected" : "");
-      chip.dataset.cid = ch.channelId;
-      chip.innerHTML = `
-        <div class="${ch.isLive ? "chip-live" : "chip-offline"}"></div>
-        ${esc(ch.name)}
-      `;
-      chip.addEventListener("click", () => toggleChannel(ch.channelId));
-      elChips.appendChild(chip);
-    });
-  }
-
-  function toggleChannel(channelId) {
-    if (selectedIds.includes(channelId)) {
-      selectedIds = selectedIds.filter(id => id !== channelId);
-      if (activeAudioId === channelId) {
-        const nextLive = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
-        activeAudioId = nextLive?.channelId ?? selectedIds[0] ?? null;
-        elAudioLbl.textContent = activeAudioId
-          ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "")
-          : "— tap a stream —";
-      }
-    } else {
-      selectedIds.push(channelId);
-      if (!activeAudioId) {
-        const ch = channelData.find(c => c.channelId === channelId);
-        if (ch?.isLive) {
-          activeAudioId = channelId;
-          elAudioLbl.textContent = ch.name;
-        }
-      }
-    }
-    renderGrid();
-    renderChips();
-  }
-
-  // Helpers
-  function setStatus(ok, msg) {
-    elStatusDot.className = "ms-status-dot " + (ok ? "ok" : "err");
-    elStatusTxt.textContent = msg;
-  }
-
-  function esc(s) {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-  }
-
-  // Init
-  let msInitialized = false;
-  window.msInit = function () {
-    if (msInitialized) return;
-    msInitialized = true;
-    fetchLiveStatus();
-  };
-
-  // Auto-refresh every 3 minutes while livestreams tab is visible
-  setInterval(() => {
-    const tab = document.getElementById("sec-livestreams");
-    if (tab && tab.style.display !== "none" && msInitialized) {
-      fetchLiveStatus();
-    }
-  }, 3 * 60 * 1000);
-
-})();
-
-// ── Scores / submit / ticker ──────────────────────────────────────────────────
-async function loadData() {
-  try {
-    const [mr, pr] = await Promise.allSettled([
-      fetch("master_games.csv?" + Date.now()),
-      fetch("predictions.csv?" + Date.now()),
-    ]);
-    if (mr.status === "fulfilled" && mr.value.ok) {
-      const t = await mr.value.text();
-      games = parseCSV(t).filter(r => r.game_id);
-    } else {
-      games = seed();
-    }
-    if (pr.status === "fulfilled" && pr.value.ok) {
-      const vs = parseCSV(await pr.value.text()).filter(r => r.vote_id);
-      vs.forEach(v => {
-        if (!preds[v.game_id]) preds[v.game_id] = { home: 0, away: 0 };
-        if (v.predicted_winner === "home") preds[v.game_id].home++;
-        else preds[v.game_id].away++;
-      });
-    }
-  } catch (e) {
-    games = seed();
-  }
-  buildSel();
-  const today = new Date();
-  document.getElementById("gameDate").valueAsDate = today;
-  renderScores(today);
-  renderTicker();
-}
-
+// ═══════════════════════════════════════════════════════════════════════════════
+// CSV PARSER — handles quoted fields that may contain commas
+// ═══════════════════════════════════════════════════════════════════════════════
 function parseCSV(text) {
-  const lines = text.trim().split("\n");
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
   if (!lines.length) return [];
-  const headers = lines[0].split(",").map(h => h.trim());
+  const headers = splitCSVLine(lines[0]);
   return lines.slice(1).map(line => {
-    const vals = line.split(",");
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = (vals[i] || "").trim());
+    const vals = splitCSVLine(line);
+    const obj  = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || "").trim(); });
     return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+function splitCSVLine(line) {
+  const result = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }  // escaped quote
+      else { inQ = !inQ; }
+    } else if (c === ',' && !inQ) { result.push(cur); cur = ""; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATS ENGINE
+// Builds per-team stats from all final games in master_games.csv.
+// Records shown on cards are derived here — never from the CSV's home_record field.
+// ═══════════════════════════════════════════════════════════════════════════════
+let teamStats = {};   // "header|team" → { wins, losses, pf, pa, gamesPlayed, opponents{} }
+
+function buildTeamStats() {
+  teamStats = {};
+  games
+    .filter(g => g.status === "final" && g.home_score !== "" && g.away_score !== "")
+    .forEach(g => {
+      const hs = parseInt(g.home_score) || 0;
+      const as = parseInt(g.away_score) || 0;
+      const hk = g.header + "|" + g.home_team;
+      const ak = g.header + "|" + g.away_team;
+
+      ensureStat(hk); ensureStat(ak);
+
+      teamStats[hk].pf += hs; teamStats[hk].pa += as; teamStats[hk].gamesPlayed++;
+      teamStats[ak].pf += as; teamStats[ak].pa += hs; teamStats[ak].gamesPlayed++;
+
+      if (hs > as) { teamStats[hk].wins++; teamStats[ak].losses++; }
+      else if (as > hs) { teamStats[ak].wins++; teamStats[hk].losses++; }
+
+      // Track results vs each opponent for SOS + common opponents
+      if (!teamStats[hk].opponents[g.away_team]) teamStats[hk].opponents[g.away_team] = [];
+      if (!teamStats[ak].opponents[g.home_team]) teamStats[ak].opponents[g.home_team] = [];
+      teamStats[hk].opponents[g.away_team].push({ hs, as, iAmHome: true });
+      teamStats[ak].opponents[g.home_team].push({ hs, as, iAmHome: false });
+    });
+}
+
+function ensureStat(k) {
+  if (!teamStats[k]) teamStats[k] = { wins:0, losses:0, pf:0, pa:0, gamesPlayed:0, opponents:{} };
+}
+
+function getStat(header, team) {
+  return teamStats[header + "|" + team] || null;
+}
+
+function calcSOS(header, team) {
+  // Average win% of all opponents faced (higher = tougher schedule)
+  const st = getStat(header, team);
+  if (!st || !st.gamesPlayed) return null;
+  const opps = Object.keys(st.opponents);
+  if (!opps.length) return null;
+  let sum = 0, cnt = 0;
+  opps.forEach(opp => {
+    const os = getStat(header, opp);
+    if (os) { const t = os.wins + os.losses; if (t > 0) { sum += os.wins / t; cnt++; } }
   });
+  return cnt > 0 ? sum / cnt : null;
 }
 
-function seed() {
-  return [
-    { game_id:"g1", header:"CIAC Boys Basketball", home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", home_record:"10-12", away_record:"8-14",  game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
-    { game_id:"g2", header:"CIAC Boys Basketball", home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", home_record:"8-13",  away_record:"9-13",  game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g3", header:"CIAC Boys Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", home_record:"23-0",  away_record:"17-6",  game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g4", header:"CIAC Boys Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   home_record:"14-8",  away_record:"18-4",  game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
-    { game_id:"g5", header:"CIAC Boys Basketball", home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   home_record:"20-2",  away_record:"16-6",  game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
-  ];
+function getCommonOpponents(header, teamA, teamB) {
+  const sa = getStat(header, teamA);
+  const sb = getStat(header, teamB);
+  if (!sa || !sb) return [];
+  const common = [];
+  Object.keys(sa.opponents).forEach(opp => {
+    if (!sb.opponents[opp] || opp === teamB) return;
+    const ra = resultSummary(sa.opponents[opp]);
+    const rb = resultSummary(sb.opponents[opp]);
+    common.push({ opp, aRec: ra, bRec: rb });
+  });
+  return common.sort((a, b) => a.opp.localeCompare(b.opp));
 }
 
+function resultSummary(results) {
+  let w = 0, l = 0;
+  results.forEach(r => {
+    const myScore  = r.iAmHome ? r.hs : r.as;
+    const oppScore = r.iAmHome ? r.as : r.hs;
+    if (myScore > oppScore) w++; else if (oppScore > myScore) l++;
+  });
+  return { w, l, str: w + "-" + l };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATE / FORMAT HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
 function parseGD(s) {
   if (!s) return null;
-  s = s.trim();
-  const [dp, tp = "00:00"] = s.split(" ");
+  const [dp, tp = "00:00:00"] = s.trim().split(" ");
   const [m, d, y] = dp.split("/");
-  const [h, mn] = tp.split(":");
+  const [h, mn]   = tp.split(":");
   return new Date(+y, +m - 1, +d, +h, +mn);
 }
 function tds(d) { return d.toISOString().slice(0, 10); }
-function fmtT(d) { let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return `${h}:${m.toString().padStart(2, "0")} ${ap}`; }
+function fmtT(d) {
+  let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
 function voteOpen(g) {
   if (g.status !== "scheduled") return false;
-  const gt = parseGD(g.game_datetime);
-  if (!gt) return false;
+  const gt = parseGD(g.game_datetime); if (!gt) return false;
   const now = new Date();
   return now >= new Date(gt - 48 * 3600000) && now < gt;
 }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fmt1(n) { return (n === null || isNaN(n)) ? "—" : n.toFixed(1); }
+function fmtPct(n) { return (n === null || isNaN(n)) ? "—" : (n * 100).toFixed(1) + "%"; }
+function barWidths(a, b) {
+  if (a === null || b === null || isNaN(a) || isNaN(b)) return [50, 50];
+  const tot = Math.abs(a) + Math.abs(b); if (!tot) return [50, 50];
+  return [Math.round(Math.abs(a) / tot * 100), Math.round(Math.abs(b) / tot * 100)];
+}
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDER SCORES FOR A DATE
+// ═══════════════════════════════════════════════════════════════════════════════
 function renderScores(date) {
   const ctr = document.getElementById("scoresCtr");
   ctr.innerHTML = "";
@@ -910,79 +477,220 @@ function renderScores(date) {
   if (!gs.length) { ctr.innerHTML = `<div class="no-games">No games scheduled for this date.</div>`; return; }
   const hdr = document.createElement("div");
   hdr.className = "date-hdr";
-  hdr.textContent = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  hdr.textContent = date.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" });
   ctr.appendChild(hdr);
   gs.forEach(g => renderCard(g, ctr));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDER ONE GAME CARD
+// ═══════════════════════════════════════════════════════════════════════════════
 function renderCard(g, ctr) {
   const fin = g.status === "final";
-  const hs = parseInt(g.home_score) || 0, as = parseInt(g.away_score) || 0;
-  const hw = fin && hs > as, aw = fin && as > hs;
-  const gd = parseGD(g.game_datetime);
-  const vo = voteOpen(g);
-  const p = preds[g.game_id] || { home: 0, away: 0 };
+  const hs  = parseInt(g.home_score) || 0;
+  const as  = parseInt(g.away_score) || 0;
+  const hw  = fin && hs > as, aw = fin && as > hs;
+  const gd  = parseGD(g.game_datetime);
+  const vo  = voteOpen(g);
+  const p   = preds[g.game_id] || { home:0, away:0 };
   const tot = p.home + p.away;
-  const hp = tot ? Math.round(p.home / tot * 100) : 50, ap = 100 - hp;
+  const hp  = tot ? Math.round(p.home / tot * 100) : 50, ap2 = 100 - hp;
 
   const card = document.createElement("div");
-  card.className = "game-card" + (g.status === "scheduled" ? " sched" : "");
+  card.className = "game-card";
   card.dataset.gid = g.game_id;
 
-  const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${g.home_rank}</span>` : "";
-  const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${g.away_rank}</span>` : "";
+  const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${esc(g.home_rank)}</span>` : "";
+  const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${esc(g.away_rank)}</span>` : "";
 
-  let ctr2 = "";
+  // Score / time centre block
+  let scoreCtr = "";
   if (fin) {
-    const cap = g.caption ? `<div class="cap-b">${g.caption}</div>` : "";
-    ctr2 = `<div class="scores-row"><div class="score-n ${hw ? "W" : "L"}">${hs}</div><div class="score-div">Final</div><div class="score-n ${aw ? "W" : "L"}">${as}</div></div>${cap}`;
+    const cap = g.caption ? `<div class="cap-b">${esc(g.caption)}</div>` : "";
+    scoreCtr = `<div class="scores-row">
+      <div class="score-n ${hw?"W":"L"}">${hs}</div>
+      <div class="score-div">Final</div>
+      <div class="score-n ${aw?"W":"L"}">${as}</div>
+    </div>${cap}`;
   } else {
-    ctr2 = `<div class="time-b">${gd ? fmtT(gd) : "TBD"}</div><div class="sport-sub">${g.header || ""}</div>`;
+    scoreCtr = `<div class="time-b">${gd ? fmtT(gd) : "TBD"}</div>
+                <div class="sport-sub">${esc(g.header || "")}</div>`;
   }
 
-  card.innerHTML = `<div class="card-inner">
-    <div class="team-col"><div class="team-name ${hw ? "W" : aw ? "L" : "N"}">${hr}${g.home_team}</div><div class="team-rec">${g.home_record || ""}</div></div>
-    <div class="score-ctr">${ctr2}</div>
-    <div class="team-col right"><div class="team-name ${aw ? "W" : hw ? "L" : "N"}">${g.away_team}${ar}</div><div class="team-rec">${g.away_record || ""}</div></div>
-  </div>`;
+  // Computed records (authoritative — ignore CSV home_record/away_record)
+  const hst = getStat(g.header, g.home_team);
+  const ast = getStat(g.header, g.away_team);
+  const hRec = hst ? `${hst.wins}-${hst.losses}` : "";
+  const aRec = ast ? `${ast.wins}-${ast.losses}` : "";
 
+  card.innerHTML = `
+    <div class="card-inner">
+      <div class="team-col">
+        <div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${esc(g.home_team)}</div>
+        <div class="team-rec">${esc(hRec)}</div>
+      </div>
+      <div class="score-ctr">${scoreCtr}</div>
+      <div class="team-col right">
+        <div class="team-name ${aw?"W":hw?"L":"N"}">${esc(g.away_team)}${ar}</div>
+        <div class="team-rec">${esc(aRec)}</div>
+      </div>
+    </div>
+    <div class="expand-row"><span class="chevron">Stats &amp; Common Opponents</span></div>
+    ${buildStatsPanel(g)}
+  `;
+
+  // Vote strip (appended after innerHTML so it doesn't interfere with stats)
   if (vo || (g.status === "scheduled" && tot > 0)) {
     const uvc = uv[g.game_id];
     const hs2 = g.home_team.split(" ").pop(), as2 = g.away_team.split(" ").pop();
-    const vs = document.createElement("div");
+    const vs  = document.createElement("div");
     vs.className = "vote-strip";
     vs.innerHTML = `<span class="vote-lbl">🗳 Pick</span>
       <div class="vote-bars">
-        <div class="vote-team-lbl">${hs2}</div>
-        <div class="bar-track"><div class="bar-h" style="width:${hp}%"></div><div class="bar-a" style="width:${ap}%"></div></div>
-        <div class="vote-team-lbl" style="text-align:right">${as2}</div>
+        <div class="vote-team-lbl">${esc(hs2)}</div>
+        <div class="bar-track"><div class="bar-h" style="width:${hp}%"></div><div class="bar-a" style="width:${ap2}%"></div></div>
+        <div class="vote-team-lbl" style="text-align:right">${esc(as2)}</div>
       </div>
-      <div class="vote-pcts">${hp}%–${ap}%</div>
-      ${vo ? `<button class="vote-btn${uvc === "home" ? " vh" : ""}" onclick="vote('${g.game_id}','home')">${hs2}</button><button class="vote-btn${uvc === "away" ? " va" : ""}" onclick="vote('${g.game_id}','away')">${as2}</button>` : `<span style="font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px">${tot} VOTES</span>`}`;
+      <div class="vote-pcts">${hp}%–${ap2}%</div>
+      ${vo
+        ? `<button class="vote-btn${uvc==="home"?" vh":""}" onclick="vote('${g.game_id}','home')">${esc(hs2)}</button>
+           <button class="vote-btn${uvc==="away"?" va":""}" onclick="vote('${g.game_id}','away')">${esc(as2)}</button>`
+        : `<span style="font-family:var(--fd);font-size:.66rem;color:var(--gray);letter-spacing:1px">${tot} VOTES</span>`}`;
     card.appendChild(vs);
   }
+
+  // Expand / collapse toggle
+  card.querySelector(".expand-row").addEventListener("click", e => {
+    e.stopPropagation();
+    card.classList.toggle("expanded");
+  });
+  card.querySelector(".card-inner").addEventListener("click", () => {
+    card.classList.toggle("expanded");
+  });
+
   ctr.appendChild(card);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUILD STATS PANEL HTML
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildStatsPanel(g) {
+  const hst = getStat(g.header, g.home_team);
+  const ast = getStat(g.header, g.away_team);
+  const gH  = hst ? hst.gamesPlayed : 0;
+  const gA  = ast ? ast.gamesPlayed : 0;
+
+  const hPPG  = hst && gH ? hst.pf / gH : NaN;
+  const aPPG  = ast && gA ? ast.pf / gA : NaN;
+  const hOPPG = hst && gH ? hst.pa / gH : NaN;
+  const aOPPG = ast && gA ? ast.pa / gA : NaN;
+  const hDiff = hPPG - hOPPG;
+  const aDiff = aPPG - aOPPG;
+  const hSOS  = calcSOS(g.header, g.home_team);
+  const aSOS  = calcSOS(g.header, g.away_team);
+  const hWPct = hst && (hst.wins + hst.losses) ? hst.wins / (hst.wins + hst.losses) : NaN;
+  const aWPct = ast && (ast.wins + ast.losses) ? ast.wins / (ast.wins + ast.losses) : NaN;
+
+  // Comparison bars
+  const [ppgH, ppgA] = barWidths(hPPG, aPPG);
+  const [sosH, sosA] = barWidths(hSOS, aSOS);
+  const [difH, difA] = barWidths(Math.max(hDiff, 0), Math.max(aDiff, 0));
+
+  const diffStr = v => isNaN(v) ? "—" : (v >= 0 ? "+" : "") + fmt1(v);
+
+  // Common opponents
+  const common = getCommonOpponents(g.header, g.home_team, g.away_team);
+  let commonHTML = "";
+  if (common.length) {
+    const items = common.map(c => {
+      const aClass = c.aRec.w > c.aRec.l ? "W" : c.aRec.l > c.aRec.w ? "L" : "N";
+      const bClass = c.bRec.w > c.bRec.l ? "W" : c.bRec.l > c.bRec.w ? "L" : "N";
+      return `<div class="common-item">
+        <span class="common-opp">${esc(c.opp)}</span>
+        <span class="common-result ${aClass}" title="${esc(g.home_team)}">${esc(g.home_team.split(" ").pop())} ${c.aRec.str}</span>
+        <span class="common-result ${bClass}" title="${esc(g.away_team)}">${esc(g.away_team.split(" ").pop())} ${c.bRec.str}</span>
+      </div>`;
+    }).join("");
+    commonHTML = `<div class="common-list">${items}</div>`;
+  } else {
+    commonHTML = `<div class="no-common">No common opponents found yet this season.</div>`;
+  }
+
+  return `<div class="stats-panel">
+    <div class="stats-grid">
+      <div class="stats-col left">
+        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${hst ? hst.wins+"-"+hst.losses : "—"}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Win %</div><div class="stat-val">${fmtPct(hWPct)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(hPPG)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(hOPPG)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Point Diff</div><div class="stat-val">${diffStr(hDiff)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtPct(hSOS)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Games Played</div><div class="stat-val">${gH || "—"}</div></div>
+      </div>
+      <div class="stats-col right">
+        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${ast ? ast.wins+"-"+ast.losses : "—"}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Win %</div><div class="stat-val">${fmtPct(aWPct)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(aPPG)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(aOPPG)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Point Diff</div><div class="stat-val">${diffStr(aDiff)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtPct(aSOS)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Games Played</div><div class="stat-val">${gA || "—"}</div></div>
+      </div>
+    </div>
+
+    <div class="cmp-row">
+      <div class="cmp-lbl">Head-to-Head Comparison</div>
+      <div class="cmp-bar-wrap">
+        <div class="cmp-team-lbl">${fmt1(hPPG)}</div>
+        <div class="cmp-track"><div class="cmp-h" style="width:${ppgH}%"></div><div class="cmp-a" style="width:${ppgA}%"></div></div>
+        <div class="cmp-vals">${fmt1(aPPG)}</div>
+      </div>
+      <div class="cmp-lbl" style="margin-top:2px;margin-bottom:4px">PPG</div>
+      <div class="cmp-bar-wrap">
+        <div class="cmp-team-lbl">${diffStr(hDiff)}</div>
+        <div class="cmp-track"><div class="cmp-h" style="width:${difH}%"></div><div class="cmp-a" style="width:${difA}%"></div></div>
+        <div class="cmp-vals">${diffStr(aDiff)}</div>
+      </div>
+      <div class="cmp-lbl" style="margin-top:2px;margin-bottom:4px">Point Diff</div>
+      <div class="cmp-bar-wrap">
+        <div class="cmp-team-lbl">${fmtPct(hSOS)}</div>
+        <div class="cmp-track"><div class="cmp-h" style="width:${sosH}%"></div><div class="cmp-a" style="width:${sosA}%"></div></div>
+        <div class="cmp-vals">${fmtPct(aSOS)}</div>
+      </div>
+      <div class="cmp-lbl" style="margin-top:2px">Strength of Schedule</div>
+    </div>
+
+    <hr class="stats-divider">
+    <div class="common-hdr">Common Opponents</div>
+    ${commonHTML}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VOTES
+// ═══════════════════════════════════════════════════════════════════════════════
 function vote(gid, team) {
-  if (!preds[gid]) preds[gid] = { home: 0, away: 0 };
+  if (!preds[gid]) preds[gid] = { home:0, away:0 };
   const prev = uv[gid];
   if (prev) preds[gid][prev]--;
   uv[gid] = team;
   preds[gid][team]++;
   sessionStorage.setItem("uv", JSON.stringify(uv));
+  // Re-render just this card in-place
   const old = document.querySelector(`[data-gid="${gid}"]`);
   if (old) {
     const g = games.find(x => x.game_id === gid);
-    const p = old.parentElement;
-    const n = old.nextSibling;
+    const parent = old.parentElement, next = old.nextSibling;
     old.remove();
-    const t = document.createElement("div");
-    renderCard(g, t);
-    p.insertBefore(t.firstChild, n);
+    const tmp = document.createElement("div");
+    renderCard(g, tmp);
+    parent.insertBefore(tmp.firstChild, next);
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// TICKER — today's games only
+// ═══════════════════════════════════════════════════════════════════════════════
 function renderTicker() {
   const tk = document.getElementById("ticker");
   tk.innerHTML = "";
@@ -993,25 +701,69 @@ function renderTicker() {
     const el = document.createElement("div");
     el.className = "ticker-item";
     if (g.status === "final") {
-      const hs = parseInt(g.home_score) || 0, as = parseInt(g.away_score) || 0;
-      el.innerHTML = `<span class="${hs > as ? "tw" : ""}">${g.home_team}</span> ${hs} — ${as} <span class="${as > hs ? "tw" : ""}">${g.away_team}</span>`;
+      const h = parseInt(g.home_score)||0, a = parseInt(g.away_score)||0;
+      el.innerHTML = `<span class="${h>a?"tw":""}">${esc(g.home_team)}</span> ${h} — ${a} <span class="${a>h?"tw":""}">${esc(g.away_team)}</span>`;
     } else {
       const d = parseGD(g.game_datetime);
-      el.innerHTML = `<span class="upc">${g.home_team} vs ${g.away_team}${d ? " " + fmtT(d) : ""}</span>`;
+      el.innerHTML = `<span class="upc">${esc(g.home_team)} vs ${esc(g.away_team)}${d?" "+fmtT(d):""}</span>`;
     }
     return el;
   });
   [...items, ...items.map(i => i.cloneNode(true))].forEach(i => tk.appendChild(i));
 }
 
-// Tabs
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadData() {
+  try {
+    const [mr, pr] = await Promise.allSettled([
+      fetch("master_games.csv?" + Date.now()),
+      fetch("predictions.csv?" + Date.now()),
+    ]);
+    if (mr.status === "fulfilled" && mr.value.ok) {
+      games = parseCSV(await mr.value.text()).filter(r => r.game_id);
+    } else { games = seedGames(); }
+    if (pr.status === "fulfilled" && pr.value.ok) {
+      parseCSV(await pr.value.text()).filter(r => r.vote_id).forEach(v => {
+        if (!preds[v.game_id]) preds[v.game_id] = { home:0, away:0 };
+        if (v.predicted_winner === "home") preds[v.game_id].home++;
+        else preds[v.game_id].away++;
+      });
+    }
+  } catch (_) { games = seedGames(); }
+
+  // Build stats from all season data before rendering anything
+  buildTeamStats();
+
+  buildSel();
+  const today = new Date();
+  document.getElementById("gameDate").valueAsDate = today;
+  renderScores(today);
+  renderTicker();
+}
+
+function seedGames() {
+  return [
+    { game_id:"g1", header:"CIAC Boys Basketball", home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
+    { game_id:"g2", header:"CIAC Boys Basketball", home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g3", header:"CIAC Boys Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g4", header:"CIAC Boys Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
+    { game_id:"g5", header:"CIAC Boys Basketball", home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════════════
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
     t.classList.add("active");
     const s = t.dataset.s;
-    ["scores", "submit", "livestreams"].forEach(id => {
-      document.getElementById("sec-" + id).style.display = id === s ? "block" : "none";
+    ["scores","submit","livestreams"].forEach(id => {
+      const el = document.getElementById("sec-"+id);
+      if (el) el.style.display = id === s ? "block" : "none";
     });
     if (s === "livestreams") msInit();
   });
@@ -1022,89 +774,235 @@ document.getElementById("gameDate").addEventListener("change", e => {
   renderScores(new Date(y, m - 1, d));
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUBMIT FORM
+// ═══════════════════════════════════════════════════════════════════════════════
 function buildSel() {
   const sel = document.getElementById("gameSelect");
   sel.innerHTML = `<option value="">— Select a game —</option>`;
   games.forEach(g => {
-    const d = parseGD(g.game_datetime);
-    const ds = d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-    const o = document.createElement("option");
-    o.value = g.game_id;
+    const d  = parseGD(g.game_datetime);
+    const ds = d ? d.toLocaleDateString("en-US", { month:"short", day:"numeric" }) : "";
+    const o  = document.createElement("option");
+    o.value       = g.game_id;
     o.textContent = `${ds} — ${g.home_team} vs ${g.away_team}`;
     sel.appendChild(o);
   });
 }
 
 document.getElementById("gameSelect").addEventListener("change", e => {
-  const gid = e.target.value;
+  const gid  = e.target.value;
   const show = !!gid;
-  ["scoreGrp", "photoGrp"].forEach(id => document.getElementById(id).style.display = show ? "block" : "none");
+  ["scoreGrp","photoGrp"].forEach(id => document.getElementById(id).style.display = show ? "block" : "none");
   document.getElementById("subBtn").style.display = show ? "block" : "none";
   if (gid) {
     const g = games.find(x => x.game_id === gid);
-    if (g) {
-      document.getElementById("homeL").textContent = g.home_team;
-      document.getElementById("awayL").textContent = g.away_team;
-    }
+    if (g) { document.getElementById("homeL").textContent = g.home_team; document.getElementById("awayL").textContent = g.away_team; }
   }
 });
 
-// File drop
 let selFile = null;
-const fd = document.getElementById("fileDrop"), fi = document.getElementById("fileInput");
-fd.addEventListener("click", () => fi.click());
-fd.addEventListener("dragover", e => { e.preventDefault(); fd.classList.add("dov"); });
-fd.addEventListener("dragleave", () => fd.classList.remove("dov"));
-fd.addEventListener("drop", e => { e.preventDefault(); fd.classList.remove("dov"); hf(e.dataTransfer.files[0]); });
-fi.addEventListener("change", e => hf(e.target.files[0]));
-function hf(f) {
+const fdEl = document.getElementById("fileDrop"), fiEl = document.getElementById("fileInput");
+fdEl.addEventListener("click", () => fiEl.click());
+fdEl.addEventListener("dragover", e => { e.preventDefault(); fdEl.classList.add("dov"); });
+fdEl.addEventListener("dragleave", () => fdEl.classList.remove("dov"));
+fdEl.addEventListener("drop", e => { e.preventDefault(); fdEl.classList.remove("dov"); handleFile(e.dataTransfer.files[0]); });
+fiEl.addEventListener("change", e => handleFile(e.target.files[0]));
+function handleFile(f) {
   if (!f || !f.type.startsWith("image/")) { document.getElementById("photoErr").classList.add("show"); return; }
   document.getElementById("photoErr").classList.remove("show");
   selFile = f;
   const r = new FileReader();
-  r.onload = e => {
-    document.getElementById("prevImg").src = e.target.result;
-    document.getElementById("prevName").textContent = f.name;
-    document.getElementById("fprev").style.display = "block";
-  };
+  r.onload = e => { document.getElementById("prevImg").src = e.target.result; document.getElementById("prevName").textContent = f.name; document.getElementById("fprev").style.display = "block"; };
   r.readAsDataURL(f);
 }
 
 document.getElementById("subBtn").addEventListener("click", () => {
   let ok = true;
-  const hs = document.getElementById("homeS").value, as = document.getElementById("awayS").value;
+  const hs = document.getElementById("homeS").value, as2 = document.getElementById("awayS").value;
   const se = document.getElementById("scoreErr");
-  if (!hs || !as || isNaN(+hs) || isNaN(+as) || !Number.isInteger(+hs) || !Number.isInteger(+as) || +hs < 0 || +as < 0 || +hs > 999 || +as > 999) {
+  if (!hs || !as2 || isNaN(+hs) || isNaN(+as2) || !Number.isInteger(+hs) || !Number.isInteger(+as2) || +hs < 0 || +as2 < 0 || +hs > 999 || +as2 > 999) {
     se.classList.add("show"); ok = false;
   } else { se.classList.remove("show"); }
-  const pe = document.getElementById("photoErr");
-  if (!selFile) { pe.classList.add("show"); ok = false; } else { pe.classList.remove("show"); }
+  if (!selFile) { document.getElementById("photoErr").classList.add("show"); ok = false; } else { document.getElementById("photoErr").classList.remove("show"); }
   if (!ok) return;
   const gid = document.getElementById("gameSelect").value;
-  const sub = { submission_id: "sub_" + Date.now(), game_id: gid, home_score: +hs, away_score: +as, image_url: "[uploaded]:" + selFile.name, submitter_note: "", submitted_at: new Date().toISOString(), status: "pending", admin_notes: "" };
-  const p = JSON.parse(sessionStorage.getItem("ps") || "[]");
-  p.push(sub);
-  sessionStorage.setItem("ps", JSON.stringify(p));
-  const btn = document.getElementById("subBtn");
-  btn.disabled = true;
+  const sub = { submission_id:"sub_"+Date.now(), game_id:gid, home_score:+hs, away_score:+as2, image_url:"[uploaded]:"+selFile.name, submitter_note:"", submitted_at:new Date().toISOString(), status:"pending", admin_notes:"" };
+  const p = JSON.parse(sessionStorage.getItem("ps")||"[]"); p.push(sub); sessionStorage.setItem("ps", JSON.stringify(p));
+  const btn = document.getElementById("subBtn"); btn.disabled = true;
   document.getElementById("successMsg").classList.add("show");
   setTimeout(() => {
-    document.getElementById("successMsg").classList.remove("show");
-    btn.disabled = false;
-    document.getElementById("gameSelect").value = "";
-    document.getElementById("homeS").value = "";
-    document.getElementById("awayS").value = "";
-    document.getElementById("fprev").style.display = "none";
-    selFile = null;
-    ["scoreGrp", "photoGrp", "subBtn"].forEach(id => document.getElementById(id).style.display = "none");
+    document.getElementById("successMsg").classList.remove("show"); btn.disabled = false;
+    document.getElementById("gameSelect").value = ""; document.getElementById("homeS").value = ""; document.getElementById("awayS").value = "";
+    document.getElementById("fprev").style.display = "none"; selFile = null;
+    ["scoreGrp","photoGrp","subBtn"].forEach(id => document.getElementById(id).style.display = "none");
   }, 4000);
 });
 
-setInterval(() => {
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTO-REFRESH
+// ═══════════════════════════════════════════════════════════════════════════════
+setInterval(async () => {
+  try {
+    const r = await fetch("master_games.csv?" + Date.now());
+    if (r.ok) { games = parseCSV(await r.text()).filter(x => x.game_id); buildTeamStats(); }
+  } catch (_) {}
   const v = document.getElementById("gameDate").value;
   if (v) { const [y, m, d] = v.split("-").map(Number); renderScores(new Date(y, m - 1, d)); }
   renderTicker();
 }, 120000);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MULTI-STREAM WIDGET
+// ═══════════════════════════════════════════════════════════════════════════════
+(function () {
+  const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";
+  const CHANNELS = [
+    { name:"Staples Boys Basketball",  channelId:"UC04Jzrsn-GdX21cCbVdB2xg", url:"https://www.youtube.com/@staplesboysbasketball" },
+    { name:"The Day CT",               channelId:"UC5w-uRIutST34hir01q1iSQ",  url:"https://www.youtube.com/@thedayct" },
+    { name:"TB860LIVE",                channelId:"UCEfE3f3VVgWbFU7ephKOHuA",  url:"https://www.youtube.com/@TB860LIVE" },
+    { name:"WHCI",                     channelId:"UCa3sHmUhm7-2Dep_Yy3LarA",  url:"https://www.youtube.com/@whci", keywords:["basketball"] },
+    { name:"Newington High School",    channelId:"UCRAbTG5A7YsSp_uUXwlPG4A",  url:"https://www.youtube.com/@NewingtonHighSchool605" },
+    { name:"Project Purple Sports",    channelId:"UC0Qv-RCIYZZJNeA7Ra8IsFg",  url:"https://www.youtube.com/@ProjectPurpleSports" },
+    { name:"Waterbury Public Schools", channelId:"UC3msaxLNUfUTipfx2BoRLNg",  url:"https://www.youtube.com/@waterburypublicschoolsathl9870" },
+    { name:"Fairfield Prep Athletics", channelId:"UCGecTgvH_28YBQJx-YW2OIg",  url:"https://www.youtube.com/@fairfieldprepjesuits" },
+    { name:"Fairfield Ludlowe Live",   channelId:"UCuI4_F2ZyNbGWkwBZNkkJhQ",  url:"https://www.youtube.com/@flhslive" },
+    { name:"New Canaan Athletics",     channelId:"UCdtLggb1RcyKQWuRpMp8u9A",  url:"https://www.youtube.com/@newcanaanhighschoolathleti3780" },
+  ];
+
+  let channelData   = CHANNELS.map(c => ({...c, isLive:false, videoId:null, liveTitle:null, thumb:null}));
+  let selectedIds   = [], activeAudioId = null;
+
+  const elGrid      = document.getElementById("msGrid");
+  const elLoading   = document.getElementById("msLoading");
+  const elChips     = document.getElementById("msChipList");
+  const elAudioLbl  = document.getElementById("msAudioLbl");
+  const elStatus    = document.getElementById("msStatusBar");
+  const elStatusDot = document.getElementById("msStatusDot");
+  const elStatusTxt = document.getElementById("msStatusTxt");
+
+  elGrid.addEventListener("click", e => {
+    const overlay = e.target.closest(".ms-click-overlay"); if (!overlay) return;
+    const cell = overlay.closest(".ms-cell"); if (!cell) return;
+    const ch = channelData.find(c => c.channelId === cell.dataset.cid);
+    if (ch?.isLive) switchAudio(cell.dataset.cid);
+  });
+  document.getElementById("msRefreshBtn").addEventListener("click", fetchLiveStatus);
+
+  async function fetchLiveStatus() {
+    elLoading.style.display = "block"; elGrid.style.display = "none"; elStatus.style.display = "none";
+    if (!PROXY_BASE) { setStatus(false, "No proxy configured"); finishLoad(); return; }
+    const ids = CHANNELS.map(c => c.channelId).join(",");
+    const kwMap = {}; CHANNELS.forEach(c => { if (c.keywords?.length) kwMap[c.channelId] = c.keywords; });
+    const kwParam = Object.keys(kwMap).length ? "&keywords=" + encodeURIComponent(JSON.stringify(kwMap)) : "";
+    try {
+      const res = await fetch(`${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`Proxy ${res.status}`);
+      const data = await res.json();
+      if (data.channels) data.channels.forEach(remote => {
+        const local = channelData.find(c => c.channelId === remote.channelId);
+        if (local) Object.assign(local, { isLive:remote.isLive, videoId:remote.videoId, liveTitle:remote.liveTitle, thumb:remote.thumb });
+      });
+      const lc = channelData.filter(c => c.isLive).length;
+      setStatus(true, `${lc} channel${lc!==1?"s":""} live · ${new Date().toLocaleTimeString()}`);
+    } catch (err) { setStatus(false, `Live check failed: ${err.message}`); }
+    finishLoad();
+  }
+
+  function finishLoad() {
+    elLoading.style.display = "none";
+    if (!selectedIds.length) {
+      selectedIds = [...channelData.filter(c => c.isLive).map(c => c.channelId),
+                     ...channelData.filter(c => !c.isLive).map(c => c.channelId)];
+    }
+    if (!activeAudioId || !selectedIds.includes(activeAudioId)) {
+      const fl = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
+      activeAudioId = fl?.channelId ?? selectedIds[0] ?? null;
+      elAudioLbl.textContent = activeAudioId ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "") : "— tap a stream —";
+    }
+    renderGrid(); renderChips();
+    elGrid.style.display = "grid"; elChips.style.display = "flex"; elStatus.style.display = "flex";
+  }
+
+  function renderGrid() {
+    elGrid.classList.toggle("solo", selectedIds.length === 1);
+    elGrid.innerHTML = "";
+    selectedIds.forEach(id => { const ch = channelData.find(c => c.channelId === id); if (ch) elGrid.appendChild(buildCell(ch)); });
+  }
+
+  function buildCell(ch) {
+    const isAudio = ch.channelId === activeAudioId;
+    const cell = document.createElement("div");
+    cell.className = "ms-cell" + (isAudio ? " active-audio" : "");
+    cell.dataset.cid = ch.channelId;
+    let inner = "";
+    if (ch.isLive && ch.videoId) {
+      const mute = isAudio ? "0" : "1";
+      inner += `<iframe src="https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${mute}&controls=1&modestbranding=1&rel=0" allow="autoplay;encrypted-media" allowfullscreen></iframe>`;
+    } else if (ch.isLive) {
+      inner += `<div class="ms-placeholder"><div class="ms-placeholder-icon">🔴</div><div class="ms-placeholder-name">${esc(ch.name)}</div><div class="ms-placeholder-status"><a href="${esc(ch.url)}/live" target="_blank" rel="noopener" style="color:var(--gold)">Watch on YouTube ↗</a></div></div>`;
+    } else {
+      inner += `<div class="ms-placeholder"><div class="ms-placeholder-icon">📡</div><div class="ms-placeholder-name">${esc(ch.name)}</div><div class="ms-placeholder-status">Not currently live</div></div>`;
+    }
+    inner += `<div class="ms-audio-badge">🔊 Audio</div>`;
+    inner += `<div class="ms-cell-label"><span class="ms-cell-name">${esc(ch.name)}</span>${ch.isLive ? '<div class="ms-live-dot"></div>' : ''}</div>`;
+    inner += `<div class="ms-click-overlay" title="${ch.isLive ? "Tap to hear this stream" : "Not live"}"></div>`;
+    cell.innerHTML = inner; return cell;
+  }
+
+  function switchAudio(channelId) {
+    if (activeAudioId === channelId) return;
+    const prevId = activeAudioId; activeAudioId = channelId;
+    elAudioLbl.textContent = channelData.find(c => c.channelId === channelId)?.name ?? "";
+    [prevId, channelId].forEach(cid => {
+      if (!cid) return;
+      const cell = elGrid.querySelector(`.ms-cell[data-cid="${cid}"]`); if (!cell) return;
+      const ch = channelData.find(c => c.channelId === cid); if (!ch) return;
+      const isNowAudio = cid === channelId;
+      cell.classList.toggle("active-audio", isNowAudio);
+      if (ch.isLive && ch.videoId) {
+        const existing = cell.querySelector("iframe");
+        const src = `https://www.youtube.com/embed/${ch.videoId}?autoplay=1&mute=${isNowAudio?"0":"1"}&controls=1&modestbranding=1&rel=0`;
+        if (existing) { existing.src = src; } else { const iframe = document.createElement("iframe"); iframe.src = src; iframe.allow = "autoplay;encrypted-media"; iframe.allowFullscreen = true; cell.insertBefore(iframe, cell.firstChild); }
+      }
+    });
+    renderChips();
+  }
+
+  function renderChips() {
+    elChips.innerHTML = "";
+    channelData.forEach(ch => {
+      const isSel = selectedIds.includes(ch.channelId);
+      const chip  = document.createElement("div");
+      chip.className = "ms-ch-chip" + (isSel ? " selected" : "");
+      chip.dataset.cid = ch.channelId;
+      chip.innerHTML = `<div class="${ch.isLive?"chip-live":"chip-offline"}"></div>${esc(ch.name)}`;
+      chip.addEventListener("click", () => toggleChannel(ch.channelId));
+      elChips.appendChild(chip);
+    });
+  }
+
+  function toggleChannel(channelId) {
+    if (selectedIds.includes(channelId)) {
+      selectedIds = selectedIds.filter(id => id !== channelId);
+      if (activeAudioId === channelId) {
+        const nx = channelData.find(c => c.isLive && selectedIds.includes(c.channelId));
+        activeAudioId = nx?.channelId ?? selectedIds[0] ?? null;
+        elAudioLbl.textContent = activeAudioId ? (channelData.find(c => c.channelId === activeAudioId)?.name ?? "") : "— tap a stream —";
+      }
+    } else {
+      selectedIds.push(channelId);
+      if (!activeAudioId) { const ch = channelData.find(c => c.channelId === channelId); if (ch?.isLive) { activeAudioId = channelId; elAudioLbl.textContent = ch.name; } }
+    }
+    renderGrid(); renderChips();
+  }
+
+  function setStatus(ok, msg) { elStatusDot.className = "ms-status-dot " + (ok ? "ok" : "err"); elStatusTxt.textContent = msg; }
+
+  let msInitialized = false;
+  window.msInit = function () { if (msInitialized) return; msInitialized = true; fetchLiveStatus(); };
+  setInterval(() => { const tab = document.getElementById("sec-livestreams"); if (tab && tab.style.display !== "none" && msInitialized) fetchLiveStatus(); }, 3 * 60 * 1000);
+})();
 
 loadData();
 </script>

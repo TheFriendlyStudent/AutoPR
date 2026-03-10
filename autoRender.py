@@ -16,10 +16,10 @@ from dotenv import load_dotenv
 
 load_dotenv(".env")
 
-ACCOUNT_ID = os.getenv("ACCOUNT_ID")
-ACCESS_KEY = os.getenv("ACCESS_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY")
-BUCKET_NAME = os.getenv("BUCKET_NAME")
+ACCOUNT_ID      = os.getenv("ACCOUNT_ID")
+ACCESS_KEY      = os.getenv("ACCESS_KEY")
+SECRET_KEY      = os.getenv("SECRET_KEY")
+BUCKET_NAME     = os.getenv("BUCKET_NAME")
 PUBLIC_URL_BASE = os.getenv("PUBLIC_URL_BASE")
 
 
@@ -86,40 +86,58 @@ def mark_posted(csv_path, game_id):
     print(f"[OK] Marked {game_id} as posted.")
 
 
-def render_game(row, template_png="graphic.png"):
-    """Render a single game graphic and upload to R2. Returns (game_id, url) or None."""
+def is_today_eastern(game_datetime_str):
+    """Return True if the game's date matches today in US/Eastern time."""
+    if not game_datetime_str:
+        return False
+    eastern = pytz.timezone("US/Eastern")
+    today_str = datetime.datetime.now(eastern).strftime("%m/%d/%Y")
+    return game_datetime_str.strip().startswith(today_str)
 
-    # Only render games that are final and not yet posted
+
+def render_game(row, template_png="graphic.png", today_only=False):
+    """
+    Render a single game graphic and upload to R2.
+    Returns (game_id, url) or None if the game should be skipped.
+
+    Eligibility:
+      - status must be "final"
+      - posted_to_instagram must not be "true"
+      - game time must be in the past (Eastern)
+      - if today_only=True, game date must match today (Eastern)
+    """
     if row.get("status", "").lower() != "final":
         return None
     if row.get("posted_to_instagram", "").lower() == "true":
         return None
 
-    game_date_time_str = row.get("game_datetime")
+    game_date_time_str = row.get("game_datetime", "").strip()
     if not game_date_time_str:
         return None
 
+    # today_only filter — skip games not from today
+    if today_only and not is_today_eastern(game_date_time_str):
+        return None
+
     eastern = pytz.timezone("US/Eastern")
-    central = pytz.timezone("US/Central")
-
-    game_dt_naive = datetime.datetime.strptime(
-        game_date_time_str.strip(), "%m/%d/%Y %H:%M:%S"
-    )
+    try:
+        game_dt_naive = datetime.datetime.strptime(game_date_time_str, "%m/%d/%Y %H:%M:%S")
+    except ValueError:
+        return None
     game_dt_est = eastern.localize(game_dt_naive)
-    now_cst = datetime.datetime.now(central)
+    now_est     = datetime.datetime.now(eastern)
 
-    if game_dt_est > now_cst.astimezone(eastern):
+    if game_dt_est > now_est:
         return None
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        client = create_s3_client()
-        uid = str(uuid.uuid4())
-        output_png = os.path.join(tmpdir, f"{uid}.png")
-        bg_local = None
+        client      = create_s3_client()
+        uid         = str(uuid.uuid4())
+        output_png  = os.path.join(tmpdir, f"{uid}.png")
 
-        bg_url = row.get("bg_image", "")
+        bg_url          = row.get("bg_image", "")
         background_path = bg_url or None
-        drive_direct = convert_drive_link(bg_url) if bg_url else None
+        drive_direct    = convert_drive_link(bg_url) if bg_url else None
 
         if drive_direct:
             bg_local = os.path.join(tmpdir, f"bg_{uid}.jpg")
@@ -128,11 +146,11 @@ def render_game(row, template_png="graphic.png"):
 
         render_image(
             output_path=output_png,
-            home_won=int(row.get("home_score", 0)) > int(row.get("away_score", 0)),
+            home_won=int(row.get("home_score", 0) or 0) > int(row.get("away_score", 0) or 0),
             title_text=row.get("header", ""),
             caption_text=row.get("caption", ""),
-            home_score=int(row.get("home_score", 0)),
-            away_score=int(row.get("away_score", 0)),
+            home_score=int(row.get("home_score", 0) or 0),
+            away_score=int(row.get("away_score", 0) or 0),
             home_rank=row.get("home_rank", ""),
             away_rank=row.get("away_rank", ""),
             home_record=row.get("home_record", ""),
@@ -141,7 +159,7 @@ def render_game(row, template_png="graphic.png"):
             away_team=row.get("away_team", ""),
             photo_text="PHOTO: @" + row.get("photo_cred", ""),
             template_png=template_png,
-            background_image=background_path
+            background_image=background_path,
         )
 
         r2_name = f"{uid}.png"
@@ -149,19 +167,20 @@ def render_game(row, template_png="graphic.png"):
         return (row.get("game_id"), url)
 
 
-def render_from_csv(csv_path, template_png="graphic.png", max_threads=4):
+def render_from_csv(csv_path, template_png="graphic.png", max_threads=4, today_only=False):
     """
     Render all eligible games from master_games.csv.
-    Returns list of (game_id, url) tuples.
+    If today_only=True, only render games whose date matches today (Eastern).
+    Returns list of (game_id, url) tuples in the order they appear in the CSV.
     """
-    results = []
+    results_map = {}
 
     with open(csv_path, newline="", encoding="utf-8") as file:
         rows = list(csv.DictReader(file))
 
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = {
-            executor.submit(render_game, row, template_png): row
+            executor.submit(render_game, row, template_png, today_only): row
             for row in rows
         }
         for future in as_completed(futures):
@@ -171,9 +190,15 @@ def render_from_csv(csv_path, template_png="graphic.png", max_threads=4):
                 result = future.result()
                 if result:
                     game_id, url = result
-                    results.append((game_id, url))
+                    results_map[game_id] = url
                     print(f"[OK] Rendered & uploaded: {url}")
             except Exception as e:
                 print(f"[ERROR] {row.get('home_team')} vs {row.get('away_team')}: {e}")
 
+    # Return in CSV order so carousel slides match the date order
+    results = []
+    for row in rows:
+        gid = row.get("game_id")
+        if gid in results_map:
+            results.append((gid, results_map[gid]))
     return results

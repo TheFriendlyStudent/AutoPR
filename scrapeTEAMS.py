@@ -1,11 +1,12 @@
 """
-scrapeCIAC.py
+scrapeTEAMS.py
 Scrapes CIAC boys & girls basketball schedules and scores.
+Records are calculated from scraped game data only — no user input required.
 
 Usage:
-    python scrapeCIAC.py              # today's games (default)
-    python scrapeCIAC.py --week       # this week's games
-    python scrapeCIAC.py --all        # entire season (scrapes per school to bypass 200-row cap)
+    python scrapeTEAMS.py              # today's games (default)
+    python scrapeTEAMS.py --week       # this week's games
+    python scrapeTEAMS.py --all        # entire season (per-school, bypasses 200-row cap)
 """
 
 import argparse
@@ -140,12 +141,11 @@ def parse_dt_obj(dt_str):
     try:
         return datetime.strptime(dt_str, "%m/%d/%Y %H:%M:%S")
     except ValueError:
-        return datetime.max  # push unparseable dates to the end
+        return datetime.max
 
 
 def game_sort_key(r):
-    """Stable sort key shared by calculate_records and the final CSV sort,
-    guaranteeing the order records are calculated matches the file order."""
+    """Stable sort key shared by calculate_records and the final CSV sort."""
     return (
         parse_dt_obj(r.get("game_datetime", "")),
         r.get("header", ""),
@@ -175,8 +175,6 @@ def parse_datetime(date_str, time_str):
         hour = 0
 
     today = datetime.now()
-    # If we're currently in the second half of the season (Jan-Jun),
-    # any Nov/Dec game belongs to the prior calendar year.
     year = (today.year - 1) if (month >= 11 and today.month < 7) else today.year
 
     try:
@@ -186,11 +184,7 @@ def parse_datetime(date_str, time_str):
 
 
 def parse_team_div(div):
-    """
-    Extract (team_name, score) from a <div class="team"> element.
-    Score is in <div class="scoreright">; name is the remaining text
-    after stripping child elements and the division suffix (e.g. '- IV').
-    """
+    """Extract (team_name, score) from a <div class="team"> element."""
     scoreright = div.find("div", class_="scoreright")
     score = scoreright.get_text(strip=True) if scoreright else ""
 
@@ -210,13 +204,10 @@ def parse_row(row):
     if not cells:
         return None
 
-    # Skip scrimmages; all other gametype labels (classics, tournaments, etc.)
-    # are treated as normal games.
     gt_cell = row.find("td", class_="gametype")
     if gt_cell and "scrimmage" in gt_cell.get_text(strip=True).lower():
         return None
 
-    # Date + time from cell[0]
     date_span = cells[0].find("span", class_="date")
     time_span = cells[0].find("span", class_="time")
     if not date_span or not time_span:
@@ -226,7 +217,6 @@ def parse_row(row):
     if not dt_str:
         return None
 
-    # Game must have a dashboardgame link
     a = None
     for cell in cells:
         a = cell.find("a", href=re.compile(r"/dashboardgame\.aspx", re.I))
@@ -235,16 +225,9 @@ def parse_row(row):
     if not a:
         return None
 
-    # Teams live in <div class="team"> inside the link.
-    # Tournament games prepend an extra title div (e.g. "Xmas Holiday Tournament").
-    # Real team divs always have a division suffix like "- I" or "- IV".
-    # Title divs never do, so we use that as the filter.
     team_divs = a.find_all("div", class_="team")
 
     def is_real_team(div):
-        # Real team divs always have a division suffix like "- I" or "- IV".
-        # Tournament title divs never do. Strip child tags first so the
-        # suffix check works on plain text only.
         text = div.get_text(separator=" ", strip=True)
         return bool(re.search(r"-\s*[IVX]+", text))
 
@@ -252,7 +235,6 @@ def parse_row(row):
     if len(team_divs) < 2:
         return None
 
-    # Home team is the one with the house icon
     home_idx = 0
     for i, div in enumerate(team_divs):
         if div.find("i", class_=re.compile(r"fa-house")):
@@ -285,7 +267,6 @@ def fetch_page(sport_id, quick_filter, school_id=None):
     params = {"L": "1", "SportID": sport_id, "QuickFilter": quick_filter}
     if school_id is not None:
         params["SchoolID"] = school_id
-
     try:
         resp = requests.get(BASE_URL, params=params, headers=REQUEST_HEADERS, timeout=20)
         resp.raise_for_status()
@@ -297,15 +278,11 @@ def fetch_page(sport_id, quick_filter, school_id=None):
     table = soup.find("table")
     if not table:
         return []
-
     return [g for row in table.find_all("tr") if (g := parse_row(row))]
 
 
 def fetch_all_schools(sport_id):
-    """
-    Scrape every school individually with a thread pool to bypass the
-    200-row server cap, deduplicate by game key, and return the merged list.
-    """
+    """Scrape every school individually (bypasses 200-row cap) using a thread pool."""
     all_games = []
     seen_keys = set()
     completed = 0
@@ -334,24 +311,20 @@ def fetch_all_schools(sport_id):
 def fetch_today(sport_id):
     """
     Fetch today's games — both scheduled and completed.
-
-    QuickFilter=2 (this week) returns scheduled games including today's.
-    QuickFilter=1 (today) returns completed games with scores.
-    We merge both and let scores upgrade scheduled -> final.
+    QuickFilter=2 (week) has scheduled games; QuickFilter=1 (today) has scores.
+    We merge both and upgrade scheduled -> final when scores arrive.
     """
-    today_date = datetime.now().strftime("%m/%d/%Y")  # e.g. "03/10/2026"
-    seen = {}  # game_key -> game dict
+    today_date = datetime.now().strftime("%m/%d/%Y")
+    seen = {}
 
     for qf in ("2", "1"):
         for g in fetch_page(sport_id, qf):
-            # Discard any game not on today's date
             if not g["game_datetime"].startswith(today_date):
                 continue
             key = make_game_key(g["home_team"], g["away_team"], g["game_datetime"])
             if key not in seen:
                 seen[key] = g
             elif g["status"] == "final":
-                # Upgrade a previously-seen scheduled game to final
                 seen[key].update(g)
 
     return list(seen.values())
@@ -361,9 +334,9 @@ def fetch_today(sport_id):
 
 def calculate_records(rows):
     """
-    Walk all final games in the same chronological order used for the CSV,
-    and write each team's cumulative W-L record back into that row.
-    Boys and girls are tracked independently so shared school names don't mix.
+    Walk all final games in chronological order and write each team's cumulative
+    W-L record back into that game row. Boys and girls tracked independently.
+    Records are derived entirely from scraped game data — no user input used.
     """
     final_rows = [
         r for r in rows
@@ -373,7 +346,7 @@ def calculate_records(rows):
 
     wins   = defaultdict(int)
     losses = defaultdict(int)
-    game_records = {}  # game_id -> (home_record_str, away_record_str)
+    game_records = {}
 
     for r in final_rows:
         hdr      = r.get("header", "")
@@ -467,12 +440,12 @@ def main():
 
     all_rows = list(existing_by_key.values())
 
-    # Recalculate W-L records for scraped rows; preserve manually-set records
+    # Records are always recalculated from scraped data — never from user input
     ciac_rows   = [r for r in all_rows if r.get("game_id", "").startswith("ciac_")]
     manual_rows = [r for r in all_rows if not r.get("game_id", "").startswith("ciac_")]
     ciac_rows   = calculate_records(ciac_rows)
 
-    # Final sort uses the exact same key as calculate_records
+    # Sort using the same key calculate_records used — guarantees order matches records
     all_rows_final = sorted(ciac_rows + manual_rows, key=game_sort_key)
 
     save_master(all_rows_final)
