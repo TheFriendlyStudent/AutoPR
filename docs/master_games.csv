@@ -1,12 +1,4 @@
 game_id,header,home_team,away_team,home_rank,away_rank,home_score,away_score,home_record,away_record,bg_image,photo_cred,game_datetime,status,posted_to_instagram,caption
-game_001,CIAC Boys Basketball,Daniel Hand,Wilbur Cross,NR,NR,59,53,10-12,8-14,https://drive.google.com/open?id=14hQfK2Q8uhuIey7VpUvzAhMiNG6ZYipi,ez.vision_,03/04/2026 18:00:00,final,FALSE,FINAL
-game_002,CIAC Boys Basketball,Bristol Eastern,Foran,NR,NR,47,50,8-13,9-13,https://drive.google.com/open?id=1vBoge5IfEKnS9gHVolmGAWJtzx87tKdh,mangosmedia_,03/04/2026 18:30:00,final,FALSE,FINAL
-game_005,CIAC Boys Basketball,Abbott Tech,Grasso Tech,NR,NR,58,55,19-4,19-4,https://drive.google.com/open?id=1FkYjMX4mUIOb1tGYDvjkmwRTdMUdE0kc,_13visuals,03/04/2026 19:00:00,final,FALSE,FINAL
-game_003,CIAC Boys Basketball,Old Lyme,Cromwell,NR,NR,58,42,21-2,19-4,https://drive.google.com/open?id=1HIjI_LIIl7hFa5mIcdcNR3V-mG9Ao-9L,flicsbycham,03/04/2026 19:00:00,final,FALSE,BELT
-game_004,CIAC Boys Basketball,Staples,Ridgefield,2,NR,62,48,23-0,17-6,https://drive.google.com/open?id=1BqgwAb3UOd04dB-KSmfZ9-gPnF8lHrMZ,pprepzone,03/04/2026 19:30:00,final,FALSE,FINAL
-game_006,CIAC Boys Basketball,Shelton,Amity Regional,NR,3,,,14-8,18-4,,,03/06/2026 19:00:00,scheduled,FALSE,
-game_007,CIAC Boys Basketball,Glastonbury,South Windsor,1,NR,,,20-2,16-6,,,03/06/2026 19:30:00,scheduled,FALSE,
-game_008,CIAC Girls Basketball,Mercy,Guilford,NR,NR,,,12-10,14-8,,,03/07/2026 18:00:00,scheduled,FALSE,
 ciac_efab4506,CIAC Girls Basketball,Plainfield,Oxford,NR,NR,53,49,1-0,0-1,,,03/10/2026 16:00:00,final,FALSE,
 ciac_85a342cc,CIAC Girls Basketball,Notre Dame Prep,Sheehan,NR,NR,,,,,,,03/10/2026 17:00:00,scheduled,FALSE,
 ciac_7401ad19,CIAC Girls Basketball,Weaver,Waterford,NR,NR,,,,,,,03/10/2026 17:00:00,scheduled,FALSE,
@@ -47,3 +39,4 @@ ciac_4ebd9332,CIAC Girls Basketball,Woodstock Academy,Bristol Central,NR,NR,,,,,
 ciac_192c2970,CIAC Boys Basketball,Bethel,St. Joseph,NR,NR,,,,,,,03/10/2026 18:30:00,scheduled,FALSE,
 ciac_07417ff6,CIAC Boys Basketball,Notre Dame Prep,New Britain,NR,NR,,,,,,,03/10/2026 19:30:00,scheduled,FALSE,
 ciac_dffd5511,CIAC Girls Basketball,Staples,Fairfield Warde,NR,NR,,,,,,,03/10/2026 19:30:00,scheduled,FALSE,
+
