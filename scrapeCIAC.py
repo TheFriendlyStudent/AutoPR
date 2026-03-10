@@ -26,7 +26,7 @@ MASTER_CSV = "docs/master_games.csv"
 SPORTS = [
     {
         "base_url": "https://ciac.fpsports.org/DashboardSchedule.aspx?L=1&SportID=2_1015_-1&QuickFilter=3",
-        "params": {"L": "1", "SportID": "2_1015_-1"},   # Boys Basketball
+        "params": {"L": "3", "SportID": "2_1015_-1"},   # Boys Basketball
         "header": "CIAC Boys Basketball",
     }
 ]
