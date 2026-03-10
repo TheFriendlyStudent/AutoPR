@@ -1,4 +1,4 @@
-name: Run Google Sheets Script
+name: Run CIAC Scraper
 
 on:
   workflow_dispatch:
@@ -21,18 +21,17 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
-      - name: Run Google Sheets sync
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-        run: python getScoreSheet.py
+      - name: Run CIAC scraper
+        run: |
+          python scrapeTEAMS.py
 
       - name: Commit updated CSVs for GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/master_games.csv docs/submitted_scores.csv docs/predictions.csv
-          git commit -m "Update CSVs [ci skip]" || echo "No changes"
+          git add docs/master_games.csv
+          git commit -m "Update CIAC games [ci skip]" || echo "No changes"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
