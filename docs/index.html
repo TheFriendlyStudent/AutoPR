@@ -13,6 +13,7 @@
   --gray-l:#c8d3e8;--surf:#111d33;--surf2:#192540;
   --bdr:rgba(255,255,255,0.08);--fd:'Barlow Condensed',sans-serif;
   --fb:'Barlow',sans-serif;--r:10px;
+  --boys:#2563d4;--girls:#c026d3;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--fb);background:var(--navy);color:var(--white);min-height:100vh;overflow-x:hidden}
@@ -54,9 +55,17 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .date-hdr{font-family:var(--fd);font-size:1.05rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin:18px 0 10px;display:flex;align-items:center;gap:10px}
 .date-hdr::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
+/* GENDER BADGE */
+.gender-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-bottom:3px}
+.gender-badge.boys{background:rgba(37,99,212,.25);color:#93c5fd;border:1px solid rgba(37,99,212,.4)}
+.gender-badge.girls{background:rgba(192,38,211,.22);color:#e879f9;border:1px solid rgba(192,38,211,.4)}
+
 /* GAME CARD */
 .game-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
 .game-card:hover{border-color:rgba(255,255,255,.14)}
+/* Subtle left accent by gender */
+.game-card.boys{border-left:3px solid var(--boys)}
+.game-card.girls{border-left:3px solid var(--girls)}
 
 /* Card header row — clickable */
 .card-inner{padding:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -86,7 +95,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .stats-panel{border-top:1px solid var(--bdr);padding:16px 18px;display:none;background:var(--navy-mid)}
 .game-card.expanded .stats-panel{display:block}
 
-/* stat grid: two columns, one per team */
+/* stat grid */
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .stats-col{display:flex;flex-direction:column;gap:6px;padding:0 4px}
 .stats-col.left{border-right:1px solid var(--bdr)}
@@ -116,6 +125,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .common-result{font-family:var(--fd);font-size:.72rem;font-weight:700;white-space:nowrap}
 .common-result.W{color:#4ade80}.common-result.L{color:var(--red)}.common-result.N{color:var(--gray)}
 .no-common{font-size:.75rem;color:var(--gray);font-style:italic;padding:4px 0}
+
+/* VIDEO REPLAY */
+.replay-row{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.replay-lbl{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold)}
+.replay-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);color:#fca5a5;font-family:var(--fd);font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:4px;text-decoration:none;transition:all .15s}
+.replay-btn:hover{background:rgba(220,38,38,.3);color:#fff}
+.replay-btn svg{width:12px;height:12px;flex-shrink:0}
 
 /* VOTE STRIP */
 .vote-strip{background:var(--navy-mid);border-top:1px solid var(--bdr);padding:9px 18px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -295,7 +311,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
       </div>
     </div>
 
-    <!-- LIVESTREAMS (inside .content so sidebar stays fixed on desktop) -->
+    <!-- LIVESTREAMS -->
     <div id="sec-livestreams" style="display:none">
       <div class="ms-toolbar">
         <span class="ms-toolbar-title">🔊 Audio</span>
@@ -328,7 +344,46 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 let games = [], preds = {}, uv = JSON.parse(sessionStorage.getItem("uv") || "{}");
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CSV PARSER — handles quoted fields that may contain commas
+// EASTERN TIME HELPERS
+// All date operations use America/New_York (auto-handles EST ↔ EDT).
+// ═══════════════════════════════════════════════════════════════════════════════
+const ET_LOCALE = "en-US";
+const ET_TZ     = "America/New_York";
+
+/** Today's date string "YYYY-MM-DD" in Eastern time. */
+function todayET() {
+  return new Date().toLocaleDateString(ET_LOCALE, { timeZone: ET_TZ,
+    year: "numeric", month: "2-digit", day: "2-digit" })
+    .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2");
+}
+
+/** Parse CSV datetime string "MM/DD/YYYY HH:MM:SS" as a JS Date (local). */
+function parseGD(s) {
+  if (!s) return null;
+  const [dp, tp = "00:00:00"] = s.trim().split(" ");
+  const [m, d, y] = dp.split("/");
+  const [h, mn]   = tp.split(":");
+  return new Date(+y, +m - 1, +d, +h, +mn);
+}
+
+/** "YYYY-MM-DD" from a JS Date using Eastern time zone. */
+function tdsET(d) {
+  return d.toLocaleDateString(ET_LOCALE, { timeZone: ET_TZ,
+    year: "numeric", month: "2-digit", day: "2-digit" })
+    .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2");
+}
+
+/** "YYYY-MM-DD" from a JS Date using local time (for CSV dates which are naive). */
+function tds(d) { return d.toISOString().slice(0, 10); }
+
+function fmtT(d) {
+  let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CSV PARSER
 // ═══════════════════════════════════════════════════════════════════════════════
 function parseCSV(text) {
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
@@ -347,7 +402,7 @@ function splitCSVLine(line) {
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (c === '"') {
-      if (inQ && line[i+1] === '"') { cur += '"'; i++; }  // escaped quote
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
       else { inQ = !inQ; }
     } else if (c === ',' && !inQ) { result.push(cur); cur = ""; }
     else { cur += c; }
@@ -357,11 +412,27 @@ function splitCSVLine(line) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STATS ENGINE
-// Builds per-team stats from all final games in master_games.csv.
-// Records shown on cards are derived here — never from the CSV's home_record field.
+// GENDER HELPER
+// Detects Boys / Girls from the header field.
 // ═══════════════════════════════════════════════════════════════════════════════
-let teamStats = {};   // "header|team" → { wins, losses, pf, pa, gamesPlayed, opponents{} }
+function genderOf(header) {
+  const h = (header || "").toLowerCase();
+  if (h.includes("girls")) return "girls";
+  if (h.includes("boys"))  return "boys";
+  return "";
+}
+
+function genderBadge(header) {
+  const g = genderOf(header);
+  if (!g) return "";
+  const label = g === "boys" ? "♂ Boys Basketball" : "♀ Girls Basketball";
+  return `<span class="gender-badge ${g}">${label}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATS ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+let teamStats = {};
 
 function buildTeamStats() {
   teamStats = {};
@@ -381,7 +452,6 @@ function buildTeamStats() {
       if (hs > as) { teamStats[hk].wins++; teamStats[ak].losses++; }
       else if (as > hs) { teamStats[ak].wins++; teamStats[hk].losses++; }
 
-      // Track results vs each opponent for SOS + common opponents
       if (!teamStats[hk].opponents[g.away_team]) teamStats[hk].opponents[g.away_team] = [];
       if (!teamStats[ak].opponents[g.home_team]) teamStats[ak].opponents[g.home_team] = [];
       teamStats[hk].opponents[g.away_team].push({ hs, as, iAmHome: true });
@@ -398,7 +468,6 @@ function getStat(header, team) {
 }
 
 function calcSOS(header, team) {
-  // Average win% of all opponents faced (higher = tougher schedule)
   const st = getStat(header, team);
   if (!st || !st.gamesPlayed) return null;
   const opps = Object.keys(st.opponents);
@@ -436,21 +505,8 @@ function resultSummary(results) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DATE / FORMAT HELPERS
+// FORMAT HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
-function parseGD(s) {
-  if (!s) return null;
-  const [dp, tp = "00:00:00"] = s.trim().split(" ");
-  const [m, d, y] = dp.split("/");
-  const [h, mn]   = tp.split(":");
-  return new Date(+y, +m - 1, +d, +h, +mn);
-}
-function tds(d) { return d.toISOString().slice(0, 10); }
-function fmtT(d) {
-  let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
-}
 function voteOpen(g) {
   if (g.status !== "scheduled") return false;
   const gt = parseGD(g.game_datetime); if (!gt) return false;
@@ -459,6 +515,8 @@ function voteOpen(g) {
 }
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function fmt1(n) { return (n === null || isNaN(n)) ? "—" : n.toFixed(1); }
+/** SOS displayed as a plain decimal (e.g. 0.621), not a percentage. */
+function fmtDec(n) { return (n === null || isNaN(n)) ? "—" : n.toFixed(3); }
 function fmtPct(n) { return (n === null || isNaN(n)) ? "—" : (n * 100).toFixed(1) + "%"; }
 function barWidths(a, b) {
   if (a === null || b === null || isNaN(a) || isNaN(b)) return [50, 50];
@@ -467,17 +525,40 @@ function barWidths(a, b) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// VIDEO REPLAY SEARCH
+// Builds a YouTube search URL for the game. The user clicks through to YouTube.
+// ═══════════════════════════════════════════════════════════════════════════════
+function replaySearchUrl(g) {
+  const q = encodeURIComponent(`${g.home_team} vs ${g.away_team} basketball`);
+  return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function buildReplayRow(g) {
+  // Only show for final games
+  if (g.status !== "final") return "";
+  const url = replaySearchUrl(g);
+  return `<div class="replay-row">
+    <span class="replay-lbl">📹 Replay / Highlights</span>
+    <a class="replay-btn" href="${esc(url)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+      Search on YouTube ↗
+    </a>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RENDER SCORES FOR A DATE
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderScores(date) {
   const ctr = document.getElementById("scoresCtr");
   ctr.innerHTML = "";
+  // Use tds() on naive CSV dates (no timezone offset needed since they're already local)
   const ds = tds(date);
   const gs = games.filter(g => { const d = parseGD(g.game_datetime); return d && tds(d) === ds; });
   if (!gs.length) { ctr.innerHTML = `<div class="no-games">No games scheduled for this date.</div>`; return; }
   const hdr = document.createElement("div");
   hdr.className = "date-hdr";
-  hdr.textContent = date.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" });
+  hdr.textContent = date.toLocaleDateString(ET_LOCALE, { weekday:"long", month:"long", day:"numeric", timeZone: ET_TZ });
   ctr.appendChild(hdr);
   gs.forEach(g => renderCard(g, ctr));
 }
@@ -495,15 +576,15 @@ function renderCard(g, ctr) {
   const p   = preds[g.game_id] || { home:0, away:0 };
   const tot = p.home + p.away;
   const hp  = tot ? Math.round(p.home / tot * 100) : 50, ap2 = 100 - hp;
+  const gender = genderOf(g.header);
 
   const card = document.createElement("div");
-  card.className = "game-card";
+  card.className = "game-card" + (gender ? " " + gender : "");
   card.dataset.gid = g.game_id;
 
   const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${esc(g.home_rank)}</span>` : "";
   const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${esc(g.away_rank)}</span>` : "";
 
-  // Score / time centre block
   let scoreCtr = "";
   if (fin) {
     const cap = g.caption ? `<div class="cap-b">${esc(g.caption)}</div>` : "";
@@ -517,15 +598,19 @@ function renderCard(g, ctr) {
                 <div class="sport-sub">${esc(g.header || "")}</div>`;
   }
 
-  // Computed records (authoritative — ignore CSV home_record/away_record)
   const hst = getStat(g.header, g.home_team);
   const ast = getStat(g.header, g.away_team);
   const hRec = hst ? `${hst.wins}-${hst.losses}` : "";
   const aRec = ast ? `${ast.wins}-${ast.losses}` : "";
 
+  // Gender badge shown on the score centre block for finished games,
+  // and on team columns for scheduled games so it's always visible
+  const badge = genderBadge(g.header);
+
   card.innerHTML = `
     <div class="card-inner">
       <div class="team-col">
+        ${badge ? `<div>${badge}</div>` : ""}
         <div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${esc(g.home_team)}</div>
         <div class="team-rec">${esc(hRec)}</div>
       </div>
@@ -539,7 +624,6 @@ function renderCard(g, ctr) {
     ${buildStatsPanel(g)}
   `;
 
-  // Vote strip (appended after innerHTML so it doesn't interfere with stats)
   if (vo || (g.status === "scheduled" && tot > 0)) {
     const uvc = uv[g.game_id];
     const hs2 = g.home_team.split(" ").pop(), as2 = g.away_team.split(" ").pop();
@@ -559,7 +643,6 @@ function renderCard(g, ctr) {
     card.appendChild(vs);
   }
 
-  // Expand / collapse toggle
   card.querySelector(".expand-row").addEventListener("click", e => {
     e.stopPropagation();
     card.classList.toggle("expanded");
@@ -591,14 +674,12 @@ function buildStatsPanel(g) {
   const hWPct = hst && (hst.wins + hst.losses) ? hst.wins / (hst.wins + hst.losses) : NaN;
   const aWPct = ast && (ast.wins + ast.losses) ? ast.wins / (ast.wins + ast.losses) : NaN;
 
-  // Comparison bars
   const [ppgH, ppgA] = barWidths(hPPG, aPPG);
   const [sosH, sosA] = barWidths(hSOS, aSOS);
   const [difH, difA] = barWidths(Math.max(hDiff, 0), Math.max(aDiff, 0));
 
   const diffStr = v => isNaN(v) ? "—" : (v >= 0 ? "+" : "") + fmt1(v);
 
-  // Common opponents
   const common = getCommonOpponents(g.header, g.home_team, g.away_team);
   let commonHTML = "";
   if (common.length) {
@@ -624,7 +705,7 @@ function buildStatsPanel(g) {
         <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(hPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(hOPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Point Diff</div><div class="stat-val">${diffStr(hDiff)}</div></div>
-        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtPct(hSOS)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtDec(hSOS)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Games Played</div><div class="stat-val">${gH || "—"}</div></div>
       </div>
       <div class="stats-col right">
@@ -633,7 +714,7 @@ function buildStatsPanel(g) {
         <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(aPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(aOPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Point Diff</div><div class="stat-val">${diffStr(aDiff)}</div></div>
-        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtPct(aSOS)}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Str. of Schedule</div><div class="stat-val">${fmtDec(aSOS)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Games Played</div><div class="stat-val">${gA || "—"}</div></div>
       </div>
     </div>
@@ -653,9 +734,9 @@ function buildStatsPanel(g) {
       </div>
       <div class="cmp-lbl" style="margin-top:2px;margin-bottom:4px">Point Diff</div>
       <div class="cmp-bar-wrap">
-        <div class="cmp-team-lbl">${fmtPct(hSOS)}</div>
+        <div class="cmp-team-lbl">${fmtDec(hSOS)}</div>
         <div class="cmp-track"><div class="cmp-h" style="width:${sosH}%"></div><div class="cmp-a" style="width:${sosA}%"></div></div>
-        <div class="cmp-vals">${fmtPct(aSOS)}</div>
+        <div class="cmp-vals">${fmtDec(aSOS)}</div>
       </div>
       <div class="cmp-lbl" style="margin-top:2px">Strength of Schedule</div>
     </div>
@@ -663,6 +744,7 @@ function buildStatsPanel(g) {
     <hr class="stats-divider">
     <div class="common-hdr">Common Opponents</div>
     ${commonHTML}
+    ${buildReplayRow(g)}
   </div>`;
 }
 
@@ -676,7 +758,6 @@ function vote(gid, team) {
   uv[gid] = team;
   preds[gid][team]++;
   sessionStorage.setItem("uv", JSON.stringify(uv));
-  // Re-render just this card in-place
   const old = document.querySelector(`[data-gid="${gid}"]`);
   if (old) {
     const g = games.find(x => x.game_id === gid);
@@ -689,12 +770,12 @@ function vote(gid, team) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TICKER — today's games only
+// TICKER — today's games, using Eastern time
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderTicker() {
   const tk = document.getElementById("ticker");
   tk.innerHTML = "";
-  const ds = tds(new Date());
+  const ds = todayET();
   const tg = games.filter(g => { const d = parseGD(g.game_datetime); return d && tds(d) === ds; });
   if (!tg.length) return;
   const items = tg.map(g => {
@@ -733,23 +814,24 @@ async function loadData() {
     }
   } catch (_) { games = seedGames(); }
 
-  // Build stats from all season data before rendering anything
   buildTeamStats();
-
   buildSel();
-  const today = new Date();
-  document.getElementById("gameDate").valueAsDate = today;
-  renderScores(today);
+
+  // Default date picker to today in Eastern time
+  const etToday = todayET();
+  document.getElementById("gameDate").value = etToday;
+  const [y, m, d] = etToday.split("-").map(Number);
+  renderScores(new Date(y, m - 1, d));
   renderTicker();
 }
 
 function seedGames() {
   return [
-    { game_id:"g1", header:"CIAC Boys Basketball", home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
-    { game_id:"g2", header:"CIAC Boys Basketball", home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g3", header:"CIAC Boys Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g4", header:"CIAC Boys Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
-    { game_id:"g5", header:"CIAC Boys Basketball", home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
+    { game_id:"g1", header:"CIAC Boys Basketball",  home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
+    { game_id:"g2", header:"CIAC Boys Basketball",  home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g3", header:"CIAC Girls Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g4", header:"CIAC Girls Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
+    { game_id:"g5", header:"CIAC Boys Basketball",  home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
   ];
 }
 
@@ -782,7 +864,7 @@ function buildSel() {
   sel.innerHTML = `<option value="">— Select a game —</option>`;
   games.forEach(g => {
     const d  = parseGD(g.game_datetime);
-    const ds = d ? d.toLocaleDateString("en-US", { month:"short", day:"numeric" }) : "";
+    const ds = d ? d.toLocaleDateString(ET_LOCALE, { month:"short", day:"numeric" }) : "";
     const o  = document.createElement("option");
     o.value       = g.game_id;
     o.textContent = `${ds} — ${g.home_team} vs ${g.away_team}`;
@@ -840,7 +922,7 @@ document.getElementById("subBtn").addEventListener("click", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AUTO-REFRESH
+// AUTO-REFRESH (Eastern time aware)
 // ═══════════════════════════════════════════════════════════════════════════════
 setInterval(async () => {
   try {
@@ -854,6 +936,9 @@ setInterval(async () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MULTI-STREAM WIDGET
+// Caching is handled server-side (Cloudflare edge, 10-min TTL) in youtube-proxy.js.
+// The frontend polls every 3 minutes only when the tab is visible; the proxy
+// serves cached results so no extra YouTube API quota is spent between refreshes.
 // ═══════════════════════════════════════════════════════════════════════════════
 (function () {
   const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";
@@ -870,8 +955,8 @@ setInterval(async () => {
     { name:"New Canaan Athletics",     channelId:"UCdtLggb1RcyKQWuRpMp8u9A",  url:"https://www.youtube.com/@newcanaanhighschoolathleti3780" },
   ];
 
-  let channelData   = CHANNELS.map(c => ({...c, isLive:false, videoId:null, liveTitle:null, thumb:null}));
-  let selectedIds   = [], activeAudioId = null;
+  let channelData  = CHANNELS.map(c => ({...c, isLive:false, videoId:null, liveTitle:null, thumb:null}));
+  let selectedIds  = [], activeAudioId = null;
 
   const elGrid      = document.getElementById("msGrid");
   const elLoading   = document.getElementById("msLoading");
@@ -892,11 +977,13 @@ setInterval(async () => {
   async function fetchLiveStatus() {
     elLoading.style.display = "block"; elGrid.style.display = "none"; elStatus.style.display = "none";
     if (!PROXY_BASE) { setStatus(false, "No proxy configured"); finishLoad(); return; }
-    const ids = CHANNELS.map(c => c.channelId).join(",");
-    const kwMap = {}; CHANNELS.forEach(c => { if (c.keywords?.length) kwMap[c.channelId] = c.keywords; });
+    const ids    = CHANNELS.map(c => c.channelId).join(",");
+    const kwMap  = {}; CHANNELS.forEach(c => { if (c.keywords?.length) kwMap[c.channelId] = c.keywords; });
     const kwParam = Object.keys(kwMap).length ? "&keywords=" + encodeURIComponent(JSON.stringify(kwMap)) : "";
     try {
-      const res = await fetch(`${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}&t=${Date.now()}`);
+      // Omit timestamp from URL so the Cloudflare edge cache can be hit.
+      // The proxy's 10-minute Cache-Control handles freshness server-side.
+      const res = await fetch(`${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}`);
       if (!res.ok) throw new Error(`Proxy ${res.status}`);
       const data = await res.json();
       if (data.channels) data.channels.forEach(remote => {
@@ -1001,7 +1088,12 @@ setInterval(async () => {
 
   let msInitialized = false;
   window.msInit = function () { if (msInitialized) return; msInitialized = true; fetchLiveStatus(); };
-  setInterval(() => { const tab = document.getElementById("sec-livestreams"); if (tab && tab.style.display !== "none" && msInitialized) fetchLiveStatus(); }, 3 * 60 * 1000);
+
+  // Poll every 3 minutes, but only when the livestreams tab is actually visible
+  setInterval(() => {
+    const tab = document.getElementById("sec-livestreams");
+    if (tab && tab.style.display !== "none" && msInitialized) fetchLiveStatus();
+  }, 3 * 60 * 1000);
 })();
 
 loadData();

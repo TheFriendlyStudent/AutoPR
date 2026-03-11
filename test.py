@@ -1,14 +1,22 @@
 """
 test.py
-Posts today's final unposted CIAC games to Instagram as carousel(s).
+Posts CIAC games to Instagram as carousel(s).
+
+Default mode:
+  Posts today's final unposted games (US/Eastern time).
+
+Manual mode (triggered by admin console):
+  python test.py --manual-ids <path-to-id-file>
+  The file must contain one game_id per line.
+  Date filtering is skipped — any final game can be posted.
 
 Rules:
-  - Only games whose date matches today (US/Eastern) are eligible.
   - Instagram allows max 10 images per carousel, so if there are more than
     10 games we create multiple consecutive carousel posts.
   - Each batch is labelled "Part N" in the caption when there is more than one.
 """
 
+import argparse
 import datetime
 import os
 import time
@@ -56,7 +64,6 @@ def post_carousel(ig_user_id, creation_ids, caption, access_token):
     Assemble and publish a carousel from already-uploaded child container IDs.
     Returns the permalink string, or None if polling timed out.
     """
-    # Create carousel container
     r = requests.post(
         f"https://graph.facebook.com/v19.0/{ig_user_id}/media",
         data={
@@ -72,7 +79,6 @@ def post_carousel(ig_user_id, creation_ids, caption, access_token):
         raise ValueError("Failed to create carousel container.")
     print(f"  Carousel container ID: {carousel_id}")
 
-    # Publish
     pub = requests.post(
         f"https://graph.facebook.com/v19.0/{ig_user_id}/media_publish",
         data={"creation_id": carousel_id, "access_token": access_token},
@@ -98,6 +104,15 @@ def post_carousel(ig_user_id, creation_ids, caption, access_token):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--manual-ids",
+        metavar="FILE",
+        help="Path to a text file with one game_id per line. "
+             "Skips date filtering and posts exactly these games.",
+    )
+    args = parser.parse_args()
+
     client = create_s3_client()
 
     # ── Resolve Instagram Business Account ID ─────────────────────────────────
@@ -114,23 +129,37 @@ def main():
     ig_user_id = page_data["instagram_business_account"]["id"]
     print(f"Instagram Business ID: {ig_user_id}")
 
-    # ── Render today's unposted final games ───────────────────────────────────
-    # today_only=True ensures we never post games from other dates
-    rendered = render_from_csv(MASTER_CSV, today_only=True)
+    # ── Determine which games to render ──────────────────────────────────────
+    if args.manual_ids:
+        # Manual mode — admin has pre-selected specific game IDs
+        with open(args.manual_ids) as f:
+            manual_ids = [line.strip() for line in f if line.strip()]
+
+        if not manual_ids:
+            print("Manual ID file is empty. Exiting.")
+            return
+
+        print(f"\nManual mode: {len(manual_ids)} game(s) specified by admin.")
+        rendered = render_from_csv(MASTER_CSV, today_only=False,
+                                   game_ids=manual_ids)
+    else:
+        # Automatic mode — today's unposted final games
+        rendered = render_from_csv(MASTER_CSV, today_only=True)
 
     if not rendered:
-        print("No today's final unposted games to post. Exiting.")
+        print("No games to post. Exiting.")
         return
 
     print(f"\n{len(rendered)} game(s) ready to post.")
 
     # ── Post in batches of CAROUSEL_MAX ───────────────────────────────────────
-    batches     = list(chunked(rendered, CAROUSEL_MAX))
+    batches       = list(chunked(rendered, CAROUSEL_MAX))
     total_batches = len(batches)
     total_posted  = 0
 
     eastern    = pytz.timezone("US/Eastern")
     date_label = datetime.datetime.now(eastern).strftime("%B %-d, %Y")
+    mode_label = " (Admin Selection)" if args.manual_ids else ""
 
     for batch_num, batch in enumerate(batches, start=1):
         game_ids = [r[0] for r in batch]
@@ -157,18 +186,15 @@ def main():
 
         print(f"  Uploaded {len(creation_ids)} child container(s).")
 
-        # Build caption
-        caption = f"CIAC Basketball Scores — {date_label}"
+        caption = f"CIAC Basketball Scores — {date_label}{mode_label}"
         if total_batches > 1:
             caption += f" (Part {batch_num} of {total_batches})"
 
         post_carousel(ig_user_id, creation_ids, caption, MY_ACCESS_TOKEN)
 
-        # Mark these games as posted before cleaning up images
         for game_id in game_ids:
             mark_posted(MASTER_CSV, game_id)
 
-        # Clean up R2 images for this batch
         for url in urls:
             file_name = url.split("/")[-1]
             delete_from_r2(client, file_name)
@@ -176,7 +202,6 @@ def main():
         total_posted += len(game_ids)
         print(f"  ✓ {len(game_ids)} game(s) marked posted and images cleaned up.")
 
-        # Pause between posts to respect rate limits
         if batch_num < total_batches:
             print(f"  Pausing {BATCH_PAUSE}s before next batch…")
             time.sleep(BATCH_PAUSE)
