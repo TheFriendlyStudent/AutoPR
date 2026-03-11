@@ -1,7 +1,9 @@
 """
 scrapeTEAMS.py
 Scrapes CIAC boys & girls basketball schedules and scores.
-Records are calculated from scraped game data only — no user input required.
+Records are calculated from scraped game data, then cross-checked against
+the official CIAC rankings page so that any games missing from the local CSV
+are reflected in the final record shown on each game card.
 
 Usage:
     python scrapeTEAMS.py              # today's games (default)
@@ -88,6 +90,11 @@ SPORTS = [
     ("CIAC Boys Basketball", "2_1015_5"),
     ("CIAC Girls Basketball", "3_1015_5"),
 ]
+
+RANKINGS_URLS = {
+    "CIAC Boys Basketball":  "https://content.ciacsports.com/scripts/bbb_rankings2.cgi",
+    "CIAC Girls Basketball": "https://content.ciacsports.com/scripts/gbball_rankings2.cgi",
+}
 
 MASTER_FIELDS = [
     "game_id", "header", "home_team", "away_team", "home_rank", "away_rank",
@@ -330,13 +337,74 @@ def fetch_today(sport_id):
     return list(seen.values())
 
 
+# ── CIAC rankings scraper ─────────────────────────────────────────────────────
+
+def scrape_ciac_records(header):
+    """
+    Scrape the CIAC unofficial rankings page for the given sport header.
+    Returns dict: normalized_name -> {"wins": int, "losses": int, "full_name": str}
+    """
+    url = RANKINGS_URLS.get(header)
+    if not url:
+        return {}
+    try:
+        resp = requests.get(url, timeout=15, headers=REQUEST_HEADERS)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"  [WARN] Could not scrape CIAC rankings for {header}: {e}", file=sys.stderr)
+        return {}
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    records = {}
+    for row in soup.find_all("tr"):
+        cells = row.find_all("td")
+        if len(cells) < 4:
+            continue
+        link = cells[0].find("a")
+        if not link:
+            continue
+        name = link.get_text(strip=True)
+        try:
+            wins   = int(cells[2].get_text(strip=True))
+            losses = int(cells[3].get_text(strip=True))
+        except (ValueError, IndexError):
+            continue
+        records[normalize(name)] = {"wins": wins, "losses": losses, "full_name": name}
+
+    print(f"  CIAC rankings scraped for {header}: {len(records)} teams")
+    return records
+
+
+def find_ciac_record(name, ciac_map):
+    """
+    Look up a team name in a CIAC rankings map.
+    Tries exact normalized match first, then partial containment.
+    Returns (wins, losses) or None.
+    """
+    norm = normalize(name)
+    if norm in ciac_map:
+        r = ciac_map[norm]
+        return r["wins"], r["losses"]
+    # Partial match — handles slight name discrepancies
+    for key, r in ciac_map.items():
+        if norm in key or key in norm:
+            return r["wins"], r["losses"]
+    return None
+
+
 # ── Records calculator ────────────────────────────────────────────────────────
 
-def calculate_records(rows):
+def calculate_records(rows, ciac_maps):
     """
-    Walk all final games in chronological order and write each team's cumulative
-    W-L record back into that game row. Boys and girls tracked independently.
-    Records are derived entirely from scraped game data — no user input used.
+    Walk all final non-scrimmage games in chronological order and write each
+    team's cumulative W-L record back into that game row.
+
+    After the local walk, any team whose locally-counted total (wins + losses)
+    is LESS than what CIAC reports gets their record in their LAST game corrected
+    to the authoritative CIAC figure.  This handles the common case where some
+    games are missing from the local CSV because they weren't scraped.
+
+    Boys and girls are tracked independently via the `header` field.
     """
     final_rows = [
         r for r in rows
@@ -344,9 +412,10 @@ def calculate_records(rows):
     ]
     final_rows.sort(key=game_sort_key)
 
-    wins   = defaultdict(int)
-    losses = defaultdict(int)
+    wins        = defaultdict(int)
+    losses      = defaultdict(int)
     game_records = {}
+    last_game    = {}   # (header, team) -> game_id of their most recent final game
 
     for r in final_rows:
         hdr      = r.get("header", "")
@@ -370,9 +439,50 @@ def calculate_records(rows):
             f"{wins[away_key]}-{losses[away_key]}",
         )
 
+        last_game[home_key] = r["game_id"]
+        last_game[away_key] = r["game_id"]
+
+    # Write locally-calculated records into every row
     for r in rows:
         if r.get("game_id") in game_records:
             r["home_record"], r["away_record"] = game_records[r["game_id"]]
+
+    # ── Cross-check against CIAC official records ──────────────────────────
+    # For each team, if CIAC reports more games played than we counted locally,
+    # patch only their LAST game's record to reflect the true season record.
+    # Earlier game rows keep their locally-computed running records intact.
+    for (hdr, team), gid in last_game.items():
+        ciac_map = ciac_maps.get(hdr, {})
+        if not ciac_map:
+            continue
+
+        local_w = wins[(hdr, team)]
+        local_l = losses[(hdr, team)]
+        local_total = local_w + local_l
+
+        result = find_ciac_record(team, ciac_map)
+        if result is None:
+            continue
+        ciac_w, ciac_l = result
+        ciac_total = ciac_w + ciac_l
+
+        if ciac_total <= local_total:
+            # CIAC doesn't show more games — local data is complete enough
+            continue
+
+        # CIAC has more games. Patch the last game row this team appeared in.
+        print(
+            f"  [RECORD PATCH] {team} ({hdr}): "
+            f"local {local_w}-{local_l} → CIAC {ciac_w}-{ciac_l}"
+        )
+        for r in rows:
+            if r.get("game_id") != gid:
+                continue
+            if normalize(r.get("home_team", "")) == normalize(team):
+                r["home_record"] = f"{ciac_w}-{ciac_l}"
+            if normalize(r.get("away_team", "")) == normalize(team):
+                r["away_record"] = f"{ciac_w}-{ciac_l}"
+            break
 
     return rows
 
@@ -440,12 +550,14 @@ def main():
 
     all_rows = list(existing_by_key.values())
 
-    # Records are always recalculated from scraped data — never from user input
+    # Scrape CIAC rankings once per sport to use as authoritative record reference
+    ciac_maps = {header: scrape_ciac_records(header) for header, _ in SPORTS}
+
+    # Records are always recalculated from scraped data, then patched from CIAC
     ciac_rows   = [r for r in all_rows if r.get("game_id", "").startswith("ciac_")]
     manual_rows = [r for r in all_rows if not r.get("game_id", "").startswith("ciac_")]
-    ciac_rows   = calculate_records(ciac_rows)
+    ciac_rows   = calculate_records(ciac_rows, ciac_maps)
 
-    # Sort using the same key calculate_records used — guarantees order matches records
     all_rows_final = sorted(ciac_rows + manual_rows, key=game_sort_key)
 
     save_master(all_rows_final)
