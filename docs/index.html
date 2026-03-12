@@ -233,7 +233,243 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 .ms-status-dot{width:6px;height:6px;border-radius:50%;background:var(--gray);flex-shrink:0}
 .ms-status-dot.ok{background:#4ade80}.ms-status-dot.err{background:var(--red)}
 
-/* RESPONSIVE */
+/* ═══════════════════════════════
+   RANKINGS TAB
+   ═══════════════════════════════ */
+#sec-rankings { display:none; }
+
+.rnk-header {
+  margin-bottom: 22px;
+}
+.rnk-title {
+  font-family: var(--fd);
+  font-size: clamp(1.3rem, 4vw, 1.8rem);
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.rnk-subtitle {
+  font-size: .82rem;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.rnk-subtitle strong { color: var(--gold); }
+
+.rnk-table-wrap {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+/* Sticky column headers */
+.rnk-col-hdr {
+  display: grid;
+  grid-template-columns: 52px 1fr 80px 80px 80px 64px 60px 80px;
+  gap: 0;
+  background: var(--navy-mid);
+  border-bottom: 2px solid var(--bdr);
+  padding: 0 12px;
+}
+.rnk-col-hdr span {
+  font-family: var(--fd);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gray);
+  padding: 9px 6px;
+}
+.rnk-col-hdr span:last-child { text-align: center; }
+
+/* Section divider */
+.rnk-section-lbl {
+  font-family: var(--fd);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(240,180,41,.08);
+  border-top: 1px solid rgba(240,180,41,.2);
+  border-bottom: 1px solid rgba(240,180,41,.2);
+  padding: 5px 18px;
+}
+
+/* Row */
+.rnk-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 80px 80px 80px 64px 60px 80px;
+  gap: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--bdr);
+  align-items: center;
+  min-height: 52px;
+  transition: background .12s;
+}
+.rnk-row:last-child { border-bottom: none; }
+.rnk-row:hover { background: rgba(255,255,255,.03); }
+
+/* Top 3 gold/silver/bronze accent */
+.rnk-row.rank-1 { border-left: 3px solid #f0b429; }
+.rnk-row.rank-2 { border-left: 3px solid #b0bec5; }
+.rnk-row.rank-3 { border-left: 3px solid #cd7f32; }
+.rnk-row.rank-other { border-left: 3px solid transparent; }
+.rnk-row.others-row { border-left: 3px solid rgba(37,99,212,.4); }
+
+/* Rank number cell */
+.rnk-num {
+  font-family: var(--fd);
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--gray);
+  padding: 8px 6px;
+  line-height: 1;
+}
+.rnk-row.rank-1 .rnk-num { color: #f0b429; }
+.rnk-row.rank-2 .rnk-num { color: #b0bec5; }
+.rnk-row.rank-3 .rnk-num { color: #cd7f32; }
+
+/* School cell */
+.rnk-school {
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rnk-school-name {
+  font-family: var(--fd);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.rnk-class-badge {
+  display: inline-block;
+  font-family: var(--fd);
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(37,99,212,.2);
+  color: #93c5fd;
+  border: 1px solid rgba(37,99,212,.35);
+  border-radius: 3px;
+  padding: 1px 5px;
+  width: fit-content;
+}
+
+/* Data cells */
+.rnk-cell {
+  font-family: var(--fd);
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--gray-l);
+  padding: 8px 6px;
+}
+.rnk-cell.votes-1st {
+  color: var(--gold);
+  font-weight: 700;
+}
+.rnk-cell.record {
+  color: var(--white);
+  font-weight: 700;
+}
+
+/* Change indicator */
+.rnk-change {
+  font-family: var(--fd);
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 8px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chg-up   { color: #4ade80; }
+.chg-down { color: var(--red); }
+.chg-same { color: var(--gray); }
+.chg-new  { color: var(--gold); font-size:.65rem; letter-spacing:1px; }
+
+/* Points bar */
+.rnk-pts-wrap {
+  padding: 8px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rnk-pts-num {
+  font-family: var(--fd);
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--gray-l);
+  white-space: nowrap;
+  min-width: 32px;
+}
+.rnk-pts-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--navy);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rnk-pts-bar {
+  height: 100%;
+  background: var(--blue-b);
+  border-radius: 2px;
+  transition: width .5s;
+}
+.rnk-row.rank-1 .rnk-pts-bar { background: var(--gold); }
+
+/* Poll notes footer */
+.rnk-footer {
+  background: var(--navy-mid);
+  border-top: 1px solid var(--bdr);
+  padding: 14px 18px;
+  font-size: .75rem;
+  color: var(--gray);
+  line-height: 1.6;
+}
+.rnk-footer strong { color: var(--gray-l); }
+
+/* Unranked badge on game cards */
+.poll-rank-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: var(--fd);
+  font-size: .6rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: .5px;
+  margin-right: 3px;
+}
+
+/* Responsive */
+@media(max-width:700px){
+  .rnk-col-hdr,
+  .rnk-row {
+    grid-template-columns: 44px 1fr 64px 64px 64px 0px 50px 70px;
+  }
+  .rnk-col-hdr span:nth-child(6),
+  .rnk-row > .rnk-cell:nth-child(6) { display: none; }
+}
+@media(max-width:480px){
+  .rnk-col-hdr,
+  .rnk-row {
+    grid-template-columns: 40px 1fr 58px 58px 0px 0px 46px 64px;
+  }
+  .rnk-col-hdr span:nth-child(5),
+  .rnk-col-hdr span:nth-child(6),
+  .rnk-row > .rnk-cell:nth-child(5),
+  .rnk-row > .rnk-cell:nth-child(6) { display: none; }
+}
+
+/* RESPONSIVE (existing) */
 @media(max-width:860px){
   .layout{flex-direction:column;margin:14px auto}
   .sidebar{position:relative;top:0;width:100%;min-width:0}
@@ -272,6 +508,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 <div class="nav">
   <div class="tab active" data-s="scores">Scores</div>
+  <div class="tab" data-s="rankings">Rankings</div>
   <div class="tab" data-s="submit">Submit Score</div>
   <div class="tab" data-s="livestreams">Livestreams</div>
 </div>
@@ -286,6 +523,20 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
         <input type="date" id="gameDate">
       </div>
       <div id="scoresCtr"></div>
+    </div>
+
+    <!-- RANKINGS -->
+    <div id="sec-rankings" style="display:none">
+      <div class="rnk-header">
+        <div class="rnk-title">🏀 Boys Basketball Top 25</div>
+        <div class="rnk-subtitle">
+          <strong>2025-26 GametimeCT Poll</strong> &nbsp;·&nbsp;
+          East Hartford moves into top five as the CIAC tournaments begin.
+          First-place votes in parentheses. Points compiled on a 30-28-26-24-22-20-18-16-14-12-11-10-9-8-7 basis.
+          All games played through Saturday.
+        </div>
+      </div>
+      <div class="rnk-table-wrap" id="rnkTable"></div>
     </div>
 
     <!-- SUBMIT -->
@@ -354,32 +605,174 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════════
+// POLL DATA  (GametimeCT Top 25 Boys Basketball, 2025-26)
+// Sourced from CTInsider/GametimeCT poll HTML — March 2026
+// Others Receiving Votes sorted by points descending, then ties broken
+// alphabetically; tied teams share the same rank.
+// ═══════════════════════════════════════════════════════════════════════════════
+const POLL_TEAMS = [
+  // rank, school, firstPlaceVotes, record, points, lastWeekRank, classif, change
+  { rank:1,  school:"Notre Dame-West Haven", fpv:16, record:"20-3", pts:480, last:1,  cls:"I",   chg:0  },
+  { rank:2,  school:"Staples",               fpv:0,  record:"23-0", pts:442, last:2,  cls:"I",   chg:0  },
+  { rank:3,  school:"Notre Dame Prep",       fpv:0,  record:"20-3", pts:414, last:3,  cls:"I",   chg:0  },
+  { rank:4,  school:"East Hartford",         fpv:0,  record:"20-3", pts:386, last:9,  cls:"II",  chg:5  },
+  { rank:5,  school:"Windsor",               fpv:0,  record:"22-2", pts:338, last:4,  cls:"II",  chg:-1 },
+  { rank:6,  school:"East Catholic",         fpv:0,  record:"19-4", pts:297, last:5,  cls:"I",   chg:-1 },
+  { rank:7,  school:"Woodland",              fpv:0,  record:"23-0", pts:281, last:7,  cls:"IV",  chg:0  },
+  { rank:8,  school:"Northwest Catholic",    fpv:0,  record:"19-4", pts:239, last:8,  cls:"I",   chg:0  },
+  { rank:9,  school:"West Haven",            fpv:0,  record:"19-4", pts:219, last:6,  cls:"I",   chg:-3 },
+  { rank:10, school:"Ellington",             fpv:0,  record:"22-1", pts:215, last:10, cls:"III", chg:0  },
+  // Others receiving votes — ordered by pts desc; ties broken alphabetically
+  { rank:11, school:"Old Lyme",              fpv:0,  record:"21-2", pts:173, last:null, cls:"S",   chg:null },
+  { rank:12, school:"Fitch",                 fpv:0,  record:"20-3", pts:163, last:null, cls:"LL",  chg:null },
+  { rank:13, school:"North Haven",           fpv:0,  record:"20-2", pts:86,  last:null, cls:"L",   chg:null },
+  { rank:14, school:"Trumbull",              fpv:0,  record:"18-3", pts:60,  last:null, cls:"LL",  chg:null },
+  { rank:15, school:"Platt",                 fpv:0,  record:"17-4", pts:48,  last:null, cls:"L",   chg:null },
+  { rank:16, school:"Bunnell",               fpv:0,  record:"18-5", pts:47,  last:null, cls:"L",   chg:null },
+  { rank:17, school:"Hillhouse",             fpv:0,  record:"15-7", pts:45,  last:null, cls:"LL",  chg:null },
+  { rank:18, school:"Ridgefield",            fpv:0,  record:"17-6", pts:43,  last:null, cls:"LL",  chg:null },
+  // Tied at 18 pts — Fairfield Prep and New London share rank 19
+  { rank:19, school:"Fairfield Prep",        fpv:0,  record:"18-6", pts:18,  last:null, cls:"L",   chg:null },
+  { rank:19, school:"New London",            fpv:0,  record:"15-6", pts:18,  last:null, cls:"LL",  chg:null },
+  // Tied at 15 pts — Griswold and Hartford Public share rank 21
+  { rank:21, school:"Griswold",              fpv:0,  record:"18-5", pts:15,  last:null, cls:"M",   chg:null },
+  { rank:21, school:"Hartford Public",       fpv:0,  record:"16-6", pts:15,  last:null, cls:"LL",  chg:null },
+  { rank:23, school:"SMSA",                  fpv:0,  record:"20-3", pts:14,  last:null, cls:"S",   chg:null },
+  { rank:24, school:"Granby",                fpv:0,  record:"19-4", pts:11,  last:null, cls:"S",   chg:null },
+  // Tied at 9 pts — Cromwell and Norwich Free Academy share rank 25
+  { rank:25, school:"Cromwell",              fpv:0,  record:"19-4", pts:9,   last:null, cls:"S",   chg:null },
+  { rank:25, school:"Norwich Free Academy",  fpv:0,  record:"13-10",pts:9,   last:null, cls:"LL",  chg:null },
+];
+
+// Build a quick lookup: normalized name → poll rank (for game card badges)
+const POLL_RANK_MAP = {};
+POLL_TEAMS.forEach(t => {
+  const key = t.school.toLowerCase().replace(/[^a-z0-9]/g, "");
+  POLL_RANK_MAP[key] = t.rank;
+});
+
+const MAX_PTS = POLL_TEAMS[0].pts;
+
+// ── Render rankings table ─────────────────────────────────────────────────────
+function renderRankings() {
+  const wrap = document.getElementById("rnkTable");
+  if (!wrap) return;
+
+  // Column headers
+  let html = `
+    <div class="rnk-col-hdr">
+      <span>Rank</span>
+      <span>School</span>
+      <span>1st Votes</span>
+      <span>Record</span>
+      <span>Points</span>
+      <span>Last</span>
+      <span>Class</span>
+      <span>Change</span>
+    </div>`;
+
+  // Section label: Top 10
+  html += `<div class="rnk-section-lbl">TOP 10 &nbsp;·&nbsp; Official Ranked Teams</div>`;
+
+  let inOthers = false;
+  POLL_TEAMS.forEach((t, i) => {
+    // Insert "Others receiving votes" divider
+    if (t.rank > 10 && !inOthers) {
+      inOthers = true;
+      html += `<div class="rnk-section-lbl">OTHERS RECEIVING VOTES &nbsp;·&nbsp; Ranked #11–25</div>`;
+    }
+
+    const rankClass = t.rank === 1 ? "rank-1" : t.rank === 2 ? "rank-2" : t.rank === 3 ? "rank-3" : t.rank > 10 ? "others-row" : "rank-other";
+
+    // Change cell
+    let chgHtml = "";
+    if (t.chg === null) {
+      chgHtml = `<span class="chg-new">NEW</span>`;
+    } else if (t.chg > 0) {
+      chgHtml = `<span class="chg-up">▲ ${t.chg}</span>`;
+    } else if (t.chg < 0) {
+      chgHtml = `<span class="chg-down">▼ ${Math.abs(t.chg)}</span>`;
+    } else {
+      chgHtml = `<span class="chg-same">—</span>`;
+    }
+
+    // Points bar
+    const barPct = Math.round((t.pts / MAX_PTS) * 100);
+    const ptsHtml = `
+      <div class="rnk-pts-wrap">
+        <span class="rnk-pts-num">${t.pts}</span>
+        <div class="rnk-pts-bar-track"><div class="rnk-pts-bar" style="width:${barPct}%"></div></div>
+      </div>`;
+
+    // 1st place votes
+    const fpvHtml = t.fpv > 0
+      ? `<div class="rnk-cell votes-1st">${t.fpv}</div>`
+      : `<div class="rnk-cell" style="color:var(--gray)">—</div>`;
+
+    // Last week
+    const lastHtml = t.last
+      ? `<div class="rnk-cell">${t.last}</div>`
+      : `<div class="rnk-cell" style="color:var(--gray)">NR</div>`;
+
+    html += `
+      <div class="rnk-row ${rankClass}">
+        <div class="rnk-num">${t.rank}</div>
+        <div class="rnk-school">
+          <span class="rnk-school-name">${esc(t.school)}</span>
+          <span class="rnk-class-badge">Class ${esc(t.cls)}</span>
+        </div>
+        ${fpvHtml}
+        <div class="rnk-cell record">${esc(t.record)}</div>
+        ${ptsHtml}
+        ${lastHtml}
+        <div class="rnk-cell">${esc(t.cls)}</div>
+        <div class="rnk-change">${chgHtml}</div>
+      </div>`;
+  });
+
+  // Footer / notes
+  html += `
+    <div class="rnk-footer">
+      <strong>Dropped out:</strong> None. &nbsp;·&nbsp;
+      Southington (14-8) 8 pts; Stamford (12-10) 7 pts also received votes but fall outside the top 25.
+      <br><br>
+      <strong>Voters:</strong> Andy Close, Bristol Press; Justin DeVellis, News 12 Connecticut; Mike DiMauro, The Day of New London; Erik Dobratz, WTNH-8; Scott Ericson, GametimeCT; Rob Gullo, New Britain Herald; Gabby Lucivero, WVIT-30; Mike Madera, GametimeCT correspondent; Joe Morelli, GametimeCT; Lori Riley, Hartford Courant; Marc Robbins, WFSB-3; Kevin Roberts, GametimeCT; Dave Ruden, The Ruden Report; Chris Saunders, WATR-AM; Ben Talbott, Bird's Eye Sports; Jimmy Zanor, Norwich Bulletin.
+      <br><br>
+      Compiled by Joe Morelli &nbsp;·&nbsp; Source: GametimeCT / CTInsider
+    </div>`;
+
+  wrap.innerHTML = html;
+}
+
+// ── Lookup poll rank for a team name ──────────────────────────────────────────
+function getPollRank(teamName) {
+  const key = (teamName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (POLL_RANK_MAP[key]) return POLL_RANK_MAP[key];
+  // Partial match
+  for (const k in POLL_RANK_MAP) {
+    if (key.includes(k) || k.includes(key)) return POLL_RANK_MAP[k];
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GLOBALS
 // ═══════════════════════════════════════════════════════════════════════════════
 let games = [], preds = {}, uv = JSON.parse(sessionStorage.getItem("uv") || "{}");
-
-// teamRecords[sport][normalizedName] = { wins, losses, pct, players: [...] }
 let teamRecords = {};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EASTERN TIME HELPERS
-// All date operations use America/New_York (auto-handles EST ↔ EDT).
-// CSV datetimes are naive local strings — we must NEVER call toISOString()
-// (which converts to UTC) when comparing against them.
 // ═══════════════════════════════════════════════════════════════════════════════
 const ET_LOCALE = "en-US";
 const ET_TZ     = "America/New_York";
 
-/** Today's date string "YYYY-MM-DD" in Eastern time. */
 function todayET() {
   return new Date().toLocaleDateString(ET_LOCALE, { timeZone: ET_TZ,
     year: "numeric", month: "2-digit", day: "2-digit" })
     .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2");
 }
 
-/** Parse CSV datetime string "MM/DD/YYYY HH:MM:SS" as a local JS Date.
- *  The CSV stores naive ET strings so we construct the Date as local,
- *  then always compare using tds() which also uses ET. */
 function parseGD(s) {
   if (!s) return null;
   const [dp, tp = "00:00:00"] = s.trim().split(" ");
@@ -388,8 +781,6 @@ function parseGD(s) {
   return new Date(+y, +m - 1, +d, +h, +mn);
 }
 
-/** "YYYY-MM-DD" in Eastern time from any JS Date.
- *  Used for ALL date comparisons — never use toISOString() which gives UTC. */
 function tds(d) {
   return d.toLocaleDateString(ET_LOCALE, { timeZone: ET_TZ,
     year: "numeric", month: "2-digit", day: "2-digit" })
@@ -449,7 +840,7 @@ function genderBadge(header) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEAM RECORDS (from team_records.csv)
+// TEAM RECORDS
 // ═══════════════════════════════════════════════════════════════════════════════
 function normalize(name) {
   return (name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -480,7 +871,6 @@ function getTeamRecord(header, teamName) {
   if (!bucket) return null;
   const norm = normalize(teamName);
   if (bucket[norm]) return bucket[norm];
-  // partial match
   for (const k in bucket) {
     if (norm.includes(k) || k.includes(norm)) return bucket[k];
   }
@@ -488,7 +878,7 @@ function getTeamRecord(header, teamName) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STATS ENGINE  (used for PPG, SOS, common opponents — computed from CSV games)
+// STATS ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
 let teamStats = {};
 
@@ -617,7 +1007,6 @@ function buildPlayersPanel(g) {
 
   const buildTable = (players) => {
     if (!players || !players.length) return `<div class="no-players">No player stats available.</div>`;
-    // Find max values for highlighting
     const maxPPG = Math.max(...players.map(p => p.ppg || 0));
     const rows = players.map(p => {
       const ppgHi = p.ppg !== null && p.ppg === maxPPG ? ' class="stat-hi"' : '';
@@ -638,7 +1027,6 @@ function buildPlayersPanel(g) {
 
   const homeOpt = hPlayers ? `<option value="home">${esc(g.home_team)}</option>` : "";
   const awayOpt = aPlayers ? `<option value="away">${esc(g.away_team)}</option>` : "";
-  // Default to first available team
   const defaultTeam = hPlayers ? "home" : "away";
   const defaultTable = buildTable(defaultTeam === "home" ? hPlayers : aPlayers);
 
@@ -703,11 +1091,17 @@ function renderCard(g, ctr) {
   card.className = "game-card" + (gender ? " " + gender : "");
   card.dataset.gid = g.game_id;
 
-  const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${esc(g.home_rank)}</span>` : "";
-  const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${esc(g.away_rank)}</span>` : "";
+  // Use poll rank badge if available, fall back to game row rank
+  const hPollRank = getPollRank(g.home_team);
+  const aPollRank = getPollRank(g.away_team);
 
-  // Use record from CSV row directly — these are authoritative (updateRecords.py keeps them correct)
-  // Fall back to team_records.csv lookup for teams where the row field is blank
+  const hr = hPollRank
+    ? `<span class="poll-rank-badge">#${hPollRank}</span>`
+    : (g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${esc(g.home_rank)}</span>` : "");
+  const ar = aPollRank
+    ? `<span class="poll-rank-badge">#${aPollRank}</span>`
+    : (g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${esc(g.away_rank)}</span>` : "");
+
   let hRec = g.home_record || "";
   let aRec = g.away_record || "";
   if (!hRec) { const tr = getTeamRecord(g.header, g.home_team); if (tr) hRec = tr.wins + "-" + tr.losses; }
@@ -726,7 +1120,6 @@ function renderCard(g, ctr) {
                 <div class="sport-sub">${esc(g.header || "")}</div>`;
   }
 
-  // Gender badge sits in its own top row, centred, above the score grid
   const badge = genderBadge(g.header);
 
   card.innerHTML = `
@@ -794,13 +1187,11 @@ function buildStatsPanel(g) {
   const hSOS  = calcSOS(g.header, g.home_team);
   const aSOS  = calcSOS(g.header, g.away_team);
 
-  // Win % comes from authoritative team_records.csv if available, else local
   const hTR   = getTeamRecord(g.header, g.home_team);
   const aTR   = getTeamRecord(g.header, g.away_team);
   const hWPct = hTR ? hTR.pct : (hst && (hst.wins + hst.losses) ? hst.wins / (hst.wins + hst.losses) : NaN);
   const aWPct = aTR ? aTR.pct : (ast && (ast.wins + ast.losses) ? ast.wins / (ast.wins + ast.losses) : NaN);
 
-  // Authoritative records from CSV row, with team_records.csv fallback
   const hRecStr = g.home_record || (hTR ? hTR.wins + "-" + hTR.losses : (hst ? hst.wins + "-" + hst.losses : "—"));
   const aRecStr = g.away_record || (aTR ? aTR.wins + "-" + aTR.losses : (ast ? ast.wins + "-" + ast.losses : "—"));
 
@@ -979,10 +1370,11 @@ document.querySelectorAll(".tab").forEach(t => {
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
     t.classList.add("active");
     const s = t.dataset.s;
-    ["scores","submit","livestreams"].forEach(id => {
+    ["scores","rankings","submit","livestreams"].forEach(id => {
       const el = document.getElementById("sec-"+id);
       if (el) el.style.display = id === s ? "block" : "none";
     });
+    if (s === "rankings") renderRankings();
     if (s === "livestreams") msInit();
   });
 });
