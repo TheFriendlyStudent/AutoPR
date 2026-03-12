@@ -2,6 +2,10 @@ name: Run CIAC Scraper
 
 on:
   workflow_dispatch:
+  schedule:
+    # ET 8 AM – 11 PM = UTC 12:00 – 03:00 (next day)
+    # Runs every 20 minutes
+    - cron: "0,20,40 12-23,0-3 * * *"
 
 jobs:
   run:
@@ -22,7 +26,7 @@ jobs:
 
       - name: Run CIAC scraper
         run: |
-          python scrapeTEAMS.py --all
+          python scrapeTEAMS.py
 
       - name: Commit updated CSVs for GitHub Pages
         run: |
