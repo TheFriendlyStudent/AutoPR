@@ -238,6 +238,44 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
    ═══════════════════════════════ */
 #sec-rankings { display:none; }
 
+/* Sport switcher */
+.rnk-sport-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  padding: 6px;
+  width: fit-content;
+}
+.rnk-sport-btn {
+  font-family: var(--fd);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all .18s;
+  color: var(--gray);
+  background: transparent;
+  white-space: nowrap;
+}
+.rnk-sport-btn:hover { color: var(--white); }
+.rnk-sport-btn.active-boys {
+  background: rgba(37,99,212,.25);
+  color: #93c5fd;
+  border: 1px solid rgba(37,99,212,.4);
+}
+.rnk-sport-btn.active-girls {
+  background: rgba(192,38,211,.22);
+  color: #e879f9;
+  border: 1px solid rgba(192,38,211,.4);
+}
+
 .rnk-header {
   margin-bottom: 22px;
 }
@@ -318,6 +356,14 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 .rnk-row.rank-3 { border-left: 3px solid #cd7f32; }
 .rnk-row.rank-other { border-left: 3px solid transparent; }
 .rnk-row.others-row { border-left: 3px solid rgba(37,99,212,.4); }
+.rnk-row.others-row-girls { border-left: 3px solid rgba(192,38,211,.4); }
+/* Girls poll: section label pink tint */
+.rnk-section-lbl.girls-lbl {
+  color: #e879f9;
+  background: rgba(192,38,211,.08);
+  border-top-color: rgba(192,38,211,.25);
+  border-bottom-color: rgba(192,38,211,.25);
+}
 
 /* Rank number cell */
 .rnk-num {
@@ -437,16 +483,16 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 /* Unranked badge on game cards */
 .poll-rank-badge {
-  display: inline-block;
-  background: var(--gold);
-  color: var(--navy);
+  display: inline;
+  color: var(--gold);
   font-family: var(--fd);
-  font-size: .6rem;
-  font-weight: 900;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: .5px;
-  margin-right: 3px;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-right: 2px;
+  vertical-align: super;
+  line-height: 0;
+  opacity: 0.9;
 }
 
 /* Responsive */
@@ -527,9 +573,15 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
     <!-- RANKINGS -->
     <div id="sec-rankings" style="display:none">
-      <div class="rnk-header">
-        <div class="rnk-title">🏀 Boys Basketball Top 25</div>
-        <div class="rnk-subtitle">
+      <!-- Sport switcher -->
+      <div class="rnk-sport-switcher">
+        <button class="rnk-sport-btn active-boys" id="rnkBtnBoys" onclick="switchRankSport('boys')">♂ Boys Basketball</button>
+        <button class="rnk-sport-btn" id="rnkBtnGirls" onclick="switchRankSport('girls')">♀ Girls Basketball</button>
+      </div>
+      <!-- Dynamic header -->
+      <div class="rnk-header" id="rnkHeader">
+        <div class="rnk-title" id="rnkTitle">🏀 Boys Basketball Top 25</div>
+        <div class="rnk-subtitle" id="rnkSubtitle">
           <strong>2025-26 GametimeCT Poll</strong> &nbsp;·&nbsp;
           East Hartford moves into top five as the CIAC tournaments begin.
           First-place votes in parentheses. Points compiled on a 30-28-26-24-22-20-18-16-14-12-11-10-9-8-7 basis.
@@ -605,58 +657,193 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════════
-// POLL DATA  (GametimeCT Top 25 Boys Basketball, 2025-26)
-// Sourced from CTInsider/GametimeCT poll HTML — March 2026
-// Others Receiving Votes sorted by points descending, then ties broken
-// alphabetically; tied teams share the same rank.
+// SCHOOL NAME REGISTRY — canonical → short display name
+// Keep in sync with schools.csv (the source of truth for the whole project)
 // ═══════════════════════════════════════════════════════════════════════════════
-const POLL_TEAMS = [
-  // rank, school, firstPlaceVotes, record, points, lastWeekRank, classif, change
-  { rank:1,  school:"Notre Dame-West Haven", fpv:16, record:"20-3", pts:480, last:1,  cls:"I",   chg:0  },
-  { rank:2,  school:"Staples",               fpv:0,  record:"23-0", pts:442, last:2,  cls:"I",   chg:0  },
-  { rank:3,  school:"Notre Dame Prep",       fpv:0,  record:"20-3", pts:414, last:3,  cls:"I",   chg:0  },
-  { rank:4,  school:"East Hartford",         fpv:0,  record:"20-3", pts:386, last:9,  cls:"II",  chg:5  },
-  { rank:5,  school:"Windsor",               fpv:0,  record:"22-2", pts:338, last:4,  cls:"II",  chg:-1 },
-  { rank:6,  school:"East Catholic",         fpv:0,  record:"19-4", pts:297, last:5,  cls:"I",   chg:-1 },
-  { rank:7,  school:"Woodland",              fpv:0,  record:"23-0", pts:281, last:7,  cls:"IV",  chg:0  },
-  { rank:8,  school:"Northwest Catholic",    fpv:0,  record:"19-4", pts:239, last:8,  cls:"I",   chg:0  },
-  { rank:9,  school:"West Haven",            fpv:0,  record:"19-4", pts:219, last:6,  cls:"I",   chg:-3 },
-  { rank:10, school:"Ellington",             fpv:0,  record:"22-1", pts:215, last:10, cls:"III", chg:0  },
-  // Others receiving votes — ordered by pts desc; ties broken alphabetically
-  { rank:11, school:"Old Lyme",              fpv:0,  record:"21-2", pts:173, last:null, cls:"S",   chg:null },
-  { rank:12, school:"Fitch",                 fpv:0,  record:"20-3", pts:163, last:null, cls:"LL",  chg:null },
-  { rank:13, school:"North Haven",           fpv:0,  record:"20-2", pts:86,  last:null, cls:"L",   chg:null },
-  { rank:14, school:"Trumbull",              fpv:0,  record:"18-3", pts:60,  last:null, cls:"LL",  chg:null },
-  { rank:15, school:"Platt",                 fpv:0,  record:"17-4", pts:48,  last:null, cls:"L",   chg:null },
-  { rank:16, school:"Bunnell",               fpv:0,  record:"18-5", pts:47,  last:null, cls:"L",   chg:null },
-  { rank:17, school:"Hillhouse",             fpv:0,  record:"15-7", pts:45,  last:null, cls:"LL",  chg:null },
-  { rank:18, school:"Ridgefield",            fpv:0,  record:"17-6", pts:43,  last:null, cls:"LL",  chg:null },
-  // Tied at 18 pts — Fairfield Prep and New London share rank 19
-  { rank:19, school:"Fairfield Prep",        fpv:0,  record:"18-6", pts:18,  last:null, cls:"L",   chg:null },
-  { rank:19, school:"New London",            fpv:0,  record:"15-6", pts:18,  last:null, cls:"LL",  chg:null },
-  // Tied at 15 pts — Griswold and Hartford Public share rank 21
-  { rank:21, school:"Griswold",              fpv:0,  record:"18-5", pts:15,  last:null, cls:"M",   chg:null },
-  { rank:21, school:"Hartford Public",       fpv:0,  record:"16-6", pts:15,  last:null, cls:"LL",  chg:null },
-  { rank:23, school:"SMSA",                  fpv:0,  record:"20-3", pts:14,  last:null, cls:"S",   chg:null },
-  { rank:24, school:"Granby",                fpv:0,  record:"19-4", pts:11,  last:null, cls:"S",   chg:null },
-  // Tied at 9 pts — Cromwell and Norwich Free Academy share rank 25
-  { rank:25, school:"Cromwell",              fpv:0,  record:"19-4", pts:9,   last:null, cls:"S",   chg:null },
-  { rank:25, school:"Norwich Free Academy",  fpv:0,  record:"13-10",pts:9,   last:null, cls:"LL",  chg:null },
+const SCHOOL_SHORT = {
+  "Ansonia":               "Ansonia",
+  "Bristol Central":       "Bristol Central",
+  "Bunnell":               "Bunnell",
+  "Coventry":              "Coventry",
+  "Cromwell":              "Cromwell",
+  "East Catholic":         "East Catholic",
+  "East Hartford":         "East Hartford",
+  "Ellington":             "Ellington",
+  "Enfield":               "Enfield",
+  "Fairfield Prep":        "F. Prep",
+  "Fitch":                 "Fitch",
+  "Granby":                "Granby",
+  "Greenwich":             "Greenwich",
+  "Griswold":              "Griswold",
+  "Hartford Public":       "Hartford Public",
+  "Hillhouse":             "Hillhouse",
+  "Ledyard":               "Ledyard",
+  "Mercy":                 "Mercy",
+  "New Britain":           "New Britain",
+  "New London":            "New London",
+  "North Haven":           "North Haven",
+  "Northwest Catholic":    "NW Catholic",
+  "Norwich Free Academy":  "Norwich FA",
+  "Notre Dame Prep":       "ND Prep",
+  "Notre Dame-West Haven": "ND West Haven",
+  "Old Lyme":              "Old Lyme",
+  "Platt":                 "Platt",
+  "Ridgefield":            "Ridgefield",
+  "Rocky Hill":            "Rocky Hill",
+  "Sacred Heart Academy":  "Sacred Heart",
+  "Seymour":               "Seymour",
+  "Sheehan":               "Sheehan",
+  "SMSA":                  "SMSA",
+  "Southington":           "Southington",
+  "Stamford":              "Stamford",
+  "Staples":               "Staples",
+  "Suffield":              "Suffield",
+  "Trumbull":              "Trumbull",
+  "West Haven":            "West Haven",
+  "Windsor":               "Windsor",
+  "Woodland":              "Woodland",
+};
+
+/** Return the short display name for a school, falling back to the original. */
+function shortName(name) {
+  if (!name) return name;
+  if (SCHOOL_SHORT[name]) return SCHOOL_SHORT[name];
+  // Partial match — useful when CSV data uses slightly different spelling
+  const norm = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  for (const [k, v] of Object.entries(SCHOOL_SHORT)) {
+    if (norm === k.toLowerCase().replace(/[^a-z0-9]/g, "")) return v;
+  }
+  return name;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POLL DATA — GametimeCT 2025-26 Boys Basketball Top 25 (March 2026)
+// ═══════════════════════════════════════════════════════════════════════════════
+const POLL_TEAMS_BOYS = [
+  { rank:1,  school:"Notre Dame-West Haven", fpv:16, record:"20-3",  pts:480, last:1,    cls:"I",   chg:0  },
+  { rank:2,  school:"Staples",               fpv:0,  record:"23-0",  pts:442, last:2,    cls:"I",   chg:0  },
+  { rank:3,  school:"Notre Dame Prep",       fpv:0,  record:"20-3",  pts:414, last:3,    cls:"I",   chg:0  },
+  { rank:4,  school:"East Hartford",         fpv:0,  record:"20-3",  pts:386, last:9,    cls:"II",  chg:5  },
+  { rank:5,  school:"Windsor",               fpv:0,  record:"22-2",  pts:338, last:4,    cls:"II",  chg:-1 },
+  { rank:6,  school:"East Catholic",         fpv:0,  record:"19-4",  pts:297, last:5,    cls:"I",   chg:-1 },
+  { rank:7,  school:"Woodland",              fpv:0,  record:"23-0",  pts:281, last:7,    cls:"IV",  chg:0  },
+  { rank:8,  school:"Northwest Catholic",    fpv:0,  record:"19-4",  pts:239, last:8,    cls:"I",   chg:0  },
+  { rank:9,  school:"West Haven",            fpv:0,  record:"19-4",  pts:219, last:6,    cls:"I",   chg:-3 },
+  { rank:10, school:"Ellington",             fpv:0,  record:"22-1",  pts:215, last:10,   cls:"III", chg:0  },
+  // Others receiving votes
+  { rank:11, school:"Old Lyme",              fpv:0,  record:"21-2",  pts:173, last:null, cls:"S",   chg:null },
+  { rank:12, school:"Fitch",                 fpv:0,  record:"20-3",  pts:163, last:null, cls:"LL",  chg:null },
+  { rank:13, school:"North Haven",           fpv:0,  record:"20-2",  pts:86,  last:null, cls:"L",   chg:null },
+  { rank:14, school:"Trumbull",              fpv:0,  record:"18-3",  pts:60,  last:null, cls:"LL",  chg:null },
+  { rank:15, school:"Platt",                 fpv:0,  record:"17-4",  pts:48,  last:null, cls:"L",   chg:null },
+  { rank:16, school:"Bunnell",               fpv:0,  record:"18-5",  pts:47,  last:null, cls:"L",   chg:null },
+  { rank:17, school:"Hillhouse",             fpv:0,  record:"15-7",  pts:45,  last:null, cls:"LL",  chg:null },
+  { rank:18, school:"Ridgefield",            fpv:0,  record:"17-6",  pts:43,  last:null, cls:"LL",  chg:null },
+  { rank:19, school:"Fairfield Prep",        fpv:0,  record:"18-6",  pts:18,  last:null, cls:"L",   chg:null },
+  { rank:19, school:"New London",            fpv:0,  record:"15-6",  pts:18,  last:null, cls:"LL",  chg:null },
+  { rank:21, school:"Griswold",              fpv:0,  record:"18-5",  pts:15,  last:null, cls:"M",   chg:null },
+  { rank:21, school:"Hartford Public",       fpv:0,  record:"16-6",  pts:15,  last:null, cls:"LL",  chg:null },
+  { rank:23, school:"SMSA",                  fpv:0,  record:"20-3",  pts:14,  last:null, cls:"S",   chg:null },
+  { rank:24, school:"Granby",                fpv:0,  record:"19-4",  pts:11,  last:null, cls:"S",   chg:null },
+  { rank:25, school:"Cromwell",              fpv:0,  record:"19-4",  pts:9,   last:null, cls:"S",   chg:null },
+  { rank:25, school:"Norwich Free Academy",  fpv:0,  record:"13-10", pts:9,   last:null, cls:"LL",  chg:null },
 ];
 
-// Build a quick lookup: normalized name → poll rank (for game card badges)
+const BOYS_FOOTER = `
+  <strong>Dropped out:</strong> None. &nbsp;·&nbsp;
+  Southington (14-8) 8 pts; Stamford (12-10) 7 pts also received votes outside the top 25.
+  <br><br>
+  <strong>Voters:</strong> Andy Close, Bristol Press; Justin DeVellis, News 12 CT; Mike DiMauro, The Day; Erik Dobratz, WTNH-8; Scott Ericson, GametimeCT; Rob Gullo, New Britain Herald; Gabby Lucivero, WVIT-30; Mike Madera, GametimeCT; Joe Morelli, GametimeCT; Lori Riley, Hartford Courant; Marc Robbins, WFSB-3; Kevin Roberts, GametimeCT; Dave Ruden, The Ruden Report; Chris Saunders, WATR-AM; Ben Talbott, Bird's Eye Sports; Jimmy Zanor, Norwich Bulletin.
+  <br><br>Compiled by Joe Morelli &nbsp;·&nbsp; Source: GametimeCT / CTInsider`;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POLL DATA — GametimeCT 2025-26 Girls Basketball Top 10 (March 6, 2026)
+// Girls poll is Top 10 only; uses D-I/D-II/D-III divisions; "NR" = not ranked
+// ═══════════════════════════════════════════════════════════════════════════════
+const POLL_TEAMS_GIRLS = [
+  { rank:1,  school:"Northwest Catholic",   fpv:14, record:"23-1", pts:420, last:1,    cls:"D-I",   chg:0,   nr:false },
+  { rank:2,  school:"Sacred Heart Academy", fpv:0,  record:"19-2", pts:390, last:2,    cls:"D-I",   chg:0,   nr:false },
+  { rank:3,  school:"Greenwich",            fpv:0,  record:"20-2", pts:356, last:5,    cls:"D-I",   chg:2,   nr:false },
+  { rank:4,  school:"Mercy",                fpv:0,  record:"20-3", pts:306, last:3,    cls:"D-I",   chg:-1,  nr:false },
+  { rank:5,  school:"Staples",              fpv:0,  record:"19-3", pts:294, last:7,    cls:"D-II",  chg:2,   nr:false },
+  { rank:5,  school:"Rocky Hill",           fpv:0,  record:"22-2", pts:294, last:4,    cls:"D-II",  chg:-1,  nr:false },
+  { rank:7,  school:"East Catholic",        fpv:0,  record:"19-4", pts:235, last:8,    cls:"D-I",   chg:1,   nr:false },
+  { rank:8,  school:"Sheehan",              fpv:0,  record:"19-5", pts:212, last:null, cls:"D-II",  chg:null, nr:true },
+  { rank:9,  school:"Coventry",             fpv:0,  record:"21-2", pts:196, last:10,   cls:"D-III", chg:1,   nr:false },
+  { rank:10, school:"Seymour",              fpv:0,  record:"22-2", pts:160, last:null, cls:"D-III", chg:null, nr:true },
+  // Others receiving votes
+  { rank:11, school:"Trumbull",             fpv:0,  record:"17-3", pts:156, last:null, cls:"D-I",   chg:null },
+  { rank:12, school:"New Britain",          fpv:0,  record:"18-3", pts:119, last:null, cls:"D-II",  chg:null },
+  { rank:13, school:"North Haven",          fpv:0,  record:"18-4", pts:97,  last:null, cls:"D-II",  chg:null },
+  { rank:14, school:"Enfield",              fpv:0,  record:"19-4", pts:93,  last:null, cls:"D-II",  chg:null },
+  { rank:15, school:"Ansonia",              fpv:0,  record:"22-2", pts:87,  last:null, cls:"D-III", chg:null },
+  { rank:16, school:"Bristol Central",      fpv:0,  record:"17-5", pts:45,  last:null, cls:"D-II",  chg:null },
+  { rank:17, school:"Southington",          fpv:0,  record:"16-6", pts:35,  last:null, cls:"D-I",   chg:null },
+  { rank:18, school:"New London",           fpv:0,  record:"16-6", pts:33,  last:null, cls:"D-II",  chg:null },
+  { rank:19, school:"Suffield",             fpv:0,  record:"20-3", pts:21,  last:null, cls:"D-III", chg:null },
+  { rank:20, school:"Ledyard",              fpv:0,  record:"18-4", pts:14,  last:null, cls:"D-II",  chg:null },
+  { rank:21, school:"Stamford",             fpv:0,  record:"16-6", pts:7,   last:null, cls:"D-I",   chg:null },
+];
+
+const GIRLS_FOOTER = `
+  <strong>Dropped out:</strong> Trumbull (6), New Britain (9).
+  <br><br>
+  <strong>Voters (Media):</strong> Will Aldam, GametimeCT; Scott Ericson, GametimeCT; Vickie Fulkerson, The Day; Robert Gullo, New Britain Herald; Mike Madera, GametimeCT; Lori Riley, Hartford Courant; Kevin Roberts, GametimeCT; Dave Ruden, The Ruden Report; Rick Wilson, Litchfield County Sports; Jimmy Zanor, Norwich Bulletin.
+  <strong>Coaches:</strong> Dave Danko, Fairfield Warde; Brian Medeiros, Canton; Scotty Nails, Hopkins; Fred Williams, Northwestern.
+  <br><br>Compiled by Scott Ericson &nbsp;·&nbsp; Source: GametimeCT / CTInsider`;
+
+// ── Active sport state ────────────────────────────────────────────────────────
+let currentRankSport = "boys";
+
+// Build lookup: normalized name → boys poll rank (used for game card badges)
 const POLL_RANK_MAP = {};
-POLL_TEAMS.forEach(t => {
+POLL_TEAMS_BOYS.forEach(t => {
   const key = t.school.toLowerCase().replace(/[^a-z0-9]/g, "");
   POLL_RANK_MAP[key] = t.rank;
 });
 
-const MAX_PTS = POLL_TEAMS[0].pts;
+// ── Switch sport and re-render ────────────────────────────────────────────────
+function switchRankSport(sport) {
+  currentRankSport = sport;
+  // Update button states
+  document.getElementById("rnkBtnBoys").className =
+    "rnk-sport-btn" + (sport === "boys" ? " active-boys" : "");
+  document.getElementById("rnkBtnGirls").className =
+    "rnk-sport-btn" + (sport === "girls" ? " active-girls" : "");
+  // Update header
+  if (sport === "boys") {
+    document.getElementById("rnkTitle").textContent = "🏀 Boys Basketball Top 25";
+    document.getElementById("rnkSubtitle").innerHTML =
+      `<strong>2025-26 GametimeCT Poll</strong> &nbsp;·&nbsp;
+      East Hartford moves into top five as the CIAC tournaments begin.
+      First-place votes in parentheses. Points compiled on a 30-28-26-24-22-20-18-16-14-12-11-10-9-8-7 basis.
+      All games played through Saturday.`;
+  } else {
+    document.getElementById("rnkTitle").textContent = "🏀 Girls Basketball Top 10";
+    document.getElementById("rnkSubtitle").innerHTML =
+      `<strong>2025-26 GametimeCT Poll · March 6, 2026</strong> &nbsp;·&nbsp;
+      Greenwich moves up two spots to #3 as the CIAC state tournaments begin.
+      First-place votes in parentheses. Points compiled on a 30-28-26-24-22-20-18-16-14-12-11-10-9-8-7 basis.
+      All games played through Saturday.`;
+  }
+  renderRankings();
+}
 
 // ── Render rankings table ─────────────────────────────────────────────────────
 function renderRankings() {
   const wrap = document.getElementById("rnkTable");
   if (!wrap) return;
+
+  const isGirls = currentRankSport === "girls";
+  const teams = isGirls ? POLL_TEAMS_GIRLS : POLL_TEAMS_BOYS;
+  const footer = isGirls ? GIRLS_FOOTER : BOYS_FOOTER;
+  const maxPts = teams[0].pts;
+  const topN = isGirls ? 10 : 10; // both polls: ranked teams = top 10
+  const othersLabel = isGirls
+    ? "OTHERS RECEIVING VOTES"
+    : "OTHERS RECEIVING VOTES &nbsp;·&nbsp; Ranked #11–25";
+  const othersRowClass = isGirls ? "others-row-girls" : "others-row";
+  const sectionLblClass = isGirls ? "rnk-section-lbl girls-lbl" : "rnk-section-lbl";
 
   // Column headers
   let html = `
@@ -671,22 +858,27 @@ function renderRankings() {
       <span>Change</span>
     </div>`;
 
-  // Section label: Top 10
-  html += `<div class="rnk-section-lbl">TOP 10 &nbsp;·&nbsp; Official Ranked Teams</div>`;
+  html += `<div class="rnk-section-lbl${isGirls ? " girls-lbl" : ""}">TOP 10 &nbsp;·&nbsp; Official Ranked Teams</div>`;
 
   let inOthers = false;
-  POLL_TEAMS.forEach((t, i) => {
-    // Insert "Others receiving votes" divider
-    if (t.rank > 10 && !inOthers) {
+  teams.forEach(t => {
+    if (t.rank > topN && !inOthers) {
       inOthers = true;
-      html += `<div class="rnk-section-lbl">OTHERS RECEIVING VOTES &nbsp;·&nbsp; Ranked #11–25</div>`;
+      html += `<div class="${sectionLblClass}">${othersLabel}</div>`;
     }
 
-    const rankClass = t.rank === 1 ? "rank-1" : t.rank === 2 ? "rank-2" : t.rank === 3 ? "rank-3" : t.rank > 10 ? "others-row" : "rank-other";
+    const rankClass = t.rank === 1 ? "rank-1"
+      : t.rank === 2 ? "rank-2"
+      : t.rank === 3 ? "rank-3"
+      : t.rank > topN ? othersRowClass
+      : "rank-other";
 
-    // Change cell
+    // Change cell — NR means newly ranked (last was null or nr flag set)
     let chgHtml = "";
-    if (t.chg === null) {
+    const isNew = t.nr === true || (t.rank <= topN && t.last === null);
+    if (isNew) {
+      chgHtml = `<span class="chg-new">NR</span>`;
+    } else if (t.chg === null) {
       chgHtml = `<span class="chg-new">NEW</span>`;
     } else if (t.chg > 0) {
       chgHtml = `<span class="chg-up">▲ ${t.chg}</span>`;
@@ -697,29 +889,29 @@ function renderRankings() {
     }
 
     // Points bar
-    const barPct = Math.round((t.pts / MAX_PTS) * 100);
+    const barPct = Math.round((t.pts / maxPts) * 100);
     const ptsHtml = `
       <div class="rnk-pts-wrap">
         <span class="rnk-pts-num">${t.pts}</span>
         <div class="rnk-pts-bar-track"><div class="rnk-pts-bar" style="width:${barPct}%"></div></div>
       </div>`;
 
-    // 1st place votes
     const fpvHtml = t.fpv > 0
       ? `<div class="rnk-cell votes-1st">${t.fpv}</div>`
       : `<div class="rnk-cell" style="color:var(--gray)">—</div>`;
 
-    // Last week
-    const lastHtml = t.last
-      ? `<div class="rnk-cell">${t.last}</div>`
-      : `<div class="rnk-cell" style="color:var(--gray)">NR</div>`;
+    const lastVal = t.last === null ? (t.rank <= topN ? "NR" : "—") : t.last;
+    const lastHtml = `<div class="rnk-cell" style="${t.last === null ? 'color:var(--gray)' : ''}">${lastVal}</div>`;
+
+    // Display rank — girls poll uses "T5" style; show numeric rank always
+    const rankDisplay = t.rank;
 
     html += `
       <div class="rnk-row ${rankClass}">
-        <div class="rnk-num">${t.rank}</div>
+        <div class="rnk-num">${rankDisplay}</div>
         <div class="rnk-school">
-          <span class="rnk-school-name">${esc(t.school)}</span>
-          <span class="rnk-class-badge">Class ${esc(t.cls)}</span>
+          <span class="rnk-school-name">${esc(shortName(t.school))}</span>
+          <span class="rnk-class-badge">${esc(t.cls)}</span>
         </div>
         ${fpvHtml}
         <div class="rnk-cell record">${esc(t.record)}</div>
@@ -730,25 +922,14 @@ function renderRankings() {
       </div>`;
   });
 
-  // Footer / notes
-  html += `
-    <div class="rnk-footer">
-      <strong>Dropped out:</strong> None. &nbsp;·&nbsp;
-      Southington (14-8) 8 pts; Stamford (12-10) 7 pts also received votes but fall outside the top 25.
-      <br><br>
-      <strong>Voters:</strong> Andy Close, Bristol Press; Justin DeVellis, News 12 Connecticut; Mike DiMauro, The Day of New London; Erik Dobratz, WTNH-8; Scott Ericson, GametimeCT; Rob Gullo, New Britain Herald; Gabby Lucivero, WVIT-30; Mike Madera, GametimeCT correspondent; Joe Morelli, GametimeCT; Lori Riley, Hartford Courant; Marc Robbins, WFSB-3; Kevin Roberts, GametimeCT; Dave Ruden, The Ruden Report; Chris Saunders, WATR-AM; Ben Talbott, Bird's Eye Sports; Jimmy Zanor, Norwich Bulletin.
-      <br><br>
-      Compiled by Joe Morelli &nbsp;·&nbsp; Source: GametimeCT / CTInsider
-    </div>`;
-
+  html += `<div class="rnk-footer">${footer}</div>`;
   wrap.innerHTML = html;
 }
 
-// ── Lookup poll rank for a team name ──────────────────────────────────────────
+// ── Lookup poll rank for a team name (boys poll, used for game card badges) ───
 function getPollRank(teamName) {
   const key = (teamName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (POLL_RANK_MAP[key]) return POLL_RANK_MAP[key];
-  // Partial match
   for (const k in POLL_RANK_MAP) {
     if (key.includes(k) || k.includes(key)) return POLL_RANK_MAP[k];
   }
@@ -1126,12 +1307,12 @@ function renderCard(g, ctr) {
     ${badge ? `<div class="card-top">${badge}</div>` : ""}
     <div class="card-inner">
       <div class="team-col">
-        <div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${esc(g.home_team)}</div>
+        <div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${esc(shortName(g.home_team))}</div>
         <div class="team-rec">${esc(hRec)}</div>
       </div>
       <div class="score-ctr">${scoreCtr}</div>
       <div class="team-col right">
-        <div class="team-name ${aw?"W":hw?"L":"N"}">${esc(g.away_team)}${ar}</div>
+        <div class="team-name ${aw?"W":hw?"L":"N"}">${esc(shortName(g.away_team))}${ar}</div>
         <div class="team-rec">${esc(aRec)}</div>
       </div>
     </div>

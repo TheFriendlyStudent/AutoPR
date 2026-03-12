@@ -14,6 +14,7 @@ import os
 
 import gspread
 from google.oauth2.service_account import Credentials
+from schools import canonical_name
 
 MASTER_CSV = "docs/master_games.csv"
 SUB_CSV    = "docs/submitted_scores.csv"

@@ -25,66 +25,7 @@ from bs4 import BeautifulSoup
 
 MASTER_CSV = "docs/master_games.csv"
 MAX_WORKERS = 15
-
-SCHOOLS = [
-    ("Abbott Tech", 70), ("Achievement First", 5), ("Aerospace", 2),
-    ("Amistad", 7), ("Amity", 8), ("Ansonia", 9), ("Avon", 10),
-    ("Bacon Academy", 11), ("Bassick", 12), ("Berlin", 13), ("Bethel", 14),
-    ("Bloomfield", 15), ("Bolton", 16), ("Branford", 17),
-    ("Bridgeport Central", 18), ("Brien McMahon", 19), ("Bristol Central", 20),
-    ("Bristol Eastern", 21), ("Brookfield", 22), ("Bulkeley", 23),
-    ("Bullard Havens Tech", 24), ("Bunnell", 25), ("Canton", 26),
-    ("Capital Prep", 27), ("Career Magnet", 28), ("Cheney Tech", 73),
-    ("Cheshire", 29), ("Classical Magnet", 61), ("Coginchaug", 30),
-    ("Comp Sci", 127), ("Conard", 31), ("Coventry", 32), ("Cromwell", 33),
-    ("Crosby", 34), ("Danbury", 35), ("Daniel Hand", 36), ("Darien", 37),
-    ("Derby", 38), ("E.O. Smith", 51), ("East Catholic", 39),
-    ("East Granby", 40), ("East Hampton", 41), ("East Hartford", 42),
-    ("East Haven", 43), ("East Lyme", 44), ("East Windsor", 45),
-    ("Ellington", 48), ("Ellis Tech", 68), ("Enfield", 50),
-    ("Fairfield Ludlowe", 53), ("Fairfield Prep", 52), ("Fairfield Warde", 54),
-    ("Farmington", 55), ("Fitch", 56), ("Foran", 80), ("Gilbert", 57),
-    ("Glastonbury", 58), ("Goodwin Tech", 46), ("Granby Memorial", 59),
-    ("Grasso Tech", 60), ("Greenwich", 62), ("Griswold", 63),
-    ("Guilford", 64), ("Haddam Killingworth", 65), ("Hale Ray", 98),
-    ("Hall", 183), ("Hamden", 66), ("Harding", 164), ("Hartford Public", 67),
-    ("Hillhouse", 75), ("HMTCA", 158), ("Holy Cross", 71),
-    ("Housatonic Regional", 72), ("Immaculate", 74), ("Innovation", 92),
-    ("International", 95), ("Joel Barlow", 78), ("Jonathan Law", 79),
-    ("Kaynor Tech", 174), ("Kennedy", 76), ("Killingly", 81),
-    ("Kolbe Cathedral", 82), ("Ledyard", 83), ("Lewis Mills", 84),
-    ("Lyman Hall", 86), ("Lyman Memorial", 87), ("Maloney", 89),
-    ("Manchester", 90), ("Masuk", 91), ("Mercy", 93), ("Middletown", 94),
-    ("Montville", 96), ("Morgan", 97), ("Naugatuck", 99),
-    ("New Britain", 100), ("New Canaan", 101), ("New Fairfield", 102),
-    ("New London", 104), ("New Milford", 105), ("Newington", 103),
-    ("Newtown", 106), ("NFA", 113), ("Nonnewaug", 107),
-    ("North Branford", 108), ("North Haven", 109), ("Northwest Catholic", 110),
-    ("Northwestern", 111), ("Norwalk", 112), ("Norwich Tech", 114),
-    ("Notre Dame-West Haven", 115), ("O'Brien Tech", 49),
-    ("Old Saybrook", 118), ("Oxford", 120), ("Plainfield", 122),
-    ("Plainville", 123), ("Platt", 117), ("Platt Tech", 124),
-    ("Pomperaug", 125), ("Portland", 126), ("Prince Tech", 6),
-    ("Putnam", 128), ("RHAM", 129), ("Ridgefield", 130), ("Rockville", 131),
-    ("Rocky Hill", 132), ("Seymour", 134), ("Sheehan", 135),
-    ("Shelton", 136), ("Shepaug Valley", 137), ("Simsbury", 138),
-    ("SMSA", 142), ("Somers", 139), ("South Windsor", 141),
-    ("Southington", 140), ("St. Bernard", 146), ("St. Joseph", 147),
-    ("St. Paul Catholic", 149), ("Stafford", 143), ("Stamford", 144),
-    ("Staples", 145), ("Stonington", 148), ("Stratford", 150),
-    ("Suffield", 151), ("Terryville", 152), ("Thomaston", 154),
-    ("Tolland", 155), ("Torrington", 156), ("Tourtellotte", 157),
-    ("Trumbull", 159), ("University", 160), ("Valley Regional", 161),
-    ("Vinal Tech", 162), ("Waterford", 166), ("Watertown", 167),
-    ("WCA", 165), ("Weaver", 168), ("West Haven", 170), ("Westbrook", 169),
-    ("Westhill", 171), ("Weston", 172), ("Wethersfield", 173),
-    ("Wheeler", 175), ("Whitney Tech", 47), ("Wilbur Cross", 176),
-    ("Wilby", 177), ("Wilcox Tech", 69), ("Wilton", 178),
-    ("Windham", 179), ("Windham Tech", 180), ("Windsor", 181),
-    ("Windsor Locks", 182), ("Wolcott", 184), ("Wolcott Tech", 119),
-    ("Woodland", 185), ("Woodstock Academy", 186), ("Wright Tech", 77),
-    ("Xavier", 187),
-]
+from schools import SCHOOLS, normalize
 
 SPORTS = [
     ("CIAC Boys Basketball", "2_1015_5"),
@@ -133,10 +74,6 @@ def save_master(rows):
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-
-def normalize(name):
-    return re.sub(r"[^a-z0-9]", "", name.lower())
-
 
 def make_game_key(home, away, dt):
     date = dt.split(" ")[0] if dt else ""

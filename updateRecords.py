@@ -42,10 +42,18 @@ from bs4 import BeautifulSoup
 
 # Import the authoritative CT school list from scrapeTEAMS.
 # CT/OOS classification uses this list — not the CIAC rankings page.
-from scrapeTEAMS import SCHOOLS, SPORTS
+from schools import SCHOOLS, normalize, is_ct_school, ciac_id as find_ciac_school_id
+# Remove: from scrapeTEAMS import SCHOOLS, SPORTS
+# Remove: CT_SCHOOL_NAMES, CIAC_SCHOOL_IDS buildout, is_ct_school(), find_ciac_school_id()
 
 MASTER_CSV  = "docs/master_games.csv"
 RECORDS_CSV = "docs/team_records.csv"
+
+SPORTS = [
+    ("CIAC Boys Basketball", "2_1015_5"),
+    ("CIAC Girls Basketball", "3_1015_5"),
+]
+
 
 # Build fast-lookup structures from SCHOOLS list
 CT_SCHOOL_NAMES = set(re.sub(r"[^a-z0-9]", "", name.lower()) for name, _ in SCHOOLS)
@@ -69,31 +77,6 @@ RECORDS_FIELDS = ["team", "sport", "wins", "losses", "pct", "source", "players"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-
-def normalize(name):
-    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
-
-
-def is_ct_school(team_name):
-    norm = normalize(team_name)
-    if norm in CT_SCHOOL_NAMES:
-        return True
-    # Allow partial match for slight name discrepancies
-    for ct in CT_SCHOOL_NAMES:
-        if norm in ct or ct in norm:
-            return True
-    return False
-
-
-def find_ciac_school_id(team_name):
-    norm = normalize(team_name)
-    if norm in CIAC_SCHOOL_IDS:
-        return CIAC_SCHOOL_IDS[norm]
-    for ct_norm, sid in CIAC_SCHOOL_IDS.items():
-        if norm in ct_norm or ct_norm in norm:
-            return sid
-    return None
-
 
 def parse_dt(s):
     for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y"):
