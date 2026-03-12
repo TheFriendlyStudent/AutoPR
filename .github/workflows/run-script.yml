@@ -26,7 +26,7 @@ jobs:
 
       - name: Run CIAC scraper
         run: |
-          python scrapeTEAMS.py
+          python scrapeTEAMS.py --all
 
       - name: Commit updated CSVs for GitHub Pages
         run: |
