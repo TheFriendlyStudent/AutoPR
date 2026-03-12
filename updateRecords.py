@@ -1,32 +1,37 @@
 """
 updateRecords.py
 
-Two jobs:
-  1. Scrape CIAC rankings for every CT team's authoritative season record,
-     then scrape MaxPreps for any out-of-state teams not found in CIAC.
-     Write all results to docs/team_records.csv.
+For every team that appears in master_games.csv:
 
-  2. Recompute home_record / away_record for every row in master_games.csv
-     using a chronological running walk anchored to authoritative totals so
-     that games missing from the local CSV don't cause under-counts.
+1.  Determine if the team is a CT school (present in the SCHOOLS list from
+    scrapeTEAMS.py) or out-of-state.
 
-How the running-record anchor works
-────────────────────────────────────
-• Walk all final games in date order, tallying wins/losses locally.
-• For each team compare local total vs authoritative total (CIAC or MaxPreps).
-• If authoritative total is higher, games are missing. Compute:
-    offset_w = auth_wins   - local_wins
-    offset_l = auth_losses - local_losses
-• Add that constant offset to every running total for that team throughout
-  the season, as if the missing games were played before our first entry.
+2.  Build a complete game list for the season:
+      - Primary:  CIAC schedule page for the team (CT teams only)
+      - Fallback: MaxPreps schedule for any game the CIAC page is missing,
+                  and for all OOS teams.
 
-Example — Glastonbury: CIAC says 14-9, local CSV has 9-7
-  offset = +5W +2L
-  game 1 in CSV: local 1-0  → displayed 6-2
-  last game:     local 9-7  → displayed 14-9
+3.  Walk that complete game list chronologically.  After each game, record
+    the running W-L for that team.  Write those running records back into
+    the matching rows of master_games.csv (home_record / away_record).
+
+4.  Write docs/team_records.csv with current-season totals + MaxPreps player
+    stats (PPG / RPG / APG) for every team that has a MaxPreps entry.
+
+Key design decisions
+────────────────────
+- CT/OOS classification comes solely from the SCHOOLS list — not from
+  whether the team appears on the CIAC rankings page.
+- The CIAC rankings page is NOT used for record calculation at all.
+  Records come from actual game results (CIAC schedule page + MaxPreps fallback).
+- A game is "missing" from CIAC if MaxPreps shows a result for that date
+  that doesn't appear in the CIAC schedule.
+- Running records in master_games.csv reflect the true record at the time
+  of each game (including any games not in our master CSV).
 """
 
 import csv
+import json
 import re
 import time
 from collections import defaultdict
@@ -35,16 +40,17 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
+# Import the authoritative CT school list from scrapeTEAMS.
+# CT/OOS classification uses this list — not the CIAC rankings page.
+from scrapeTEAMS import SCHOOLS, SPORTS
+
 MASTER_CSV  = "docs/master_games.csv"
 RECORDS_CSV = "docs/team_records.csv"
 
-RANKINGS_URLS = {
-    "boys-basketball":  "https://content.ciacsports.com/scripts/bbb_rankings2.cgi",
-    "girls-basketball": "https://content.ciacsports.com/scripts/gbball_rankings2.cgi",
-}
-
-MAXPREPS_SEARCH = "https://www.maxpreps.com/api/site/search/autocomplete?term={query}&limit=5"
-MAXPREPS_TEAM   = "https://www.maxpreps.com/api/team/record?teamId={team_id}&sport=basketball&season=2025-26"
+# Build fast-lookup structures from SCHOOLS list
+CT_SCHOOL_NAMES = set(re.sub(r"[^a-z0-9]", "", name.lower()) for name, _ in SCHOOLS)
+CIAC_SCHOOL_IDS = {re.sub(r"[^a-z0-9]", "", name.lower()): sid for name, sid in SCHOOLS}
+CIAC_SPORTS     = {h: sid for h, sid in SPORTS}
 
 HEADERS = {
     "User-Agent": (
@@ -56,13 +62,51 @@ HEADERS = {
     "Referer": "https://www.maxpreps.com/",
 }
 
-# ── Normalisation ─────────────────────────────────────────────────────────────
+CIAC_BASE     = "https://ciac.fpsports.org/DashboardSchedule.aspx"
+RECORDS_FIELDS = ["team", "sport", "wins", "losses", "pct", "source", "players"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
 
 def normalize(name):
-    return re.sub(r"[^a-z0-9]", "", name.lower())
+    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
 
 
-# ── CSV helpers ───────────────────────────────────────────────────────────────
+def is_ct_school(team_name):
+    norm = normalize(team_name)
+    if norm in CT_SCHOOL_NAMES:
+        return True
+    # Allow partial match for slight name discrepancies
+    for ct in CT_SCHOOL_NAMES:
+        if norm in ct or ct in norm:
+            return True
+    return False
+
+
+def find_ciac_school_id(team_name):
+    norm = normalize(team_name)
+    if norm in CIAC_SCHOOL_IDS:
+        return CIAC_SCHOOL_IDS[norm]
+    for ct_norm, sid in CIAC_SCHOOL_IDS.items():
+        if norm in ct_norm or ct_norm in norm:
+            return sid
+    return None
+
+
+def parse_dt(s):
+    for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y"):
+        try:
+            return datetime.strptime((s or "").strip(), fmt)
+        except ValueError:
+            pass
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CSV helpers
+# ─────────────────────────────────────────────────────────────────────────────
 
 def load_master():
     try:
@@ -81,366 +125,491 @@ def save_master(rows, fieldnames):
         writer.writerows(rows)
 
 
-# ── Datetime helper ───────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# CIAC individual team schedule scraper
+# ─────────────────────────────────────────────────────────────────────────────
 
-def parse_dt(s):
+def scrape_ciac_schedule(team_name, header):
+    """
+    Fetch the full season schedule for one team from the CIAC schedule page.
+    Returns list of game dicts sorted by date:
+      {date, dt, opponent, our_score, opp_score, status}
+    """
+    school_id = find_ciac_school_id(team_name)
+    sport_id  = CIAC_SPORTS.get(header)
+    if not school_id or not sport_id:
+        return []
+
     try:
-        return datetime.strptime(s, "%m/%d/%Y %H:%M:%S")
-    except (ValueError, TypeError):
-        return datetime.max
-
-
-# ── CIAC rankings scraper ─────────────────────────────────────────────────────
-
-def scrape_ciac_records(sport):
-    """Returns dict: normalized_name → (wins, losses, full_name)"""
-    url = RANKINGS_URLS.get(sport)
-    if not url:
-        return {}
-    try:
-        resp = requests.get(url, timeout=15, headers=HEADERS)
+        resp = requests.get(
+            CIAC_BASE,
+            params={"L": "1", "SportID": sport_id, "QuickFilter": "3",
+                    "SchoolID": school_id},
+            headers=HEADERS, timeout=20,
+        )
         resp.raise_for_status()
     except Exception as e:
-        print(f"  [WARN] Could not scrape CIAC rankings for {sport}: {e}")
-        return {}
+        print(f"    [WARN] CIAC schedule fetch failed for {team_name}: {e}")
+        return []
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    out  = {}
-    for row in soup.find_all("tr"):
+    soup  = BeautifulSoup(resp.text, "html.parser")
+    table = soup.find("table")
+    if not table:
+        return []
+
+    games = []
+    for row in table.find_all("tr"):
         cells = row.find_all("td")
-        if len(cells) < 4:
+        if not cells:
             continue
-        link = cells[0].find("a")
-        if not link:
+        gt = row.find("td", class_="gametype")
+        if gt and "scrimmage" in gt.get_text(strip=True).lower():
             continue
-        name = link.get_text(strip=True)
+
+        date_span = cells[0].find("span", class_="date")
+        if not date_span:
+            continue
+        raw_date = date_span.get_text(strip=True)
+        md = re.search(r"(\d{1,2})/(\d{1,2})", raw_date)
+        if not md:
+            continue
+        month, day = int(md.group(1)), int(md.group(2))
+        today = datetime.now()
+        year  = (today.year - 1) if (month >= 11 and today.month < 7) else today.year
         try:
-            wins   = int(cells[2].get_text(strip=True))
-            losses = int(cells[3].get_text(strip=True))
-        except (ValueError, IndexError):
+            dt = datetime(year, month, day)
+        except ValueError:
             continue
-        out[normalize(name)] = (wins, losses, name)
 
-    print(f"  CIAC {sport}: {len(out)} teams scraped")
-    return out
+        a = None
+        for cell in cells:
+            a = cell.find("a", href=re.compile(r"/dashboardgame\.aspx", re.I))
+            if a:
+                break
+        if not a:
+            continue
+
+        # Find team divs (must look like "Name - I" division format)
+        team_divs = [
+            d for d in a.find_all("div", class_="team")
+            if re.search(r"-\s*[IVX]+", d.get_text(separator=" ", strip=True))
+        ]
+        if len(team_divs) < 2:
+            continue
+
+        def extract(div):
+            score_div = div.find("div", class_="scoreright")
+            score_txt = score_div.get_text(strip=True) if score_div else ""
+            for tag in div.find_all(["i", "div"]):
+                tag.decompose()
+            name = re.sub(r"\s*-\s*[IVX]+\s*$", "", div.get_text(strip=True)).strip()
+            try:
+                score = int(score_txt)
+            except (ValueError, TypeError):
+                score = None
+            return name, score
+
+        # Identify home/away by fa-house icon
+        home_idx = 0
+        for i, div in enumerate(team_divs):
+            if div.find("i", class_=re.compile(r"fa-house")):
+                home_idx = i
+                break
+        away_idx = 1 - home_idx
+
+        home_name, home_score = extract(team_divs[home_idx])
+        away_name, away_score = extract(team_divs[away_idx])
+
+        # Determine which side is "us"
+        us_norm = normalize(team_name)
+        if normalize(home_name) == us_norm or us_norm in normalize(home_name) or normalize(home_name) in us_norm:
+            is_home   = True
+            our_score = home_score
+            opp_score = away_score
+            opp_name  = away_name
+        else:
+            is_home   = False
+            our_score = away_score
+            opp_score = home_score
+            opp_name  = home_name
+
+        status = "final" if (our_score is not None and opp_score is not None) else "scheduled"
+        games.append({
+            "date":      dt.strftime("%m/%d/%Y"),
+            "dt":        dt,
+            "opponent":  opp_name,
+            "our_score": our_score,
+            "opp_score": opp_score,
+            "is_home":   is_home,
+            "status":    status,
+        })
+
+    games.sort(key=lambda g: g["dt"])
+    return games
 
 
-def find_ciac(name, ciac_map):
-    """Return (wins, losses) from ciac_map or None."""
-    norm = normalize(name)
-    if norm in ciac_map:
-        w, l, _ = ciac_map[norm]
-        return w, l
-    for key, (w, l, _) in ciac_map.items():
-        if norm in key or key in norm:
-            return w, l
-    return None
+# ─────────────────────────────────────────────────────────────────────────────
+# MaxPreps helpers
+# ─────────────────────────────────────────────────────────────────────────────
 
-
-# ── MaxPreps scraper (out-of-state fallback) ──────────────────────────────────
-
-def scrape_maxpreps_record(team_name, is_girls, session):
-    """
-    Search MaxPreps for `team_name`, find the best basketball match,
-    and return (wins, losses) for the current season, or None on failure.
-
-    MaxPreps search returns JSON like:
-      [{"teamId": "...", "name": "Trumbull", "state": "CT", "sport": "basketball", ...}, ...]
-
-    The record endpoint returns JSON like:
-      {"wins": 14, "losses": 6, "ties": 0, ...}
-    """
+def maxpreps_find_team(team_name, is_girls, session):
+    """Search MaxPreps and return (team_id, display_name) or None."""
     sport_slug = "girls-basketball" if is_girls else "boys-basketball"
-    query      = requests.utils.quote(team_name)
-
     try:
-        # Step 1: find team ID
-        search_url = f"https://www.maxpreps.com/api/site/search/autocomplete?term={query}&limit=10"
-        r = session.get(search_url, timeout=10)
+        r = session.get(
+            "https://www.maxpreps.com/api/site/search/autocomplete",
+            params={"term": team_name, "limit": 10},
+            timeout=10,
+        )
         r.raise_for_status()
         results = r.json()
-
-        # Filter to basketball teams, prefer exact name match
-        candidates = [
-            t for t in results
-            if isinstance(t, dict)
-            and normalize(t.get("sport", "")) in ("basketball", sport_slug.replace("-", ""))
-        ]
-        if not candidates:
-            # Broaden — accept any result with a matching name
-            candidates = [
-                t for t in results
-                if isinstance(t, dict)
-                and normalize(team_name) in normalize(t.get("name", ""))
-            ]
-        if not candidates:
-            return None
-
-        # Pick best match: exact name first, then first result
-        exact = [c for c in candidates if normalize(c.get("name", "")) == normalize(team_name)]
-        chosen = exact[0] if exact else candidates[0]
-        team_id = chosen.get("teamId") or chosen.get("id")
-        if not team_id:
-            return None
-
-        # Step 2: fetch record for this season
-        time.sleep(0.3)  # be polite
-        rec_url = (
-            f"https://www.maxpreps.com/api/team/record"
-            f"?teamId={team_id}&sport={sport_slug}&season=2025-26"
-        )
-        r2 = session.get(rec_url, timeout=10)
-        r2.raise_for_status()
-        data = r2.json()
-
-        # MaxPreps may nest under "overall" or return flat
-        rec = data.get("overall") or data
-        wins   = int(rec.get("wins",   rec.get("w", 0)))
-        losses = int(rec.get("losses", rec.get("l", 0)))
-        if wins + losses == 0:
-            return None
-        return wins, losses
-
     except Exception:
         return None
 
+    candidates = [
+        t for t in results if isinstance(t, dict)
+        and normalize(t.get("sport", "")) in ("basketball", sport_slug.replace("-", ""))
+    ]
+    if not candidates:
+        candidates = [
+            t for t in results if isinstance(t, dict)
+            and normalize(team_name) in normalize(t.get("name", ""))
+        ]
+    if not candidates:
+        return None
 
-def scrape_oos_records(oos_teams, ciac_boys, ciac_girls):
+    exact = [c for c in candidates if normalize(c.get("name", "")) == normalize(team_name)]
+    # Prefer CT match for CT schools
+    ct_cands = [c for c in (exact or candidates) if c.get("state", "").upper() == "CT"]
+    chosen   = ct_cands[0] if ct_cands else (exact[0] if exact else candidates[0])
+    team_id  = chosen.get("teamId") or chosen.get("id")
+    return (team_id, chosen.get("name", team_name)) if team_id else None
+
+
+def maxpreps_schedule(team_id, sport_slug, session):
     """
-    For every out-of-state team, try MaxPreps.
-    Returns dict: (header, team) → (wins, losses)
+    Fetch full season schedule from MaxPreps.
+    Returns list of {date, dt, opponent, our_score, opp_score, status}.
     """
-    if not oos_teams:
-        return {}
+    try:
+        r = session.get(
+            "https://www.maxpreps.com/api/team/schedule",
+            params={"teamId": team_id, "sport": sport_slug, "season": "2025-26"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+    except Exception:
+        return []
 
-    print(f"\n  Fetching MaxPreps records for {len(oos_teams)} out-of-state team(s)…")
-    out = {}
-    session = requests.Session()
-    session.headers.update(HEADERS)
+    entries = data if isinstance(data, list) else data.get("games", data.get("schedule", []))
+    games   = []
+    for g in entries:
+        raw_date = g.get("date") or g.get("gameDate") or g.get("scheduledDate") or ""
+        dt = None
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%m/%d/%Y"):
+            try:
+                dt = datetime.strptime(raw_date[:len(fmt)], fmt)
+                break
+            except (ValueError, TypeError):
+                pass
+        if not dt:
+            continue
 
-    for (hdr, team) in sorted(oos_teams, key=lambda x: x[1]):
-        is_girls = "girls" in hdr.lower()
-        result   = scrape_maxpreps_record(team, is_girls, session)
-        if result:
-            w, l = result
-            out[(hdr, team)] = (w, l)
-            print(f"    ✓ {team}: {w}-{l}  (MaxPreps)")
+        scores    = g.get("score") or {}
+        is_home   = g.get("isHome", False)
+        our_score = scores.get("home") if is_home else scores.get("away")
+        opp_score = scores.get("away") if is_home else scores.get("home")
+        if our_score is None:
+            our_score = g.get("teamScore") or g.get("homeScore" if is_home else "awayScore")
+        if opp_score is None:
+            opp_score = g.get("opponentScore") or g.get("awayScore" if is_home else "homeScore")
+
+        try:
+            our_score = int(our_score) if our_score is not None else None
+            opp_score = int(opp_score) if opp_score is not None else None
+        except (TypeError, ValueError):
+            our_score = opp_score = None
+
+        opp_name = (g.get("opponent") or {}).get("name") or g.get("opponentName") or "Unknown"
+        status   = "final" if (our_score is not None and opp_score is not None) else "scheduled"
+
+        games.append({
+            "date":      dt.strftime("%m/%d/%Y"),
+            "dt":        dt,
+            "opponent":  opp_name,
+            "our_score": our_score,
+            "opp_score": opp_score,
+            "status":    status,
+        })
+
+    games.sort(key=lambda g: g["dt"])
+    return games
+
+
+def maxpreps_players(team_id, sport_slug, session):
+    """Fetch top player stats. Returns list of {name, ppg, rpg, apg}."""
+    try:
+        r = session.get(
+            "https://www.maxpreps.com/api/team/stats/leaders",
+            params={"teamId": team_id, "sport": sport_slug, "season": "2025-26"},
+            timeout=10,
+        )
+        r.raise_for_status()
+        sdata = r.json()
+    except Exception:
+        return []
+
+    raw = sdata if isinstance(sdata, list) else sdata.get("players", sdata.get("data", []))
+    players, seen = [], set()
+    for p in raw[:10]:
+        name = (p.get("fullName") or p.get("name") or
+                f"{p.get('firstName', '')} {p.get('lastName', '')}".strip())
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        parts = name.split()
+        short = f"{parts[0][0]}. {' '.join(parts[1:])}" if len(parts) > 1 else name
+
+        def _f(key, alt=None):
+            v = p.get(key, p.get(alt) if alt else None)
+            try:
+                return round(float(v), 1)
+            except (TypeError, ValueError):
+                return None
+
+        ppg = _f("pointsPerGame", "ppg")
+        rpg = _f("reboundsPerGame", "rpg")
+        apg = _f("assistsPerGame", "apg")
+        if ppg is None and rpg is None and apg is None:
+            continue
+        players.append({"name": short, "ppg": ppg, "rpg": rpg, "apg": apg})
+
+    players.sort(key=lambda p: p.get("ppg") or 0, reverse=True)
+    return players[:8]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Merge CIAC + MaxPreps schedules for one team
+# ─────────────────────────────────────────────────────────────────────────────
+
+def merge_schedules(ciac_games, mp_games):
+    """
+    CIAC is authoritative. MaxPreps fills in scored games whose dates are
+    absent from CIAC (i.e. CIAC didn't record a score for that game).
+    """
+    ciac_dates = {g["date"] for g in ciac_games}
+    merged     = list(ciac_games)
+    for g in mp_games:
+        if g["date"] not in ciac_dates and g["status"] == "final":
+            merged.append(g)
+    merged.sort(key=lambda g: g["dt"])
+    return merged
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build full schedule for every team
+# ─────────────────────────────────────────────────────────────────────────────
+
+def build_all_schedules(master_rows, session):
+    """
+    Returns:
+        schedules : (header, team) → [game dict, ...]   chronological
+        mp_info   : (header, team) → {wins, losses, players, source}
+    """
+    pairs = set()
+    for r in master_rows:
+        hdr = r.get("header", "")
+        for side in ("home_team", "away_team"):
+            if r.get(side):
+                pairs.add((hdr, r[side]))
+
+    total     = len(pairs)
+    schedules = {}
+    mp_info   = {}
+
+    for i, (hdr, team) in enumerate(sorted(pairs, key=lambda x: x[1]), 1):
+        is_girls   = "girls" in hdr.lower()
+        sport_slug = "girls-basketball" if is_girls else "boys-basketball"
+        ct         = is_ct_school(team)
+
+        # ── CIAC schedule (CT only) ───────────────────────────────────────────
+        ciac_games = []
+        if ct:
+            ciac_games = scrape_ciac_schedule(team, hdr)
+            time.sleep(0.15)
+
+        # ── MaxPreps (all teams — fills gaps + player stats) ─────────────────
+        mp_games  = []
+        players   = []
+        mp_result = maxpreps_find_team(team, is_girls, session)
+        if mp_result:
+            team_id, _ = mp_result
+            time.sleep(0.25)
+            mp_games = maxpreps_schedule(team_id, sport_slug, session)
+            time.sleep(0.25)
+            players  = maxpreps_players(team_id, sport_slug, session)
+            time.sleep(0.1)
+
+        # ── Merge ─────────────────────────────────────────────────────────────
+        if ct:
+            full = merge_schedules(ciac_games, mp_games)
+            src  = "ciac+maxpreps" if mp_games else "ciac"
         else:
-            print(f"    ✗ {team}: not found on MaxPreps — record will be omitted")
+            full = mp_games
+            src  = "maxpreps" if mp_games else "none"
 
-    return out
+        # ── Current season W-L from complete schedule ─────────────────────────
+        w = l = 0
+        for g in full:
+            if g["status"] == "final" and g["our_score"] is not None and g["opp_score"] is not None:
+                if g["our_score"] > g["opp_score"]:
+                    w += 1
+                elif g["opp_score"] > g["our_score"]:
+                    l += 1
+
+        schedules[(hdr, team)] = full
+        mp_info[(hdr, team)]   = {"wins": w, "losses": l, "players": players, "source": src}
+
+        tag = "CT" if ct else "OOS"
+        print(f"  [{i:3}/{total}] [{tag}] {team} ({'G' if is_girls else 'B'}): "
+              f"CIAC {len(ciac_games)}, MP {len(mp_games)} → {w}-{l}, "
+              f"{len(players)} players")
+
+    return schedules, mp_info
 
 
-# ── Step 1: build team_records.csv ───────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Write team_records.csv
+# ─────────────────────────────────────────────────────────────────────────────
 
-def build_records_csv(ciac_boys, ciac_girls, oos_records):
-    """Write team_records.csv from CIAC + MaxPreps data."""
-    fields = ["team", "wins", "losses", "pct", "sport", "source"]
-    rows   = []
-
-    for norm, (w, l, name) in ciac_boys.items():
-        total = w + l
-        rows.append({
-            "team": name, "wins": w, "losses": l,
-            "pct": round(w / total, 3) if total else 0.0,
-            "sport": "boys-basketball", "source": "ciac",
-        })
-    for norm, (w, l, name) in ciac_girls.items():
-        total = w + l
-        rows.append({
-            "team": name, "wins": w, "losses": l,
-            "pct": round(w / total, 3) if total else 0.0,
-            "sport": "girls-basketball", "source": "ciac",
-        })
-    for (hdr, team), (w, l) in oos_records.items():
-        total = w + l
+def write_records_csv(mp_info):
+    rows, seen = [], set()
+    for (hdr, team), info in sorted(mp_info.items(), key=lambda x: x[0][1]):
         sport = "girls-basketball" if "girls" in hdr.lower() else "boys-basketball"
+        key   = (normalize(team), sport)
+        if key in seen:
+            continue
+        seen.add(key)
+        total = info["wins"] + info["losses"]
         rows.append({
-            "team": team, "wins": w, "losses": l,
-            "pct": round(w / total, 3) if total else 0.0,
-            "sport": sport, "source": "maxpreps",
+            "team":    team,
+            "sport":   sport,
+            "wins":    info["wins"],
+            "losses":  info["losses"],
+            "pct":     round(info["wins"] / total, 3) if total else 0.0,
+            "source":  info["source"],
+            "players": json.dumps(info["players"]),
         })
-
-    rows.sort(key=lambda r: r["team"])
     with open(RECORDS_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fields)
+        writer = csv.DictWriter(f, fieldnames=RECORDS_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
     print(f"\n  Wrote {len(rows)} records to {RECORDS_CSV}")
 
 
-# ── Step 2: recompute running records in master_games.csv ────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Recompute running records in master_games.csv
+# ─────────────────────────────────────────────────────────────────────────────
 
-def recompute_master_records(master_rows, ciac_boys, ciac_girls, oos_records):
+def recompute_master_records(master_rows, schedules):
     """
-    Walk every final game chronologically, compute a running W-L for each team,
-    offset by the gap between local counts and authoritative totals (CIAC for CT
-    teams, MaxPreps for out-of-state), then write corrected records back.
+    For every final game row in master_games.csv, find where it sits in
+    each team's full chronological schedule and write the running W-L
+    that each team had *after* that game.
+
+    Matching is done by date + scores so we don't rely on fragile name
+    matching against the CIAC/MaxPreps opponent name.
     """
 
-    # ── Pass 1: count local wins/losses per (header, team) ───────────────────
-    local_w = defaultdict(int)
-    local_l = defaultdict(int)
+    def running_record_at(schedule, target_date, our_score, opp_score):
+        """
+        Walk schedule up to and including the game on target_date with
+        matching scores.  Returns (w, l) or None if not matched.
+        """
+        w = l = 0
+        for g in schedule:
+            if g["status"] != "final" or g["our_score"] is None:
+                continue
+            same_date  = g["date"] == target_date
+            same_score = (g["our_score"] == our_score and g["opp_score"] == opp_score)
+            before     = g["dt"] < datetime.strptime(target_date, "%m/%d/%Y")
 
-    final_rows = [
-        r for r in master_rows
-        if r.get("status") == "final"
-        and r.get("home_score", "").strip()
-        and r.get("away_score", "").strip()
-    ]
-    final_rows.sort(key=lambda r: parse_dt(r.get("game_datetime", "")))
+            if before or (same_date and same_score):
+                if g["our_score"] > g["opp_score"]:
+                    w += 1
+                elif g["opp_score"] > g["our_score"]:
+                    l += 1
+                if same_date and same_score:
+                    return (w, l)
 
-    for r in final_rows:
-        hdr = r.get("header", "")
-        try:
-            hs  = int(r["home_score"])
-            as_ = int(r["away_score"])
-        except (ValueError, TypeError):
-            continue
-        hk = (hdr, r["home_team"])
-        ak = (hdr, r["away_team"])
-        if hs > as_:
-            local_w[hk] += 1; local_l[ak] += 1
-        elif as_ > hs:
-            local_w[ak] += 1; local_l[hk] += 1
+        return None   # game not found in schedule
 
-    # ── Pass 2: compute per-team offset ──────────────────────────────────────
-    offset_w   = defaultdict(int)
-    offset_l   = defaultdict(int)
-    no_source  = set()   # teams with no authoritative record at all
-    patched_ct = 0
-    patched_oos = 0
-
-    all_teams = set(list(local_w.keys()) + list(local_l.keys()))
-    for (hdr, team) in all_teams:
-        ciac_map = ciac_boys if "boys" in hdr.lower() else ciac_girls
-        result   = find_ciac(team, ciac_map)
-
-        if result is None:
-            # Try MaxPreps result
-            result = oos_records.get((hdr, team))
-            is_oos = True
-        else:
-            is_oos = False
-
-        if result is None:
-            no_source.add((hdr, team))
-            continue
-
-        auth_w, auth_l = result
-        ow = max(0, auth_w - local_w[(hdr, team)])
-        ol = max(0, auth_l - local_l[(hdr, team)])
-
-        if ow or ol:
-            offset_w[(hdr, team)] = ow
-            offset_l[(hdr, team)] = ol
-            src = "MaxPreps" if is_oos else "CIAC"
-            tag = "OOS" if is_oos else "CT"
-            print(
-                f"  [OFFSET/{tag}] {team}: "
-                f"local {local_w[(hdr,team)]}-{local_l[(hdr,team)]}  "
-                f"{src} {auth_w}-{auth_l}  offset +{ow}W +{ol}L"
-            )
-            if is_oos:
-                patched_oos += 1
-            else:
-                patched_ct += 1
-
-    if no_source:
-        print(f"\n  {len(no_source)} team(s) with no authoritative record — records omitted:")
-        for (hdr, team) in sorted(no_source, key=lambda x: x[1]):
-            print(f"    • {team}")
-        print()
-
-    print(f"  {patched_ct} CT + {patched_oos} OOS team(s) needed an offset")
-
-    # ── Pass 3: walk again, writing offset-adjusted running records ───────────
-    running_w    = defaultdict(int)
-    running_l    = defaultdict(int)
-    game_records = {}
-
-    for r in final_rows:
-        hdr = r.get("header", "")
-        try:
-            hs  = int(r["home_score"])
-            as_ = int(r["away_score"])
-        except (ValueError, TypeError):
-            continue
-        hk = (hdr, r["home_team"])
-        ak = (hdr, r["away_team"])
-
-        if hs > as_:
-            running_w[hk] += 1; running_l[ak] += 1
-        elif as_ > hs:
-            running_w[ak] += 1; running_l[hk] += 1
-
-        if hk in no_source:
-            h_rec = ""
-        else:
-            h_rec = f"{running_w[hk] + offset_w[hk]}-{running_l[hk] + offset_l[hk]}"
-
-        if ak in no_source:
-            a_rec = ""
-        else:
-            a_rec = f"{running_w[ak] + offset_w[ak]}-{running_l[ak] + offset_l[ak]}"
-
-        game_records[r["game_id"]] = (h_rec, a_rec)
-
-    # ── Write back ────────────────────────────────────────────────────────────
     updated = 0
     for r in master_rows:
-        gid = r.get("game_id")
-        if gid in game_records:
-            new_h, new_a = game_records[gid]
-            if r.get("home_record") != new_h or r.get("away_record") != new_a:
-                r["home_record"] = new_h
-                r["away_record"] = new_a
-                updated += 1
+        if r.get("status") != "final":
+            continue
+        hdr    = r.get("header", "")
+        dt_obj = parse_dt(r.get("game_datetime", ""))
+        if not dt_obj:
+            continue
+        date_str = dt_obj.strftime("%m/%d/%Y")
+
+        try:
+            hs  = int(r["home_score"])
+            as_ = int(r["away_score"])
+        except (ValueError, TypeError):
+            continue
+
+        hk = (hdr, r["home_team"])
+        ak = (hdr, r["away_team"])
+
+        h_res = running_record_at(schedules.get(hk, []), date_str, hs, as_)
+        a_res = running_record_at(schedules.get(ak, []), date_str, as_, hs)
+
+        new_h = f"{h_res[0]}-{h_res[1]}" if h_res else r.get("home_record", "")
+        new_a = f"{a_res[0]}-{a_res[1]}" if a_res else r.get("away_record", "")
+
+        if r.get("home_record") != new_h or r.get("away_record") != new_a:
+            r["home_record"] = new_h
+            r["away_record"] = new_a
+            updated += 1
 
     print(f"  {updated} game row(s) updated in {MASTER_CSV}")
     return master_rows
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Scraping CIAC rankings…")
-    ciac_boys  = scrape_ciac_records("boys-basketball")
-    ciac_girls = scrape_ciac_records("girls-basketball")
-
-    # First pass to identify OOS teams before MaxPreps lookups
-    print("\nIdentifying out-of-state teams…")
+    print("Loading master_games.csv…")
     master_rows, fieldnames = load_master()
     if not master_rows:
-        print("  No rows found in master_games.csv — nothing to update.")
+        print("  No rows found — nothing to update.")
         return
+    print(f"  {len(master_rows)} rows loaded.")
 
-    final_rows = [
-        r for r in master_rows
-        if r.get("status") == "final"
-        and r.get("home_score", "").strip()
-        and r.get("away_score", "").strip()
-    ]
-    all_teams = set()
-    for r in final_rows:
+    all_pairs = set()
+    for r in master_rows:
         hdr = r.get("header", "")
-        all_teams.add((hdr, r["home_team"]))
-        all_teams.add((hdr, r["away_team"]))
+        for side in ("home_team", "away_team"):
+            if r.get(side):
+                all_pairs.add((hdr, r[side]))
+    print(f"  {len(all_pairs)} unique (sport, team) pairs.")
 
-    oos_teams = set()
-    for (hdr, team) in all_teams:
-        ciac_map = ciac_boys if "boys" in hdr.lower() else ciac_girls
-        if find_ciac(team, ciac_map) is None:
-            oos_teams.add((hdr, team))
+    session = requests.Session()
+    session.headers.update(HEADERS)
 
-    # Fetch MaxPreps for out-of-state teams
-    oos_records = scrape_oos_records(oos_teams, ciac_boys, ciac_girls)
+    print(f"\nFetching schedules for all teams…")
+    schedules, mp_info = build_all_schedules(master_rows, session)
 
-    print("\nBuilding team_records.csv…")
-    build_records_csv(ciac_boys, ciac_girls, oos_records)
+    print("\nWriting team_records.csv…")
+    write_records_csv(mp_info)
 
     print("\nRecomputing running records in master_games.csv…")
-    master_rows = recompute_master_records(master_rows, ciac_boys, ciac_girls, oos_records)
+    master_rows = recompute_master_records(master_rows, schedules)
     save_master(master_rows, fieldnames)
     print("\nDone.")
 

@@ -1,181 +1,409 @@
-team,wins,losses,pct,sport,source
-Abbott Tech,7,13,0.35,boys-basketball,ciac
-Achievement First,1,20,0.048,boys-basketball,ciac
-Aerospace,12,7,0.632,boys-basketball,ciac
-Amistad,6,11,0.353,boys-basketball,ciac
-Amity,9,11,0.45,boys-basketball,ciac
-Ansonia,11,9,0.55,boys-basketball,ciac
-Avon,4,11,0.267,boys-basketball,ciac
-Bacon Academy,8,11,0.421,boys-basketball,ciac
-Bassick,3,10,0.231,boys-basketball,ciac
-Berlin,8,12,0.4,boys-basketball,ciac
-Bethel,5,15,0.25,boys-basketball,ciac
-Bloomfield,7,12,0.368,boys-basketball,ciac
-Bolton,1,18,0.053,boys-basketball,ciac
-Branford,9,11,0.45,boys-basketball,ciac
-Bridgeport Central,1,19,0.05,boys-basketball,ciac
-Brien McMahon,6,12,0.333,boys-basketball,ciac
-Bristol Central,4,16,0.2,boys-basketball,ciac
-Bristol Eastern,16,4,0.8,boys-basketball,ciac
-Brookfield,12,8,0.6,boys-basketball,ciac
-Bulkeley,5,15,0.25,boys-basketball,ciac
-Bullard Havens Tech,9,11,0.45,boys-basketball,ciac
-Bunnell,15,5,0.75,boys-basketball,ciac
-Canton,5,15,0.25,boys-basketball,ciac
-Capital Prep,9,11,0.45,boys-basketball,ciac
-Career Magnet,10,10,0.5,boys-basketball,ciac
-Cheney Tech,17,3,0.85,boys-basketball,ciac
-Cheshire,3,14,0.176,boys-basketball,ciac
-Classical Magnet,14,6,0.7,boys-basketball,ciac
-Coginchaug,12,8,0.6,boys-basketball,ciac
-Comp Sci,2,17,0.105,boys-basketball,ciac
-Conard,15,5,0.75,boys-basketball,ciac
-Coventry,12,7,0.632,boys-basketball,ciac
-Cromwell,18,2,0.9,boys-basketball,ciac
-Crosby,15,5,0.75,boys-basketball,ciac
-Danbury,13,7,0.65,boys-basketball,ciac
-Daniel Hand,14,6,0.7,boys-basketball,ciac
-Darien,7,13,0.35,boys-basketball,ciac
-Derby,4,16,0.2,boys-basketball,ciac
-E.O. Smith,9,11,0.45,boys-basketball,ciac
-East Catholic,18,2,0.9,boys-basketball,ciac
-East Granby,7,13,0.35,boys-basketball,ciac
-East Hampton,11,9,0.55,boys-basketball,ciac
-East Hartford,8,12,0.4,boys-basketball,ciac
-East Haven,15,5,0.75,boys-basketball,ciac
-East Lyme,12,8,0.6,boys-basketball,ciac
-East Windsor,12,8,0.6,boys-basketball,ciac
-Ellington,16,4,0.8,boys-basketball,ciac
-Ellis Tech,3,17,0.15,boys-basketball,ciac
-Enfield,9,11,0.45,boys-basketball,ciac
-Fairfield Ludlowe,12,8,0.6,boys-basketball,ciac
-Fairfield Prep,4,16,0.2,boys-basketball,ciac
-Fairfield Warde,13,7,0.65,boys-basketball,ciac
-Farmington,14,6,0.7,boys-basketball,ciac
-Fitch,13,6,0.684,boys-basketball,ciac
-Foran,12,8,0.6,boys-basketball,ciac
-Gilbert,0,9,0.0,boys-basketball,ciac
-Glastonbury,13,7,0.65,boys-basketball,ciac
-Goodwin Tech,14,6,0.7,boys-basketball,ciac
-Granby Memorial,10,10,0.5,boys-basketball,ciac
-Grasso Tech,10,10,0.5,boys-basketball,ciac
-Greenwich,8,12,0.4,boys-basketball,ciac
-Griswold,12,8,0.6,boys-basketball,ciac
-Guilford,9,11,0.45,boys-basketball,ciac
-HMTCA,9,11,0.45,boys-basketball,ciac
-Haddam-Killingworth,13,6,0.684,boys-basketball,ciac
-Hale Ray,7,13,0.35,boys-basketball,ciac
-Hall,11,9,0.55,boys-basketball,ciac
-Hamden,12,8,0.6,boys-basketball,ciac
-Harding,8,12,0.4,boys-basketball,ciac
-Hartford Public,3,17,0.15,boys-basketball,ciac
-Hillhouse,15,5,0.75,boys-basketball,ciac
-Holy Cross,16,4,0.8,boys-basketball,ciac
-Housatonic Regional,3,17,0.15,boys-basketball,ciac
-Immaculate,10,10,0.5,boys-basketball,ciac
-Innovation,18,2,0.9,boys-basketball,ciac
-International,3,16,0.158,boys-basketball,ciac
-Joel Barlow,3,17,0.15,boys-basketball,ciac
-Jonathan Law,4,16,0.2,boys-basketball,ciac
-Kaynor Tech,9,10,0.474,boys-basketball,ciac
-Kennedy,6,14,0.3,boys-basketball,ciac
-Killingly,10,10,0.5,boys-basketball,ciac
-Kolbe Cathedral,19,1,0.95,boys-basketball,ciac
-Ledyard,3,10,0.231,boys-basketball,ciac
-Lewis Mills,15,4,0.789,boys-basketball,ciac
-Litchfield,9,11,0.45,boys-basketball,ciac
-Lyman Hall,1,19,0.05,boys-basketball,ciac
-Lyman Memorial,5,15,0.25,boys-basketball,ciac
-Maloney,8,12,0.4,boys-basketball,ciac
-Manchester,18,2,0.9,boys-basketball,ciac
-Masuk,11,9,0.55,boys-basketball,ciac
-Middletown,10,10,0.5,boys-basketball,ciac
-Montville,4,13,0.235,boys-basketball,ciac
-Morgan,18,2,0.9,boys-basketball,ciac
-Naugatuck,10,10,0.5,boys-basketball,ciac
-New Britain,17,3,0.85,boys-basketball,ciac
-New Canaan,8,12,0.4,boys-basketball,ciac
-New Fairfield,12,8,0.6,boys-basketball,ciac
-New London,16,4,0.8,boys-basketball,ciac
-New Milford,4,16,0.2,boys-basketball,ciac
-Newington,11,9,0.55,boys-basketball,ciac
-Newtown,13,7,0.65,boys-basketball,ciac
-Nonnewaug,17,3,0.85,boys-basketball,ciac
-North Branford,5,15,0.25,boys-basketball,ciac
-North Haven,12,8,0.6,boys-basketball,ciac
-Northwest Catholic,17,3,0.85,boys-basketball,ciac
-Northwestern,14,6,0.7,boys-basketball,ciac
-Norwalk,10,10,0.5,boys-basketball,ciac
-Norwich Free Academy,10,9,0.526,boys-basketball,ciac
-Norwich Tech,9,12,0.429,boys-basketball,ciac
-Notre Dame-Fairfield,18,1,0.947,boys-basketball,ciac
-Notre Dame-West Haven,20,0,1.0,boys-basketball,ciac
-O'Brien Tech,4,15,0.211,boys-basketball,ciac
-Old Lyme,15,5,0.75,boys-basketball,ciac
-Old Saybrook,5,15,0.25,boys-basketball,ciac
-Oxford,4,16,0.2,boys-basketball,ciac
-Plainfield,8,12,0.4,boys-basketball,ciac
-Plainville,10,10,0.5,boys-basketball,ciac
-Platt,6,12,0.333,boys-basketball,ciac
-Platt Tech,13,6,0.684,boys-basketball,ciac
-Pomperaug,10,10,0.5,boys-basketball,ciac
-Portland,7,13,0.35,boys-basketball,ciac
-Prince Tech,5,14,0.263,boys-basketball,ciac
-Putnam,6,14,0.3,boys-basketball,ciac
-RHAM,12,6,0.667,boys-basketball,ciac
-Ridgefield,19,1,0.95,boys-basketball,ciac
-Rockville,12,8,0.6,boys-basketball,ciac
-Rocky Hill,4,16,0.2,boys-basketball,ciac
-SMSA,17,3,0.85,boys-basketball,ciac
-Seymour,14,6,0.7,boys-basketball,ciac
-Sheehan,10,10,0.5,boys-basketball,ciac
-Shelton,3,17,0.15,boys-basketball,ciac
-Shepaug Valley,15,5,0.75,boys-basketball,ciac
-Simsbury,6,14,0.3,boys-basketball,ciac
-Somers,13,7,0.65,boys-basketball,ciac
-South Windsor,8,12,0.4,boys-basketball,ciac
-Southington,17,3,0.85,boys-basketball,ciac
-St. Bernard,13,2,0.867,boys-basketball,ciac
-St. Joseph,11,9,0.55,boys-basketball,ciac
-St. Paul Catholic,13,7,0.65,boys-basketball,ciac
-Stafford,8,12,0.4,boys-basketball,ciac
-Stamford,15,5,0.75,boys-basketball,ciac
-Staples,15,5,0.75,boys-basketball,ciac
-Stonington,14,6,0.7,boys-basketball,ciac
-Stratford,3,4,0.429,boys-basketball,ciac
-Suffield,11,9,0.55,boys-basketball,ciac
-Terryville,9,11,0.45,boys-basketball,ciac
-Thomaston,11,9,0.55,boys-basketball,ciac
-Tolland,8,12,0.4,boys-basketball,ciac
-Torrington,11,9,0.55,boys-basketball,ciac
-Tourtellotte,11,8,0.579,boys-basketball,ciac
-Trumbull,17,3,0.85,boys-basketball,ciac
-University,8,12,0.4,boys-basketball,ciac
-Valley Regional,4,14,0.222,boys-basketball,ciac
-Vinal Tech,3,17,0.15,boys-basketball,ciac
-WCA,16,4,0.8,boys-basketball,ciac
-Wamogo,13,7,0.65,boys-basketball,ciac
-Waterford,8,11,0.421,boys-basketball,ciac
-Watertown,2,11,0.154,boys-basketball,ciac
-Weaver,16,4,0.8,boys-basketball,ciac
-West Haven,14,6,0.7,boys-basketball,ciac
-Westbrook,1,19,0.05,boys-basketball,ciac
-Westhill,3,17,0.15,boys-basketball,ciac
-Weston,13,7,0.65,boys-basketball,ciac
-Wethersfield,2,11,0.154,boys-basketball,ciac
-Wheeler,14,5,0.737,boys-basketball,ciac
-Whitney Tech,9,9,0.5,boys-basketball,ciac
-Wilbur Cross,4,3,0.571,boys-basketball,ciac
-Wilby,16,4,0.8,boys-basketball,ciac
-Wilcox Tech,5,14,0.263,boys-basketball,ciac
-Wilton,13,6,0.684,boys-basketball,ciac
-Windham,8,12,0.4,boys-basketball,ciac
-Windham Tech,14,6,0.7,boys-basketball,ciac
-Windsor,17,3,0.85,boys-basketball,ciac
-Windsor Locks,14,5,0.737,boys-basketball,ciac
-Wolcott,1,12,0.077,boys-basketball,ciac
-Wolcott Tech,11,9,0.55,boys-basketball,ciac
-Woodland,9,11,0.45,boys-basketball,ciac
-Woodstock Academy,9,11,0.45,boys-basketball,ciac
-Wright Tech,0,20,0.0,boys-basketball,ciac
-Xavier,16,4,0.8,boys-basketball,ciac
+team,sport,wins,losses,pct,source,players
+Abbott Tech,girls-basketball,10,13,0.435,ciac,[]
+Abbott Tech,boys-basketball,21,4,0.84,ciac,[]
+Achievement First,boys-basketball,2,17,0.105,ciac,[]
+Aerospace,boys-basketball,17,6,0.739,ciac,[]
+Albany High School,girls-basketball,0,0,0.0,none,[]
+Amistad,boys-basketball,8,13,0.381,ciac,[]
+Amistad,girls-basketball,1,19,0.05,ciac,[]
+Amity,girls-basketball,11,10,0.524,ciac,[]
+Amity,boys-basketball,11,12,0.478,ciac,[]
+Ansonia,girls-basketball,19,3,0.864,ciac,[]
+Ansonia,boys-basketball,15,9,0.625,ciac,[]
+Archbishop Molloy High School,boys-basketball,0,0,0.0,none,[]
+Avon,girls-basketball,11,12,0.478,ciac,[]
+Avon,boys-basketball,5,15,0.25,ciac,[]
+Bacon Academy,boys-basketball,6,14,0.3,ciac,[]
+Bacon Academy,girls-basketball,3,17,0.15,ciac,[]
+Barnstable High School,boys-basketball,0,0,0.0,none,[]
+Barrington High School,boys-basketball,0,0,0.0,none,[]
+Bassick,boys-basketball,11,10,0.524,ciac,[]
+Bassick,girls-basketball,9,11,0.45,ciac,[]
+Berlin,boys-basketball,11,11,0.5,ciac,[]
+Berlin,girls-basketball,9,12,0.429,ciac,[]
+Bethel,girls-basketball,18,6,0.75,ciac,[]
+Bethel,boys-basketball,15,7,0.682,ciac,[]
+Bishop Guertin High School,girls-basketball,0,0,0.0,none,[]
+Bishop Hendricken High School,boys-basketball,0,0,0.0,none,[]
+Bloomfield,boys-basketball,15,9,0.625,ciac,[]
+Bolton,girls-basketball,11,10,0.524,ciac,[]
+Bolton,boys-basketball,2,18,0.1,ciac,[]
+Branford,boys-basketball,9,13,0.409,ciac,[]
+Branford,girls-basketball,6,16,0.273,ciac,[]
+Brattleboro UHS,girls-basketball,0,0,0.0,none,[]
+Bridgeport Central,girls-basketball,6,15,0.286,ciac,[]
+Bridgeport Central,boys-basketball,11,10,0.524,ciac,[]
+Brien McMahon,boys-basketball,11,10,0.524,ciac,[]
+Brien McMahon,girls-basketball,4,16,0.2,ciac,[]
+Bristol Central,boys-basketball,8,13,0.381,ciac,[]
+Bristol Central,girls-basketball,18,4,0.818,ciac,[]
+Bristol Eastern,boys-basketball,8,13,0.381,ciac,[]
+Bristol Eastern,girls-basketball,11,11,0.5,ciac,[]
+Brookfield,girls-basketball,15,8,0.652,ciac,[]
+Brookfield,boys-basketball,0,20,0.0,ciac,[]
+Bulkeley,boys-basketball,3,17,0.15,ciac,[]
+Bullard Havens Tech,girls-basketball,11,10,0.524,ciac,[]
+Bullard Havens Tech,boys-basketball,11,10,0.524,ciac,[]
+Bunnell,boys-basketball,18,4,0.818,ciac,[]
+Bunnell,girls-basketball,11,12,0.478,ciac,[]
+Burke High School,boys-basketball,0,0,0.0,none,[]
+CROWLEY North Crowley High Sch,boys-basketball,0,0,0.0,none,[]
+Canton,girls-basketball,16,7,0.696,ciac,[]
+Canton,boys-basketball,8,13,0.381,ciac,[]
+Capital Prep,girls-basketball,2,13,0.133,ciac,[]
+Capital Prep,boys-basketball,8,14,0.364,ciac,[]
+Career Magnet,boys-basketball,11,12,0.478,ciac,[]
+Career Magnet,girls-basketball,9,13,0.409,ciac,[]
+Central HS,boys-basketball,0,0,0.0,none,[]
+Cheney Tech,boys-basketball,9,11,0.45,ciac,[]
+Cheney Tech,girls-basketball,14,9,0.609,ciac,[]
+Cheshire,girls-basketball,4,16,0.2,ciac,[]
+Cheshire,boys-basketball,5,15,0.25,ciac,[]
+Chicopee Comprehensive High Sc,girls-basketball,0,0,0.0,none,[]
+Classical High School,boys-basketball,0,0,0.0,none,[]
+Classical Magnet,girls-basketball,0,18,0.0,ciac,[]
+Classical Magnet,boys-basketball,6,14,0.3,ciac,[]
+Coginchaug,boys-basketball,4,16,0.2,ciac,[]
+Coginchaug,girls-basketball,7,14,0.333,ciac,[]
+Comp Sci,girls-basketball,6,14,0.3,ciac,[]
+Comp Sci,boys-basketball,10,13,0.435,ciac,[]
+Conard,girls-basketball,4,17,0.19,ciac,[]
+Conard,boys-basketball,9,12,0.429,ciac,[]
+Coventry,girls-basketball,20,2,0.909,ciac,[]
+Coventry,boys-basketball,14,8,0.636,ciac,[]
+Cromwell,girls-basketball,14,9,0.609,ciac,[]
+Cromwell,boys-basketball,20,3,0.87,ciac,[]
+Crosby,boys-basketball,12,11,0.522,ciac,[]
+Crosby,girls-basketball,11,10,0.524,ciac,[]
+Danbury,girls-basketball,14,7,0.667,ciac,[]
+Danbury,boys-basketball,2,18,0.1,ciac,[]
+Daniel Hand,boys-basketball,10,12,0.455,ciac,[]
+Daniel Hand,girls-basketball,17,6,0.739,ciac,[]
+Darien,boys-basketball,3,17,0.15,ciac,[]
+Darien,girls-basketball,9,12,0.429,ciac,[]
+Derby,girls-basketball,3,17,0.15,ciac,[]
+Derby,boys-basketball,1,19,0.05,ciac,[]
+Dover High School,boys-basketball,0,0,0.0,none,[]
+E.O. Smith,girls-basketball,9,13,0.409,ciac,[]
+E.O. Smith,boys-basketball,14,8,0.636,ciac,[]
+East Catholic,girls-basketball,20,3,0.87,ciac,[]
+East Catholic,boys-basketball,18,3,0.857,ciac,[]
+East Granby,boys-basketball,14,8,0.636,ciac,[]
+East Granby,girls-basketball,15,8,0.652,ciac,[]
+East Hampton,boys-basketball,8,14,0.364,ciac,[]
+East Hampton,girls-basketball,12,11,0.522,ciac,[]
+East Hartford,boys-basketball,21,2,0.913,ciac,[]
+East Hartford,girls-basketball,5,15,0.25,ciac,[]
+East Haven,boys-basketball,1,19,0.05,ciac,[]
+East Haven,girls-basketball,4,16,0.2,ciac,[]
+East Lyme,boys-basketball,4,16,0.2,ciac,[]
+East Lyme,girls-basketball,14,8,0.636,ciac,[]
+East Windsor,boys-basketball,7,13,0.35,ciac,[]
+East Windsor,girls-basketball,2,18,0.1,ciac,[]
+Ellington,girls-basketball,17,5,0.773,ciac,[]
+Ellington,boys-basketball,22,1,0.957,ciac,[]
+Ellis Tech,boys-basketball,11,10,0.524,ciac,[]
+Ellis Tech,girls-basketball,7,14,0.333,ciac,[]
+Enfield,girls-basketball,20,3,0.87,ciac,[]
+Enfield,boys-basketball,10,12,0.455,ciac,[]
+Fairfield Ludlowe,boys-basketball,17,5,0.773,ciac,[]
+Fairfield Ludlowe,girls-basketball,10,12,0.455,ciac,[]
+Fairfield Prep,boys-basketball,17,6,0.739,ciac,[]
+Fairfield Warde,girls-basketball,15,8,0.652,ciac,[]
+Fairfield Warde,boys-basketball,12,10,0.545,ciac,[]
+Farmington,boys-basketball,9,13,0.409,ciac,[]
+Farmington,girls-basketball,12,10,0.545,ciac,[]
+Fitch,boys-basketball,17,4,0.81,ciac,[]
+Fitch,girls-basketball,9,12,0.429,ciac,[]
+Foran,boys-basketball,9,14,0.391,ciac,[]
+Foran,girls-basketball,9,13,0.409,ciac,[]
+George Rogers Clark High Schoo,boys-basketball,0,0,0.0,none,[]
+Gilbert,boys-basketball,5,15,0.25,ciac,[]
+Gilbert,girls-basketball,8,14,0.364,ciac,[]
+Glastonbury,boys-basketball,14,9,0.609,ciac,[]
+Glastonbury,girls-basketball,4,15,0.211,ciac,[]
+Goodwin Tech,girls-basketball,7,14,0.333,ciac,[]
+Goodwin Tech,boys-basketball,0,20,0.0,ciac,[]
+Granby Memorial,boys-basketball,18,4,0.818,ciac,[]
+Granby Memorial,girls-basketball,13,8,0.619,ciac,[]
+Grasso Tech,boys-basketball,18,4,0.818,ciac,[]
+Grasso Tech,girls-basketball,1,17,0.056,ciac,[]
+Greater Lawrence Technical Sch,boys-basketball,0,0,0.0,none,[]
+Greater Lawrence Technical Sch,girls-basketball,0,0,0.0,none,[]
+Greenwich,girls-basketball,21,2,0.913,ciac,[]
+Greenwich,boys-basketball,7,11,0.389,ciac,[]
+Griswold,boys-basketball,17,5,0.773,ciac,[]
+Griswold,girls-basketball,13,10,0.565,ciac,[]
+Guilford,boys-basketball,6,14,0.3,ciac,[]
+Guilford,girls-basketball,13,10,0.565,ciac,[]
+HMTCA,boys-basketball,4,15,0.211,ciac,[]
+HMTCA/Bulkeley Girls Basketbal,girls-basketball,6,14,0.3,ciac,[]
+HPHS/University,girls-basketball,3,14,0.176,ciac,[]
+Haddam Killingworth,girls-basketball,16,8,0.667,ciac,[]
+Haddam Killingworth,boys-basketball,16,7,0.696,ciac,[]
+Haldane,boys-basketball,0,0,0.0,none,[]
+Hale Ray,girls-basketball,16,8,0.667,ciac,[]
+Hale Ray,boys-basketball,10,12,0.455,ciac,[]
+Hall,girls-basketball,10,11,0.476,ciac,[]
+Hall,boys-basketball,17,6,0.739,ciac,[]
+Hamden,girls-basketball,12,10,0.545,ciac,[]
+Hamden,boys-basketball,4,16,0.2,ciac,[]
+Harding,boys-basketball,7,13,0.35,ciac,[]
+Harding,girls-basketball,7,14,0.333,ciac,[]
+Hartford Public,boys-basketball,18,6,0.75,ciac,[]
+High School of Science & Techn,boys-basketball,0,0,0.0,none,[]
+Hillhouse,boys-basketball,15,8,0.652,ciac,[]
+Hillhouse,girls-basketball,16,7,0.696,ciac,[]
+Holy Cross,boys-basketball,13,7,0.65,ciac,[]
+Holy Cross,girls-basketball,12,10,0.545,ciac,[]
+Housatonic Regional,boys-basketball,4,14,0.222,ciac,[]
+Housatonic Regional,girls-basketball,10,12,0.455,ciac,[]
+Immaculate,girls-basketball,9,13,0.409,ciac,[]
+Immaculate,boys-basketball,5,15,0.25,ciac,[]
+Innovation,boys-basketball,10,12,0.455,ciac,[]
+Innovation,girls-basketball,17,6,0.739,ciac,[]
+International,boys-basketball,10,12,0.455,ciac,[]
+International Aerospace Bloomf,girls-basketball,19,5,0.792,ciac,[]
+Joel Barlow,girls-basketball,18,6,0.75,ciac,[]
+Joel Barlow,boys-basketball,13,10,0.565,ciac,[]
+John J. Duggan Academy,boys-basketball,0,0,0.0,none,[]
+Jonathan Law,boys-basketball,5,15,0.25,ciac,[]
+Jonathan Law,girls-basketball,9,13,0.409,ciac,[]
+KIPP NYC College Prep,boys-basketball,0,0,0.0,none,[]
+Kaynor Tech,boys-basketball,11,10,0.524,ciac,[]
+Kaynor Tech,girls-basketball,19,6,0.76,ciac,[]
+Kennedy,girls-basketball,5,15,0.25,ciac,[]
+Kennedy,boys-basketball,4,16,0.2,ciac,[]
+Killingly,boys-basketball,15,7,0.682,ciac,[]
+Killingly,girls-basketball,9,13,0.409,ciac,[]
+Kolbe Cathedral,boys-basketball,12,10,0.545,ciac,[]
+Kolbe Cathedral,girls-basketball,13,11,0.542,ciac,[]
+La Salle Academy,girls-basketball,0,0,0.0,none,[]
+La Salle Academy,boys-basketball,0,0,0.0,none,[]
+Lakeview,boys-basketball,0,0,0.0,none,[]
+Lakeview,girls-basketball,0,0,0.0,none,[]
+Lauralton Hall,girls-basketball,10,11,0.476,ciac,[]
+Ledyard,girls-basketball,20,4,0.833,ciac,[]
+Ledyard,boys-basketball,13,9,0.591,ciac,[]
+Lewis Mills,girls-basketball,17,6,0.739,ciac,[]
+Lewis Mills,boys-basketball,9,12,0.429,ciac,[]
+Libertas Academy Charter Schoo,boys-basketball,0,0,0.0,none,[]
+Longmeadow MA High School,boys-basketball,0,0,0.0,none,[]
+Lyman Hall,boys-basketball,7,13,0.35,ciac,[]
+Lyman Hall,girls-basketball,7,15,0.318,ciac,[]
+Lyman Memorial,boys-basketball,3,17,0.15,ciac,[]
+Lyman Memorial,girls-basketball,4,17,0.19,ciac,[]
+Lyme-Old Lyme,girls-basketball,0,0,0.0,none,[]
+Lyme-Old Lyme,boys-basketball,0,0,0.0,none,[]
+Maloney,girls-basketball,2,18,0.1,ciac,[]
+Maloney,boys-basketball,16,7,0.696,ciac,[]
+Manchester,girls-basketball,3,17,0.15,ciac,[]
+Manchester,boys-basketball,0,21,0.0,ciac,[]
+Masuk,boys-basketball,6,14,0.3,ciac,[]
+Masuk,girls-basketball,10,13,0.435,ciac,[]
+Medfield Senior High School,girls-basketball,0,0,0.0,none,[]
+Mercy,girls-basketball,20,2,0.909,ciac,[]
+Middletown,boys-basketball,11,11,0.5,ciac,[]
+Middletown,girls-basketball,1,19,0.05,ciac,[]
+Minnechaug Regional High Schoo,boys-basketball,0,0,0.0,none,[]
+Minnechaug Regional High Schoo,girls-basketball,0,0,0.0,none,[]
+Montville,girls-basketball,8,14,0.364,ciac,[]
+Montville,boys-basketball,11,11,0.5,ciac,[]
+Morgan,boys-basketball,8,14,0.364,ciac,[]
+Morgan,girls-basketball,22,2,0.917,ciac,[]
+NFA,girls-basketball,7,16,0.304,ciac,[]
+NFA,boys-basketball,12,10,0.545,ciac,[]
+Naugatuck,boys-basketball,12,10,0.545,ciac,[]
+Naugatuck,girls-basketball,11,11,0.5,ciac,[]
+New Britain,boys-basketball,11,11,0.5,ciac,[]
+New Britain,girls-basketball,19,3,0.864,ciac,[]
+New Canaan,boys-basketball,16,6,0.727,ciac,[]
+New Canaan,girls-basketball,10,11,0.476,ciac,[]
+New Fairfield,boys-basketball,13,10,0.565,ciac,[]
+New Fairfield,girls-basketball,6,15,0.286,ciac,[]
+New London,boys-basketball,14,3,0.824,ciac,[]
+New London,girls-basketball,15,6,0.714,ciac,[]
+New Milford,boys-basketball,9,13,0.409,ciac,[]
+New Milford,girls-basketball,10,12,0.455,ciac,[]
+New Mission High School,boys-basketball,0,0,0.0,none,[]
+Newington,girls-basketball,9,12,0.429,ciac,[]
+Newington,boys-basketball,19,4,0.826,ciac,[]
+Newtown,girls-basketball,13,8,0.619,ciac,[]
+Newtown,boys-basketball,13,9,0.591,ciac,[]
+Nonnewaug,boys-basketball,19,3,0.864,ciac,[]
+Nonnewaug,girls-basketball,15,7,0.682,ciac,[]
+North Branford,boys-basketball,14,8,0.636,ciac,[]
+North Branford,girls-basketball,17,7,0.708,ciac,[]
+North Haven,boys-basketball,19,1,0.95,ciac,[]
+North Haven,girls-basketball,18,5,0.783,ciac,[]
+North Kingstown High School,girls-basketball,0,0,0.0,none,[]
+Northwest Catholic,boys-basketball,20,3,0.87,ciac,[]
+Northwest Catholic,girls-basketball,24,0,1.0,ciac,[]
+Northwestern,boys-basketball,12,11,0.522,ciac,[]
+Northwestern,girls-basketball,9,12,0.429,ciac,[]
+Norwalk,girls-basketball,3,17,0.15,ciac,[]
+Norwalk,boys-basketball,6,14,0.3,ciac,[]
+Norwich Tech,boys-basketball,6,14,0.3,ciac,[]
+Norwich Tech,girls-basketball,17,7,0.708,ciac,[]
+Notre Dame Prep,girls-basketball,0,0,0.0,none,[]
+Notre Dame Prep,boys-basketball,0,0,0.0,none,[]
+Notre Dame-West Haven,boys-basketball,17,0,1.0,ciac,[]
+Notre Dame-West Haven,girls-basketball,0,0,0.0,ciac,[]
+O'Brien Tech,boys-basketball,10,13,0.435,ciac,[]
+O'Brien Tech,girls-basketball,2,19,0.095,ciac,[]
+Old Saybrook,girls-basketball,5,15,0.25,ciac,[]
+Old Saybrook,boys-basketball,11,12,0.478,ciac,[]
+Olympia High School,boys-basketball,0,0,0.0,none,[]
+Oxford,boys-basketball,6,14,0.3,ciac,[]
+Oxford,girls-basketball,10,12,0.455,ciac,[]
+Parish Hill,boys-basketball,0,0,0.0,none,[]
+Parish Hill,girls-basketball,0,0,0.0,none,[]
+Pittsfield High School,girls-basketball,0,0,0.0,none,[]
+Plainfield,boys-basketball,14,8,0.636,ciac,[]
+Plainfield,girls-basketball,20,4,0.833,ciac,[]
+Plainville,boys-basketball,3,17,0.15,ciac,[]
+Plainville,girls-basketball,15,9,0.625,ciac,[]
+Platt,girls-basketball,10,12,0.455,ciac,[]
+Platt,boys-basketball,18,4,0.818,ciac,[]
+Platt Tech,boys-basketball,7,13,0.35,ciac,[]
+Platt Tech,girls-basketball,5,15,0.25,ciac,[]
+Pomperaug,boys-basketball,1,19,0.05,ciac,[]
+Pomperaug,girls-basketball,10,12,0.455,ciac,[]
+Pope Francis Preparatory Schoo,boys-basketball,0,0,0.0,none,[]
+Portland,boys-basketball,7,13,0.35,ciac,[]
+Portland,girls-basketball,10,13,0.435,ciac,[]
+Prince Tech,boys-basketball,3,17,0.15,ciac,[]
+Prince Tech,girls-basketball,19,5,0.792,ciac,[]
+Putnam,boys-basketball,11,10,0.524,ciac,[]
+Putnam,girls-basketball,0,21,0.0,ciac,[]
+RHAM,boys-basketball,11,11,0.5,ciac,[]
+RHAM,girls-basketball,9,13,0.409,ciac,[]
+Ramapo High School,boys-basketball,0,0,0.0,none,[]
+Ridgefield,boys-basketball,18,6,0.75,ciac,[]
+Ridgefield,girls-basketball,11,8,0.579,ciac,[]
+Ridgewood High School,girls-basketball,0,0,0.0,none,[]
+Rockville,girls-basketball,8,16,0.333,ciac,[]
+Rockville,boys-basketball,7,13,0.35,ciac,[]
+Rocky Hill,girls-basketball,22,2,0.917,ciac,[]
+Rocky Hill,boys-basketball,1,19,0.05,ciac,[]
+Rome Free Academy,girls-basketball,0,0,0.0,none,[]
+SMSA,boys-basketball,21,3,0.875,ciac,[]
+SMSA,girls-basketball,16,6,0.727,ciac,[]
+Sacred Heart Academy,girls-basketball,0,0,0.0,none,[]
+Seymour,girls-basketball,23,2,0.92,ciac,[]
+Seymour,boys-basketball,4,16,0.2,ciac,[]
+Shaker High School,boys-basketball,0,0,0.0,none,[]
+Sheehan,boys-basketball,14,9,0.609,ciac,[]
+Sheehan,girls-basketball,19,5,0.792,ciac,[]
+Shelton,girls-basketball,5,15,0.25,ciac,[]
+Shelton,boys-basketball,16,7,0.696,ciac,[]
+Shepaug Valley,girls-basketball,4,16,0.2,ciac,[]
+Shepaug Valley,boys-basketball,17,8,0.68,ciac,[]
+Simsbury,girls-basketball,4,16,0.2,ciac,[]
+Simsbury,boys-basketball,9,12,0.429,ciac,[]
+Socastee High School,boys-basketball,0,0,0.0,none,[]
+Somers,girls-basketball,7,14,0.333,ciac,[]
+Somers,boys-basketball,14,7,0.667,ciac,[]
+South Kingstown High School,girls-basketball,0,0,0.0,none,[]
+South Kingstown High School,boys-basketball,0,0,0.0,none,[]
+South Windsor,boys-basketball,10,11,0.476,ciac,[]
+South Windsor,girls-basketball,17,5,0.773,ciac,[]
+Southington,boys-basketball,13,9,0.591,ciac,[]
+Southington,girls-basketball,16,7,0.696,ciac,[]
+Springfield Central High Schoo,girls-basketball,0,0,0.0,none,[]
+Springfield Central High Schoo,boys-basketball,0,0,0.0,none,[]
+Springfield International Char,boys-basketball,10,12,0.455,ciac,[]
+St. Anthony's High School NY,boys-basketball,0,0,0.0,none,[]
+St. Bernard,boys-basketball,8,9,0.471,ciac,[]
+St. Bernard,girls-basketball,12,12,0.5,ciac,[]
+St. John The Baptist High Scho,boys-basketball,0,0,0.0,none,[]
+St. Joseph,boys-basketball,7,12,0.368,ciac,[]
+St. Joseph,girls-basketball,14,9,0.609,ciac,[]
+St. Paul Catholic,boys-basketball,16,8,0.667,ciac,[]
+St. Paul Catholic,girls-basketball,5,16,0.238,ciac,[]
+St. Thomas Aquinas,boys-basketball,0,0,0.0,none,[]
+Stafford,boys-basketball,18,3,0.857,ciac,[]
+Stafford,girls-basketball,2,19,0.095,ciac,[]
+Stamford,boys-basketball,12,11,0.522,ciac,[]
+Stamford,girls-basketball,16,6,0.727,ciac,[]
+Staples,boys-basketball,18,0,1.0,ciac,[]
+Staples,girls-basketball,21,2,0.913,ciac,[]
+Stonington,girls-basketball,16,6,0.727,ciac,[]
+Stonington,boys-basketball,12,5,0.706,ciac,[]
+Stratford,boys-basketball,19,4,0.826,ciac,[]
+Stratford,girls-basketball,1,19,0.05,ciac,[]
+Suffield,girls-basketball,20,2,0.909,ciac,[]
+Suffield,boys-basketball,11,12,0.478,ciac,[]
+Taconic High School,boys-basketball,0,0,0.0,none,[]
+Terryville,boys-basketball,13,8,0.619,ciac,[]
+Terryville,girls-basketball,1,19,0.05,ciac,[]
+The Stony Brook School,boys-basketball,0,0,0.0,none,[]
+Thomas Edison Voc Tech High Sc,boys-basketball,0,0,0.0,none,[]
+Thomaston,girls-basketball,16,5,0.762,ciac,[]
+Thomaston,boys-basketball,10,13,0.435,ciac,[]
+Tolland,girls-basketball,8,13,0.381,ciac,[]
+Tolland,boys-basketball,4,13,0.235,ciac,[]
+Torrington,boys-basketball,11,12,0.478,ciac,[]
+Torrington,girls-basketball,15,8,0.652,ciac,[]
+Tourtellotte,girls-basketball,4,17,0.19,ciac,[]
+Tourtellotte,boys-basketball,1,19,0.05,ciac,[]
+Trumbull,boys-basketball,20,3,0.87,ciac,[]
+Trumbull,girls-basketball,19,3,0.864,ciac,[]
+University,boys-basketball,2,14,0.125,ciac,[]
+Valley Regional,boys-basketball,10,12,0.455,ciac,[]
+Valley Regional,girls-basketball,5,15,0.25,ciac,[]
+Vinal Tech,boys-basketball,13,10,0.565,ciac,[]
+Vinal Tech,girls-basketball,6,14,0.3,ciac,[]
+WCA,boys-basketball,10,13,0.435,ciac,[]
+WCA,girls-basketball,1,19,0.05,ciac,[]
+Waterford,girls-basketball,11,12,0.478,ciac,[]
+Waterford,boys-basketball,4,15,0.211,ciac,[]
+Watertown,girls-basketball,6,15,0.286,ciac,[]
+Watertown,boys-basketball,13,10,0.565,ciac,[]
+Weaver,boys-basketball,11,9,0.55,ciac,[]
+Weaver,girls-basketball,20,3,0.87,ciac,[]
+West Haven,boys-basketball,22,0,1.0,ciac,[]
+West Haven,girls-basketball,17,8,0.68,ciac,[]
+Westbrook,girls-basketball,12,10,0.545,ciac,[]
+Westbrook,boys-basketball,1,19,0.05,ciac,[]
+Westerly RI High School,boys-basketball,0,0,0.0,none,[]
+Westerly RI High School,girls-basketball,0,0,0.0,none,[]
+Westhill,girls-basketball,2,18,0.1,ciac,[]
+Westhill,boys-basketball,12,9,0.571,ciac,[]
+Westlake High School,boys-basketball,0,0,0.0,none,[]
+Weston,girls-basketball,6,16,0.273,ciac,[]
+Weston,boys-basketball,9,14,0.391,ciac,[]
+Wethersfield,girls-basketball,8,13,0.381,ciac,[]
+Wethersfield,boys-basketball,8,13,0.381,ciac,[]
+Wheeler,boys-basketball,6,15,0.286,ciac,[]
+Wheeler,girls-basketball,16,8,0.667,ciac,[]
+White Plains High School,girls-basketball,0,0,0.0,none,[]
+Whitney Tech,boys-basketball,10,11,0.476,ciac,[]
+Whitney Tech,girls-basketball,15,8,0.652,ciac,[]
+Wilbur Cross,girls-basketball,1,19,0.05,ciac,[]
+Wilbur Cross,boys-basketball,8,14,0.364,ciac,[]
+Wilby,boys-basketball,19,4,0.826,ciac,[]
+Wilby,girls-basketball,14,7,0.667,ciac,[]
+Wilcox Tech,girls-basketball,17,3,0.85,ciac,[]
+Wilcox Tech,boys-basketball,3,17,0.15,ciac,[]
+Wilton,boys-basketball,8,12,0.4,ciac,[]
+Wilton,girls-basketball,4,16,0.2,ciac,[]
+Windham,girls-basketball,3,17,0.15,ciac,[]
+Windham,boys-basketball,4,16,0.2,ciac,[]
+Windham Tech,boys-basketball,18,5,0.783,ciac,[]
+Windham Tech,girls-basketball,9,14,0.391,ciac,[]
+Windsor,girls-basketball,14,8,0.636,ciac,[]
+Windsor,boys-basketball,20,2,0.909,ciac,[]
+Windsor Locks,boys-basketball,8,14,0.364,ciac,[]
+Windsor Locks,girls-basketball,7,15,0.318,ciac,[]
+Wolcott,boys-basketball,5,15,0.25,ciac,[]
+Wolcott,girls-basketball,5,15,0.25,ciac,[]
+Wolcott Tech,boys-basketball,5,15,0.25,ciac,[]
+Wolcott Tech,girls-basketball,1,19,0.05,ciac,[]
+Woodland,girls-basketball,10,12,0.455,ciac,[]
+Woodland,boys-basketball,24,0,1.0,ciac,[]
+Woodstock Academy,boys-basketball,11,11,0.5,ciac,[]
+Woodstock Academy,girls-basketball,19,4,0.826,ciac,[]
+Wright Tech,boys-basketball,1,17,0.056,ciac,[]
+Wright Tech,girls-basketball,6,15,0.286,ciac,[]
+Xavier,boys-basketball,15,8,0.652,ciac,[]

@@ -56,19 +56,19 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .date-hdr::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
 /* GENDER BADGE */
-.gender-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-bottom:3px}
+.gender-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:3px}
 .gender-badge.boys{background:rgba(37,99,212,.25);color:#93c5fd;border:1px solid rgba(37,99,212,.4)}
 .gender-badge.girls{background:rgba(192,38,211,.22);color:#e879f9;border:1px solid rgba(192,38,211,.4)}
 
 /* GAME CARD */
 .game-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
 .game-card:hover{border-color:rgba(255,255,255,.14)}
-/* Subtle left accent by gender */
 .game-card.boys{border-left:3px solid var(--boys)}
 .game-card.girls{border-left:3px solid var(--girls)}
 
-/* Card header row — clickable */
-.card-inner{padding:14px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* Card header row */
+.card-top{padding:6px 18px 0;display:flex;justify-content:center}
+.card-inner{padding:6px 18px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .team-col{display:flex;flex-direction:column;gap:2px}
 .team-col.right{text-align:right;align-items:flex-end}
 .team-name{font-family:var(--fd);font-size:clamp(.85rem,2.5vw,1.08rem);font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1.2}
@@ -125,6 +125,21 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .common-result{font-family:var(--fd);font-size:.72rem;font-weight:700;white-space:nowrap}
 .common-result.W{color:#4ade80}.common-result.L{color:var(--red)}.common-result.N{color:var(--gray)}
 .no-common{font-size:.75rem;color:var(--gray);font-style:italic;padding:4px 0}
+
+/* PLAYER STATS */
+.players-section{margin-top:14px}
+.players-hdr-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.players-hdr{font-family:var(--fd);font-size:.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold)}
+.players-select{background:var(--surf2);border:1px solid var(--bdr);border-radius:5px;color:var(--white);font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:.5px;padding:4px 10px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none}
+.players-select:focus{border-color:var(--blue-b)}
+.players-table{width:100%;border-collapse:collapse}
+.players-table th{font-family:var(--fd);font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);padding:4px 8px;text-align:right;border-bottom:1px solid var(--bdr)}
+.players-table th:first-child{text-align:left}
+.players-table td{font-family:var(--fd);font-size:.8rem;font-weight:600;padding:5px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--gray-l)}
+.players-table td:first-child{text-align:left;color:var(--white)}
+.players-table tr:last-child td{border-bottom:none}
+.players-table .stat-hi{color:var(--gold)}
+.no-players{font-size:.75rem;color:var(--gray);font-style:italic;padding:4px 0}
 
 /* VIDEO REPLAY */
 .replay-row{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -343,9 +358,14 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 // ═══════════════════════════════════════════════════════════════════════════════
 let games = [], preds = {}, uv = JSON.parse(sessionStorage.getItem("uv") || "{}");
 
+// teamRecords[sport][normalizedName] = { wins, losses, pct, players: [...] }
+let teamRecords = {};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // EASTERN TIME HELPERS
 // All date operations use America/New_York (auto-handles EST ↔ EDT).
+// CSV datetimes are naive local strings — we must NEVER call toISOString()
+// (which converts to UTC) when comparing against them.
 // ═══════════════════════════════════════════════════════════════════════════════
 const ET_LOCALE = "en-US";
 const ET_TZ     = "America/New_York";
@@ -357,7 +377,9 @@ function todayET() {
     .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2");
 }
 
-/** Parse CSV datetime string "MM/DD/YYYY HH:MM:SS" as a JS Date (local). */
+/** Parse CSV datetime string "MM/DD/YYYY HH:MM:SS" as a local JS Date.
+ *  The CSV stores naive ET strings so we construct the Date as local,
+ *  then always compare using tds() which also uses ET. */
 function parseGD(s) {
   if (!s) return null;
   const [dp, tp = "00:00:00"] = s.trim().split(" ");
@@ -366,15 +388,13 @@ function parseGD(s) {
   return new Date(+y, +m - 1, +d, +h, +mn);
 }
 
-/** "YYYY-MM-DD" from a JS Date using Eastern time zone. */
-function tdsET(d) {
+/** "YYYY-MM-DD" in Eastern time from any JS Date.
+ *  Used for ALL date comparisons — never use toISOString() which gives UTC. */
+function tds(d) {
   return d.toLocaleDateString(ET_LOCALE, { timeZone: ET_TZ,
     year: "numeric", month: "2-digit", day: "2-digit" })
     .replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2");
 }
-
-/** "YYYY-MM-DD" from a JS Date using local time (for CSV dates which are naive). */
-function tds(d) { return d.toISOString().slice(0, 10); }
 
 function fmtT(d) {
   let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? "PM" : "AM";
@@ -413,7 +433,6 @@ function splitCSVLine(line) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GENDER HELPER
-// Detects Boys / Girls from the header field.
 // ═══════════════════════════════════════════════════════════════════════════════
 function genderOf(header) {
   const h = (header || "").toLowerCase();
@@ -430,7 +449,46 @@ function genderBadge(header) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STATS ENGINE
+// TEAM RECORDS (from team_records.csv)
+// ═══════════════════════════════════════════════════════════════════════════════
+function normalize(name) {
+  return (name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function loadTeamRecords(rows) {
+  teamRecords = {};
+  rows.forEach(r => {
+    const sport = (r.sport || "").trim();
+    const key   = normalize(r.team);
+    if (!key) return;
+    let players = [];
+    try { players = JSON.parse(r.players || "[]"); } catch (_) {}
+    if (!teamRecords[sport]) teamRecords[sport] = {};
+    teamRecords[sport][key] = {
+      wins:    parseInt(r.wins)   || 0,
+      losses:  parseInt(r.losses) || 0,
+      pct:     parseFloat(r.pct)  || 0,
+      players: players,
+    };
+  });
+}
+
+function getTeamRecord(header, teamName) {
+  const sport = header.toLowerCase().includes("girls")
+    ? "girls-basketball" : "boys-basketball";
+  const bucket = teamRecords[sport];
+  if (!bucket) return null;
+  const norm = normalize(teamName);
+  if (bucket[norm]) return bucket[norm];
+  // partial match
+  for (const k in bucket) {
+    if (norm.includes(k) || k.includes(norm)) return bucket[k];
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATS ENGINE  (used for PPG, SOS, common opponents — computed from CSV games)
 // ═══════════════════════════════════════════════════════════════════════════════
 let teamStats = {};
 
@@ -515,7 +573,6 @@ function voteOpen(g) {
 }
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function fmt1(n) { return (n === null || isNaN(n)) ? "—" : n.toFixed(1); }
-/** SOS displayed as a plain decimal (e.g. 0.621), not a percentage. */
 function fmtDec(n) { return (n === null || isNaN(n)) ? "—" : n.toFixed(3); }
 function fmtPct(n) { return (n === null || isNaN(n)) ? "—" : (n * 100).toFixed(1) + "%"; }
 function barWidths(a, b) {
@@ -525,8 +582,7 @@ function barWidths(a, b) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VIDEO REPLAY SEARCH
-// Builds a YouTube search URL for the game. The user clicks through to YouTube.
+// VIDEO REPLAY
 // ═══════════════════════════════════════════════════════════════════════════════
 function replaySearchUrl(g) {
   const q = encodeURIComponent(`${g.home_team} vs ${g.away_team} basketball`);
@@ -534,7 +590,6 @@ function replaySearchUrl(g) {
 }
 
 function buildReplayRow(g) {
-  // Only show for final games
   if (g.status !== "final") return "";
   const url = replaySearchUrl(g);
   return `<div class="replay-row">
@@ -547,12 +602,78 @@ function buildReplayRow(g) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PLAYER STATS PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildPlayersPanel(g) {
+  const hRec = getTeamRecord(g.header, g.home_team);
+  const aRec = getTeamRecord(g.header, g.away_team);
+  const hPlayers = (hRec && hRec.players && hRec.players.length) ? hRec.players : null;
+  const aPlayers = (aRec && aRec.players && aRec.players.length) ? aRec.players : null;
+
+  if (!hPlayers && !aPlayers) return "";
+
+  const panelId  = "pl_" + g.game_id.replace(/[^a-z0-9]/gi, "_");
+  const selectId = "plsel_" + g.game_id.replace(/[^a-z0-9]/gi, "_");
+
+  const buildTable = (players) => {
+    if (!players || !players.length) return `<div class="no-players">No player stats available.</div>`;
+    // Find max values for highlighting
+    const maxPPG = Math.max(...players.map(p => p.ppg || 0));
+    const rows = players.map(p => {
+      const ppgHi = p.ppg !== null && p.ppg === maxPPG ? ' class="stat-hi"' : '';
+      return `<tr>
+        <td>${esc(p.name || "—")}</td>
+        <td${ppgHi}>${p.ppg !== null ? p.ppg.toFixed(1) : "—"}</td>
+        <td>${p.rpg !== null ? p.rpg.toFixed(1) : "—"}</td>
+        <td>${p.apg !== null ? p.apg.toFixed(1) : "—"}</td>
+      </tr>`;
+    }).join("");
+    return `<table class="players-table">
+      <thead><tr>
+        <th>Player</th><th>PPG</th><th>RPG</th><th>APG</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  };
+
+  const homeOpt = hPlayers ? `<option value="home">${esc(g.home_team)}</option>` : "";
+  const awayOpt = aPlayers ? `<option value="away">${esc(g.away_team)}</option>` : "";
+  // Default to first available team
+  const defaultTeam = hPlayers ? "home" : "away";
+  const defaultTable = buildTable(defaultTeam === "home" ? hPlayers : aPlayers);
+
+  return `<div class="players-section">
+    <div class="players-hdr-row">
+      <span class="players-hdr">Top Players</span>
+      <select class="players-select" id="${selectId}"
+        onchange="(function(sel){
+          var pid='${panelId}';
+          var hP=${hPlayers ? JSON.stringify(hPlayers) : 'null'};
+          var aP=${aPlayers ? JSON.stringify(aPlayers) : 'null'};
+          var players=sel.value==='home'?hP:aP;
+          var el=document.getElementById(pid);
+          if(!el)return;
+          if(!players||!players.length){el.innerHTML='<div class=\\'no-players\\'>No player stats available.</div>';return;}
+          var maxPPG=Math.max.apply(null,players.map(function(p){return p.ppg||0;}));
+          el.innerHTML='<table class=\\'players-table\\'><thead><tr><th>Player</th><th>PPG</th><th>RPG</th><th>APG</th></tr></thead><tbody>'+
+            players.map(function(p){
+              var hi=p.ppg!==null&&p.ppg===maxPPG?' class=\\'stat-hi\\'':'';
+              return '<tr><td>'+(p.name||'—')+'</td><td'+hi+'>'+(p.ppg!==null?p.ppg.toFixed(1):'—')+'</td><td>'+(p.rpg!==null?p.rpg.toFixed(1):'—')+'</td><td>'+(p.apg!==null?p.apg.toFixed(1):'—')+'</td></tr>';
+            }).join('')+'</tbody></table>';
+        })(this)">
+        ${homeOpt}${awayOpt}
+      </select>
+    </div>
+    <div id="${panelId}">${defaultTable}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RENDER SCORES FOR A DATE
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderScores(date) {
   const ctr = document.getElementById("scoresCtr");
   ctr.innerHTML = "";
-  // Use tds() on naive CSV dates (no timezone offset needed since they're already local)
   const ds = tds(date);
   const gs = games.filter(g => { const d = parseGD(g.game_datetime); return d && tds(d) === ds; });
   if (!gs.length) { ctr.innerHTML = `<div class="no-games">No games scheduled for this date.</div>`; return; }
@@ -585,6 +706,13 @@ function renderCard(g, ctr) {
   const hr = g.home_rank && g.home_rank !== "NR" ? `<span class="rank-b">#${esc(g.home_rank)}</span>` : "";
   const ar = g.away_rank && g.away_rank !== "NR" ? `<span class="rank-b">#${esc(g.away_rank)}</span>` : "";
 
+  // Use record from CSV row directly — these are authoritative (updateRecords.py keeps them correct)
+  // Fall back to team_records.csv lookup for teams where the row field is blank
+  let hRec = g.home_record || "";
+  let aRec = g.away_record || "";
+  if (!hRec) { const tr = getTeamRecord(g.header, g.home_team); if (tr) hRec = tr.wins + "-" + tr.losses; }
+  if (!aRec) { const tr = getTeamRecord(g.header, g.away_team); if (tr) aRec = tr.wins + "-" + tr.losses; }
+
   let scoreCtr = "";
   if (fin) {
     const cap = g.caption ? `<div class="cap-b">${esc(g.caption)}</div>` : "";
@@ -598,19 +726,13 @@ function renderCard(g, ctr) {
                 <div class="sport-sub">${esc(g.header || "")}</div>`;
   }
 
-  const hst = getStat(g.header, g.home_team);
-  const ast = getStat(g.header, g.away_team);
-  const hRec = hst ? `${hst.wins}-${hst.losses}` : "";
-  const aRec = ast ? `${ast.wins}-${ast.losses}` : "";
-
-  // Gender badge shown on the score centre block for finished games,
-  // and on team columns for scheduled games so it's always visible
+  // Gender badge sits in its own top row, centred, above the score grid
   const badge = genderBadge(g.header);
 
   card.innerHTML = `
+    ${badge ? `<div class="card-top">${badge}</div>` : ""}
     <div class="card-inner">
       <div class="team-col">
-        ${badge ? `<div>${badge}</div>` : ""}
         <div class="team-name ${hw?"W":aw?"L":"N"}">${hr}${esc(g.home_team)}</div>
         <div class="team-rec">${esc(hRec)}</div>
       </div>
@@ -671,8 +793,16 @@ function buildStatsPanel(g) {
   const aDiff = aPPG - aOPPG;
   const hSOS  = calcSOS(g.header, g.home_team);
   const aSOS  = calcSOS(g.header, g.away_team);
-  const hWPct = hst && (hst.wins + hst.losses) ? hst.wins / (hst.wins + hst.losses) : NaN;
-  const aWPct = ast && (ast.wins + ast.losses) ? ast.wins / (ast.wins + ast.losses) : NaN;
+
+  // Win % comes from authoritative team_records.csv if available, else local
+  const hTR   = getTeamRecord(g.header, g.home_team);
+  const aTR   = getTeamRecord(g.header, g.away_team);
+  const hWPct = hTR ? hTR.pct : (hst && (hst.wins + hst.losses) ? hst.wins / (hst.wins + hst.losses) : NaN);
+  const aWPct = aTR ? aTR.pct : (ast && (ast.wins + ast.losses) ? ast.wins / (ast.wins + ast.losses) : NaN);
+
+  // Authoritative records from CSV row, with team_records.csv fallback
+  const hRecStr = g.home_record || (hTR ? hTR.wins + "-" + hTR.losses : (hst ? hst.wins + "-" + hst.losses : "—"));
+  const aRecStr = g.away_record || (aTR ? aTR.wins + "-" + aTR.losses : (ast ? ast.wins + "-" + ast.losses : "—"));
 
   const [ppgH, ppgA] = barWidths(hPPG, aPPG);
   const [sosH, sosA] = barWidths(hSOS, aSOS);
@@ -700,7 +830,7 @@ function buildStatsPanel(g) {
   return `<div class="stats-panel">
     <div class="stats-grid">
       <div class="stats-col left">
-        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${hst ? hst.wins+"-"+hst.losses : "—"}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${esc(hRecStr)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Win %</div><div class="stat-val">${fmtPct(hWPct)}</div></div>
         <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(hPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(hOPPG)}</div></div>
@@ -709,7 +839,7 @@ function buildStatsPanel(g) {
         <div class="stat-row"><div class="stat-lbl">Games Played</div><div class="stat-val">${gH || "—"}</div></div>
       </div>
       <div class="stats-col right">
-        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${ast ? ast.wins+"-"+ast.losses : "—"}</div></div>
+        <div class="stat-row"><div class="stat-lbl">Record</div><div class="stat-val">${esc(aRecStr)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Win %</div><div class="stat-val">${fmtPct(aWPct)}</div></div>
         <div class="stat-row"><div class="stat-lbl">PPG</div><div class="stat-val">${fmt1(aPPG)}</div></div>
         <div class="stat-row"><div class="stat-lbl">Opp PPG</div><div class="stat-val">${fmt1(aOPPG)}</div></div>
@@ -744,6 +874,7 @@ function buildStatsPanel(g) {
     <hr class="stats-divider">
     <div class="common-hdr">Common Opponents</div>
     ${commonHTML}
+    ${buildPlayersPanel(g)}
     ${buildReplayRow(g)}
   </div>`;
 }
@@ -770,7 +901,7 @@ function vote(gid, team) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TICKER — today's games, using Eastern time
+// TICKER
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderTicker() {
   const tk = document.getElementById("ticker");
@@ -798,13 +929,15 @@ function renderTicker() {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function loadData() {
   try {
-    const [mr, pr] = await Promise.allSettled([
-      fetch("master_games.csv?" + Date.now()),
-      fetch("predictions.csv?" + Date.now()),
+    const [mr, pr, rr] = await Promise.allSettled([
+      fetch("master_games.csv?"  + Date.now()),
+      fetch("predictions.csv?"   + Date.now()),
+      fetch("team_records.csv?"  + Date.now()),
     ]);
     if (mr.status === "fulfilled" && mr.value.ok) {
       games = parseCSV(await mr.value.text()).filter(r => r.game_id);
     } else { games = seedGames(); }
+
     if (pr.status === "fulfilled" && pr.value.ok) {
       parseCSV(await pr.value.text()).filter(r => r.vote_id).forEach(v => {
         if (!preds[v.game_id]) preds[v.game_id] = { home:0, away:0 };
@@ -812,12 +945,15 @@ async function loadData() {
         else preds[v.game_id].away++;
       });
     }
+
+    if (rr.status === "fulfilled" && rr.value.ok) {
+      loadTeamRecords(parseCSV(await rr.value.text()));
+    }
   } catch (_) { games = seedGames(); }
 
   buildTeamStats();
   buildSel();
 
-  // Default date picker to today in Eastern time
   const etToday = todayET();
   document.getElementById("gameDate").value = etToday;
   const [y, m, d] = etToday.split("-").map(Number);
@@ -827,11 +963,11 @@ async function loadData() {
 
 function seedGames() {
   return [
-    { game_id:"g1", header:"CIAC Boys Basketball",  home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
-    { game_id:"g2", header:"CIAC Boys Basketball",  home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g3", header:"CIAC Girls Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
-    { game_id:"g4", header:"CIAC Girls Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:00:00", status:"scheduled", caption:"" },
-    { game_id:"g5", header:"CIAC Boys Basketball",  home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   game_datetime:"03/06/2026 19:30:00", status:"scheduled", caption:"" },
+    { game_id:"g1", header:"CIAC Boys Basketball",  home_team:"Daniel Hand",    away_team:"Wilbur Cross",   home_rank:"NR", away_rank:"NR", home_score:"59", away_score:"53", home_record:"14-8", away_record:"11-11", game_datetime:"03/04/2026 18:00:00", status:"final",     caption:"FINAL" },
+    { game_id:"g2", header:"CIAC Boys Basketball",  home_team:"Bristol Eastern", away_team:"Foran",          home_rank:"NR", away_rank:"NR", home_score:"47", away_score:"50", home_record:"9-13", away_record:"15-7",  game_datetime:"03/04/2026 18:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g3", header:"CIAC Girls Basketball", home_team:"Staples",         away_team:"Ridgefield",     home_rank:"2",  away_rank:"NR", home_score:"62", away_score:"48", home_record:"18-4", away_record:"12-10", game_datetime:"03/04/2026 19:30:00", status:"final",     caption:"FINAL" },
+    { game_id:"g4", header:"CIAC Girls Basketball", home_team:"Shelton",         away_team:"Amity Regional", home_rank:"NR", away_rank:"3",  home_score:"",   away_score:"",   home_record:"",     away_record:"",      game_datetime:"03/11/2026 19:00:00", status:"scheduled", caption:"" },
+    { game_id:"g5", header:"CIAC Boys Basketball",  home_team:"Glastonbury",     away_team:"South Windsor",  home_rank:"1",  away_rank:"NR", home_score:"",   away_score:"",   home_record:"",     away_record:"",      game_datetime:"03/11/2026 19:30:00", status:"scheduled", caption:"" },
   ];
 }
 
@@ -864,7 +1000,7 @@ function buildSel() {
   sel.innerHTML = `<option value="">— Select a game —</option>`;
   games.forEach(g => {
     const d  = parseGD(g.game_datetime);
-    const ds = d ? d.toLocaleDateString(ET_LOCALE, { month:"short", day:"numeric" }) : "";
+    const ds = d ? d.toLocaleDateString(ET_LOCALE, { month:"short", day:"numeric", timeZone: ET_TZ }) : "";
     const o  = document.createElement("option");
     o.value       = g.game_id;
     o.textContent = `${ds} — ${g.home_team} vs ${g.away_team}`;
@@ -922,13 +1058,22 @@ document.getElementById("subBtn").addEventListener("click", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AUTO-REFRESH (Eastern time aware)
+// AUTO-REFRESH
 // ═══════════════════════════════════════════════════════════════════════════════
 setInterval(async () => {
   try {
-    const r = await fetch("master_games.csv?" + Date.now());
-    if (r.ok) { games = parseCSV(await r.text()).filter(x => x.game_id); buildTeamStats(); }
+    const [mr, rr] = await Promise.allSettled([
+      fetch("master_games.csv?"  + Date.now()),
+      fetch("team_records.csv?"  + Date.now()),
+    ]);
+    if (mr.status === "fulfilled" && mr.value.ok) {
+      games = parseCSV(await mr.value.text()).filter(x => x.game_id);
+    }
+    if (rr.status === "fulfilled" && rr.value.ok) {
+      loadTeamRecords(parseCSV(await rr.value.text()));
+    }
   } catch (_) {}
+  buildTeamStats();
   const v = document.getElementById("gameDate").value;
   if (v) { const [y, m, d] = v.split("-").map(Number); renderScores(new Date(y, m - 1, d)); }
   renderTicker();
@@ -936,9 +1081,6 @@ setInterval(async () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MULTI-STREAM WIDGET
-// Caching is handled server-side (Cloudflare edge, 10-min TTL) in youtube-proxy.js.
-// The frontend polls every 3 minutes only when the tab is visible; the proxy
-// serves cached results so no extra YouTube API quota is spent between refreshes.
 // ═══════════════════════════════════════════════════════════════════════════════
 (function () {
   const PROXY_BASE = "https://nutmeg-youtube-proxy.thefriendlystudent.workers.dev";
@@ -981,8 +1123,6 @@ setInterval(async () => {
     const kwMap  = {}; CHANNELS.forEach(c => { if (c.keywords?.length) kwMap[c.channelId] = c.keywords; });
     const kwParam = Object.keys(kwMap).length ? "&keywords=" + encodeURIComponent(JSON.stringify(kwMap)) : "";
     try {
-      // Omit timestamp from URL so the Cloudflare edge cache can be hit.
-      // The proxy's 10-minute Cache-Control handles freshness server-side.
       const res = await fetch(`${PROXY_BASE}/livestreams?ids=${encodeURIComponent(ids)}${kwParam}`);
       if (!res.ok) throw new Error(`Proxy ${res.status}`);
       const data = await res.json();
@@ -1089,7 +1229,6 @@ setInterval(async () => {
   let msInitialized = false;
   window.msInit = function () { if (msInitialized) return; msInitialized = true; fetchLiveStatus(); };
 
-  // Poll every 3 minutes, but only when the livestreams tab is actually visible
   setInterval(() => {
     const tab = document.getElementById("sec-livestreams");
     if (tab && tab.style.display !== "none" && msInitialized) fetchLiveStatus();

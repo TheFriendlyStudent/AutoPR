@@ -412,8 +412,8 @@ def calculate_records(rows, ciac_maps):
     ]
     final_rows.sort(key=game_sort_key)
 
-    wins        = defaultdict(int)
-    losses      = defaultdict(int)
+    wins         = defaultdict(int)
+    losses       = defaultdict(int)
     game_records = {}
     last_game    = {}   # (header, team) -> game_id of their most recent final game
 
@@ -456,8 +456,8 @@ def calculate_records(rows, ciac_maps):
         if not ciac_map:
             continue
 
-        local_w = wins[(hdr, team)]
-        local_l = losses[(hdr, team)]
+        local_w     = wins[(hdr, team)]
+        local_l     = losses[(hdr, team)]
         local_total = local_w + local_l
 
         result = find_ciac_record(team, ciac_map)
@@ -467,10 +467,8 @@ def calculate_records(rows, ciac_maps):
         ciac_total = ciac_w + ciac_l
 
         if ciac_total <= local_total:
-            # CIAC doesn't show more games — local data is complete enough
             continue
 
-        # CIAC has more games. Patch the last game row this team appeared in.
         print(
             f"  [RECORD PATCH] {team} ({hdr}): "
             f"local {local_w}-{local_l} → CIAC {ciac_w}-{ciac_l}"
@@ -497,10 +495,35 @@ def main():
     args = parser.parse_args()
 
     existing = load_master()
-    existing_by_key = {
-        make_game_key(r["home_team"], r["away_team"], r["game_datetime"]): r
-        for r in existing
-    }
+
+    # ── Dedup existing CSV rows ───────────────────────────────────────────────
+    # If the same game was entered twice (one with a score, one without),
+    # keep the scored/final version and discard the blank one.
+    existing_by_key = {}
+    dupes_removed   = 0
+    for r in existing:
+        key = make_game_key(r["home_team"], r["away_team"], r["game_datetime"])
+        if key not in existing_by_key:
+            existing_by_key[key] = r
+        else:
+            prev = existing_by_key[key]
+            # Prefer whichever row has a final score
+            if r.get("status") == "final" and prev.get("status") != "final":
+                existing_by_key[key] = r
+                dupes_removed += 1
+            elif r.get("status") != "final" and prev.get("status") == "final":
+                dupes_removed += 1  # discard r, keep prev
+            else:
+                # Both same status — keep the one with more fields filled in
+                r_data    = sum(1 for v in r.values()    if str(v).strip())
+                prev_data = sum(1 for v in prev.values() if str(v).strip())
+                if r_data > prev_data:
+                    existing_by_key[key] = r
+                dupes_removed += 1
+
+    if dupes_removed:
+        print(f"  Removed {dupes_removed} duplicate row(s) from existing CSV")
+
     new_count = updated_count = 0
 
     for header, sport_id in SPORTS:
