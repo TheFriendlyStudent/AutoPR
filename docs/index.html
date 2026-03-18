@@ -1046,10 +1046,10 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
 
           <!-- Stats grid -->
           <div class="scout-stats-grid" id="scoutStatsGrid" style="display:none">
-            <div class="sstat hi"><div class="sstat-val" id="sstatSpeed">—</div><div class="sstat-lbl">Top Speed</div><div class="sstat-sub">mph</div></div>
-            <div class="sstat"><div class="sstat-val" id="sstatSpacing">—</div><div class="sstat-lbl">Avg Spacing</div><div class="sstat-sub">ft between players</div></div>
+            <div class="sstat hi"><div class="sstat-val" id="sstatPlayers">—</div><div class="sstat-lbl">Players Tracked</div><div class="sstat-sub" id="sstatPlayersSub">avg/frame</div></div>
             <div class="sstat"><div class="sstat-val" id="sstatShots">—</div><div class="sstat-lbl">Shot Attempts</div><div class="sstat-sub">this clip</div></div>
-            <div class="sstat"><div class="sstat-val" id="sstatPlayers">—</div><div class="sstat-lbl">Players Tracked</div><div class="sstat-sub" id="sstatPlayersSub">—</div></div>
+            <div class="sstat"><div class="sstat-val" id="sstatBall">—</div><div class="sstat-lbl">Ball Detected</div><div class="sstat-sub" id="sstatBallSub">possession</div></div>
+            <div class="sstat"><div class="sstat-val" id="sstatTopZone">—</div><div class="sstat-lbl">Top Zone</div><div class="sstat-sub">most active area</div></div>
           </div>
 
           <!-- Zone bars -->
@@ -3208,12 +3208,25 @@ loadData();
   // ════════════════════════════════════════════════════════════════════════════
   function renderStats(ym) {
     statsGrid.style.display = "grid";
-    $("sstatSpeed").textContent   = ym.top_speed_mph   != null ? ym.top_speed_mph   : "—";
-    $("sstatSpacing").textContent = ym.avg_spacing_ft  != null ? ym.avg_spacing_ft  : "—";
-    $("sstatShots").textContent   = ym.shot_attempts   != null ? ym.shot_attempts   : "—";
-    $("sstatPlayers").textContent = ym.player_count    != null ? ym.player_count    : "—";
+    $("sstatPlayers").textContent    = ym.player_count != null ? ym.player_count : "—";
     $("sstatPlayersSub").textContent = ym.avg_players_in_frame
-      ? `${ym.avg_players_in_frame} avg/frame` : "tracked";
+      ? `${ym.avg_players_in_frame} avg/frame` : "avg/frame";
+    $("sstatShots").textContent = ym.shot_attempts != null ? ym.shot_attempts : "—";
+    // Ball tracking
+    if (ym.ball_detected) {
+      $("sstatBall").textContent    = "✓";
+      $("sstatBallSub").textContent = ym.ball_possession_side
+        ? ym.ball_possession_side + " side" : "detected";
+    } else {
+      $("sstatBall").textContent    = "—";
+      $("sstatBallSub").textContent = "not detected";
+    }
+    // Top zone
+    const zones = ym.zone_occupancy || {};
+    const topZ  = Object.entries(zones).sort((a,b) => b[1]-a[1])[0];
+    const ZLBL  = {paint_left:"Paint (L)",paint_right:"Paint (R)",mid_range:"Mid-Range",
+                   perimeter:"Perimeter",three_left:"3PT (L)",three_right:"3PT (R)",backcourt:"Backcourt"};
+    $("sstatTopZone").textContent = topZ ? (ZLBL[topZ[0]] || topZ[0]) : "—";
   }
 
   const ZONE_LABELS = {
@@ -3354,42 +3367,66 @@ loadData();
     if (vizView === "top") drawTopDown(ym); else drawShotArc(ym);
   }
 
-  // ── SVG constants (100 units = 1 ft for readability) ──────────────────────
-  const CW = 9400, CH = 5000;   // top-down court viewport (94ft × 50ft)
-  const AW = 6000, AH = 3000;   // arc view
+  // ── SVG constants — NFHS high school court: 84ft × 50ft ──────────────────
+  // 1 SVG unit = 1 ft, viewport 8400×5000 (84ft × 50ft)
+  const CW = 8400, CH = 5000;
+  const AW = 6000, AH = 3000;
 
-  // ── Top-down court lines (NBA spec, normalised to CW×CH) ─────────────────
+  // Paint depth: 19ft (NFHS), lane width: 12ft, FT circle r: 6ft
+  // 3-point arc: 19ft 9in from basket (NFHS) = 19.75ft
+  // Corner 3: 3ft from sideline, extends ~14ft from baseline
   function courtSVG() {
     const s = [];
-    // Background
+    const PX = 50;  // padding
+
     s.push(`<rect width="${CW}" height="${CH}" fill="#0a0a0a"/>`);
-    // Boundary
-    s.push(`<rect x="50" y="50" width="${CW-100}" height="${CH-100}" fill="none" stroke="#fff" stroke-width="28" rx="0"/>`);
-    // Half-court
-    s.push(`<line x1="${CW/2}" y1="50" x2="${CW/2}" y2="${CH-50}" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<rect x="${PX}" y="${PX}" width="${CW-2*PX}" height="${CH-2*PX}" fill="none" stroke="#fff" stroke-width="22"/>`);
+    // Half-court line
+    s.push(`<line x1="${CW/2}" y1="${PX}" x2="${CW/2}" y2="${CH-PX}" stroke="#fff" stroke-width="18"/>`);
     // Centre circle r=600 (6ft)
-    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="40" fill="#fff"/>`);
-    // Paint boxes (19ft×12ft = 1900×1200, centred vertically)
-    const py = (CH - 1200) / 2;
-    s.push(`<rect x="50" y="${py}" width="1900" height="1200" fill="none" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<rect x="${CW-50-1900}" y="${py}" width="1900" height="1200" fill="none" stroke="#fff" stroke-width="20"/>`);
-    // Free-throw circles (r=600)
-    s.push(`<circle cx="${50+1900}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20" stroke-dasharray="80 50"/>`);
-    s.push(`<circle cx="${CW-50-1900}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20" stroke-dasharray="80 50"/>`);
-    // Baskets — red circles
-    s.push(`<circle cx="${50+90}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="30"/>`);
-    s.push(`<circle cx="${CW-50-90}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="30"/>`);
-    // 3-point arcs (~23.75ft = 2375 radius)
-    const r3 = 2375;
-    const c3y = CH / 2;
-    const c3yOff = 2200; // corner 3 height offset
-    s.push(`<path d="M50,${c3y-c3yOff} A${r3},${r3} 0 0,1 50,${c3y+c3yOff}" fill="none" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<line x1="50" y1="${c3y-c3yOff}" x2="550" y2="${c3y-c3yOff}" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<line x1="50" y1="${c3y+c3yOff}" x2="550" y2="${c3y+c3yOff}" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<path d="M${CW-50},${c3y-c3yOff} A${r3},${r3} 0 0,0 ${CW-50},${c3y+c3yOff}" fill="none" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<line x1="${CW-50}" y1="${c3y-c3yOff}" x2="${CW-550}" y2="${c3y-c3yOff}" stroke="#fff" stroke-width="20"/>`);
-    s.push(`<line x1="${CW-50}" y1="${c3y+c3yOff}" x2="${CW-550}" y2="${c3y+c3yOff}" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="18"/>`);
+    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="36" fill="#fff"/>`);
+
+    // Paint: 19ft deep, 12ft wide — centred on 50ft dimension
+    // 12ft/50ft = 0.24 → half = 0.12 of CH
+    const paintDepth = Math.round(19 / 84 * CW);  // 1900
+    const laneHalf   = Math.round(6  / 50 * CH);  // 600
+    const py1 = CH/2 - laneHalf;
+    const py2 = CH/2 + laneHalf;
+
+    // Left paint
+    s.push(`<rect x="${PX}" y="${py1}" width="${paintDepth}" height="${laneHalf*2}" fill="none" stroke="#fff" stroke-width="18"/>`);
+    // Right paint
+    s.push(`<rect x="${CW-PX-paintDepth}" y="${py1}" width="${paintDepth}" height="${laneHalf*2}" fill="none" stroke="#fff" stroke-width="18"/>`);
+
+    // FT circles (r=6ft=600)
+    s.push(`<circle cx="${PX+paintDepth}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="18" stroke-dasharray="70 45"/>`);
+    s.push(`<circle cx="${CW-PX-paintDepth}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="18" stroke-dasharray="70 45"/>`);
+
+    // Baskets (hoop at 63in = 5.25ft from baseline → 525 units)
+    const hoopOff = 525;
+    s.push(`<circle cx="${PX+hoopOff}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="28"/>`);
+    s.push(`<circle cx="${CW-PX-hoopOff}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="28"/>`);
+
+    // NFHS 3-point arc: 19ft 9in = 1975 units from basket centre
+    // Corner 3 line: 3ft from sideline (CH/2 ± (2200)) ending at baseline
+    const r3   = 1975;
+    const c3y  = CH / 2;
+    const cOff = CH/2 - Math.round(3/50*CH);  // 3ft from sideline
+
+    // Left 3-point
+    s.push(`<path d="M${PX},${c3y-cOff} A${r3},${r3} 0 0,1 ${PX},${c3y+cOff}" fill="none" stroke="#fff" stroke-width="18"/>`);
+    s.push(`<line x1="${PX}" y1="${c3y-cOff}" x2="${PX+hoopOff+200}" y2="${c3y-cOff}" stroke="#fff" stroke-width="18"/>`);
+    s.push(`<line x1="${PX}" y1="${c3y+cOff}" x2="${PX+hoopOff+200}" y2="${c3y+cOff}" stroke="#fff" stroke-width="18"/>`);
+    // Right 3-point
+    s.push(`<path d="M${CW-PX},${c3y-cOff} A${r3},${r3} 0 0,0 ${CW-PX},${c3y+cOff}" fill="none" stroke="#fff" stroke-width="18"/>`);
+    s.push(`<line x1="${CW-PX}" y1="${c3y-cOff}" x2="${CW-PX-hoopOff-200}" y2="${c3y-cOff}" stroke="#fff" stroke-width="18"/>`);
+    s.push(`<line x1="${CW-PX}" y1="${c3y+cOff}" x2="${CW-PX-hoopOff-200}" y2="${c3y+cOff}" stroke="#fff" stroke-width="18"/>`);
+
+    // Restricted area arcs (4ft radius)
+    s.push(`<circle cx="${PX+hoopOff}" cy="${CH/2}" r="400" fill="none" stroke="#fff" stroke-width="12" stroke-dasharray="40 30" opacity="0.5"/>`);
+    s.push(`<circle cx="${CW-PX-hoopOff}" cy="${CH/2}" r="400" fill="none" stroke="#fff" stroke-width="12" stroke-dasharray="40 30" opacity="0.5"/>`);
+
     return s.join("");
   }
 
@@ -3406,7 +3443,6 @@ loadData();
       const pts   = trajs[tid];
       if (!pts || pts.length < 2) return;
 
-      // Map normalised (0–1) to SVG coords
       const sp = pts.map(p => [Math.round(p.x * CW), Math.round(p.y * CH)]);
       const n  = sp.length;
 
@@ -3416,23 +3452,43 @@ loadData();
         inner += `<line x1="${sp[i-1][0]}" y1="${sp[i-1][1]}" x2="${sp[i][0]}" y2="${sp[i][1]}" stroke="${color}" stroke-width="55" opacity="${op}" stroke-linecap="round"/>`;
       }
 
-      // Current position
+      // Current position dot + label
       const [lx, ly] = sp[n - 1];
       inner += `<circle cx="${lx}" cy="${ly}" r="160" fill="${color}" opacity="0.92"/>`;
-      inner += `<text x="${lx+200}" y="${ly+60}" fill="${color}" font-size="280" font-family="monospace" font-weight="bold" opacity="0.9">#${tid}</text>`;
+      inner += `<text x="${lx+200}" y="${ly+60}" fill="${color}" font-size="260" font-family="monospace" font-weight="bold" opacity="0.9">#${tid}</text>`;
 
-      // Speed label
+      // Zone label (reliable, unlike speed)
       const pm = ym.players?.[tid];
-      if (pm?.peak_speed_mph) {
-        inner += `<text x="${lx+200}" y="${ly+370}" fill="${color}" font-size="200" font-family="monospace" opacity="0.7">${pm.peak_speed_mph}mph</text>`;
+      if (pm?.primary_zone) {
+        const ZLBL = {paint_left:"Paint(L)",paint_right:"Paint(R)",mid_range:"Mid",
+                      perimeter:"Perim",three_left:"3PT(L)",three_right:"3PT(R)",backcourt:"Back"};
+        inner += `<text x="${lx+200}" y="${ly+330}" fill="${color}" font-size="180" font-family="monospace" opacity="0.65">${ZLBL[pm.primary_zone]||pm.primary_zone}</text>`;
+      }
+      // Shot flag
+      if (pm?.shot_detected) {
+        inner += `<circle cx="${lx}" cy="${ly-220}" r="90" fill="#f43f5e" opacity="0.9"/>`;
+        inner += `<text x="${lx+140}" y="${ly-150}" fill="#f43f5e" font-size="180" font-family="monospace">SHOT</text>`;
       }
 
       legItems.push({ color, tid, zone: pm?.primary_zone || "" });
     });
 
+    // Ball trail (orange)
+    const ballTrail = ym.ball_trail || [];
+    if (ballTrail.length > 0) {
+      const bsp = ballTrail.map(p => [Math.round(p.x * CW), Math.round(p.y * CH)]);
+      for (let i = 1; i < bsp.length; i++) {
+        const op = (0.3 + 0.7 * (i / bsp.length)).toFixed(2);
+        inner += `<line x1="${bsp[i-1][0]}" y1="${bsp[i-1][1]}" x2="${bsp[i][0]}" y2="${bsp[i][1]}" stroke="#f97316" stroke-width="40" opacity="${op}" stroke-linecap="round"/>`;
+      }
+      const [bx, by] = bsp[bsp.length - 1];
+      inner += `<circle cx="${bx}" cy="${by}" r="110" fill="#f97316" opacity="0.95"/>`;
+      legItems.push({ color: "#f97316", tid: "🏀", zone: ym.ball_possession_side ? ym.ball_possession_side + " side" : "" });
+    }
+
     svgWrap.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg" style="border-radius:5px;width:100%">${inner}</svg>`;
     vizLegend.innerHTML = legItems.map(item =>
-      `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:${item.color}"></div>#${item.tid}${item.zone ? " · " + item.zone : ""}</div>`
+      `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:${item.color}"></div>${item.tid === "🏀" ? "🏀 Ball" : "#" + item.tid}${item.zone ? " · " + item.zone : ""}</div>`
     ).join("");
   }
 

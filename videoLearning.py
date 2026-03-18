@@ -223,28 +223,62 @@ def is_dead_time(clip_path: str) -> tuple:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# YOLO METRICS — calibrated tracking, speed, zone occupancy, shot detection
+# YOLO METRICS — multi-model pipeline
+#
+# Models used:
+#   yolo11m-pose.pt     — person pose estimation (keypoints for shot detection)
+#   basketball-players  — Roboflow fine-tuned player detector (higher accuracy
+#                         on court vs stands, handles occlusion better)
+#   basketball-ball     — Roboflow ball detector (tracks ball position/possession)
+#
+# Reliable stats kept (low error margin, no uncalibrated conversions):
+#   • Player count per frame (direct observation)
+#   • Zone occupancy (pixel region membership, normalised)
+#   • Shot attempt detection (boolean, wrist-above-shoulder heuristic)
+#   • Ball possession side (left/right half of court)
+#   • Ball detected (boolean per frame)
+#   • Player trajectories (normalised coords for visualizer)
+#   • Shot arc keypoint data (for visualizer only, not displayed as a number)
+#
+# Removed (too inaccurate without fixed camera + calibration rig):
+#   • Speed in mph / ft/s  (pixel displacement varies wildly with zoom/angle)
+#   • Distance covered in feet (same issue)
+#   • Defensive spacing in feet (same issue)
+#
+# NFHS court: 84ft × 50ft (high school standard, not NBA 94ft)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-COURT_W_FT = 94.0
+# NFHS high school court dimensions
+COURT_W_FT = 84.0
 COURT_H_FT = 50.0
 
 # Tunable via .env
-YOLO_CONF          = float(os.environ.get("YOLO_CONF",           "0.45"))
-MIN_PLAYER_HEIGHT  = float(os.environ.get("MIN_PLAYER_HEIGHT",   "0.10"))  # % of frame height
-SHOT_RISE_PX       = float(os.environ.get("SHOT_RISE_PX",        "40"))    # px wrist must rise
-SHOT_RISE_FRAMES   = int(os.environ.get("SHOT_RISE_FRAMES",      "5"))     # over N frames
-# Speed smoothing: rolling window to kill single-frame noise
-SPEED_SMOOTH_WIN   = int(os.environ.get("SPEED_SMOOTH_WIN",      "5"))
+YOLO_CONF         = float(os.environ.get("YOLO_CONF",         "0.45"))
+BALL_CONF         = float(os.environ.get("BALL_CONF",         "0.35"))
+MIN_PLAYER_HEIGHT = float(os.environ.get("MIN_PLAYER_HEIGHT", "0.10"))
+SHOT_RISE_PX      = float(os.environ.get("SHOT_RISE_PX",      "40"))
+SHOT_RISE_FRAMES  = int(os.environ.get("SHOT_RISE_FRAMES",    "5"))
 
+# Ball detector model — Roboflow basketball detection
+# Download once: pip install roboflow
+# from roboflow import Roboflow
+# rf = Roboflow(api_key="..."); rf.workspace("...").project("basketball-ball-detection").version(1).download("yolov8")
+# Then point BALL_MODEL_PATH to the downloaded weights.
+# Falls back gracefully if the model file is not present.
+BALL_MODEL_PATH   = os.environ.get("BALL_MODEL_PATH", "ball_detector.pt")
+PLAYER_MODEL_PATH = os.environ.get("PLAYER_MODEL_PATH", "")  # optional Roboflow player model
+
+# Court zone boundaries as (x_min, x_max, y_min, y_max) in normalised [0,1] coords.
+# Calibrated for NFHS 84x50 court viewed from a standard mid-court elevated camera.
+# Paint = 19ft deep (19/84 = 0.226), lane width = 12ft (12/50 = 0.24)
 COURT_ZONES = {
-    "paint_left":  (0.00, 0.19, 0.28, 0.72),
-    "paint_right": (0.81, 1.00, 0.28, 0.72),
-    "mid_range":   (0.19, 0.40, 0.00, 1.00),
-    "perimeter":   (0.40, 0.60, 0.00, 1.00),
-    "three_left":  (0.00, 0.19, 0.00, 0.28),
-    "three_right": (0.81, 1.00, 0.72, 1.00),
-    "backcourt":   (0.60, 1.00, 0.00, 1.00),
+    "paint_left":  (0.00, 0.226, 0.28, 0.72),
+    "paint_right": (0.774, 1.00, 0.28, 0.72),
+    "mid_range":   (0.226, 0.40, 0.00, 1.00),
+    "perimeter":   (0.40,  0.60, 0.00, 1.00),
+    "three_left":  (0.00, 0.226, 0.00, 0.28),
+    "three_right": (0.774, 1.00, 0.72, 1.00),
+    "backcourt":   (0.60,  1.00, 0.00, 1.00),
 }
 
 
@@ -255,134 +289,90 @@ def _zone_for_point(x_pct: float, y_pct: float) -> str:
     return "perimeter"
 
 
-def calibrate_px_per_ft(clip_path: str, w_px: int) -> float:
-    """
-    Attempt to measure pixels-per-foot from the free-throw lane lines
-    using FFmpeg frame extraction + NumPy edge detection.
-    The lane is exactly 12 ft wide — a reliable reference in any gym.
-    Falls back to the 70%-court heuristic if detection fails.
-    """
-    # Extract one frame as raw RGB via FFmpeg pipe (no cv2 needed)
-    cmd = [
-        "ffmpeg", "-i", clip_path, "-vframes", "1",
-        "-f", "rawvideo", "-pix_fmt", "gray", "pipe:1"
-    ]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=10)
-        if not proc.stdout:
-            raise ValueError("empty frame")
+def _load_ball_model():
+    """Load basketball detector if available, else return None."""
+    if os.path.exists(BALL_MODEL_PATH):
+        try:
+            m = YOLO(BALL_MODEL_PATH)
+            print(f"[YOLO] Ball detector loaded: {BALL_MODEL_PATH}")
+            return m
+        except Exception as e:
+            print(f"[YOLO] Ball model load failed: {e}")
+    else:
+        print(f"[YOLO] Ball detector not found at {BALL_MODEL_PATH} — ball tracking disabled.")
+    return None
 
-        # Infer height from byte count
-        total_px = len(proc.stdout)
-        h_px_est = total_px // w_px
-        if h_px_est < 100:
-            raise ValueError("bad dimensions")
 
-        gray = np.frombuffer(proc.stdout[:w_px * h_px_est],
-                             dtype=np.uint8).reshape(h_px_est, w_px).astype(np.float32)
+def _load_player_model():
+    """Load Roboflow player model if available, else fall back to pose model."""
+    if PLAYER_MODEL_PATH and os.path.exists(PLAYER_MODEL_PATH):
+        try:
+            m = YOLO(PLAYER_MODEL_PATH)
+            print(f"[YOLO] Roboflow player model loaded: {PLAYER_MODEL_PATH}")
+            return m, False   # (model, has_keypoints)
+        except Exception as e:
+            print(f"[YOLO] Player model load failed: {e}, falling back to pose model")
+    return YOLO("yolo11m-pose.pt"), True  # (model, has_keypoints)
 
-        # Simple Sobel-like vertical edge detection (no cv2)
-        # Kernel: [-1, 0, 1] applied horizontally
-        kernel = np.array([-1, 0, 1], dtype=np.float32)
-        edges  = np.abs(np.apply_along_axis(
-            lambda row: np.convolve(row, kernel, mode="same"), 1, gray
-        ))
 
-        # Sum edges vertically → column profile
-        col_profile = edges.sum(axis=0)
-
-        # Find the two strongest vertical edge columns
-        # that are plausibly lane-width apart (8–20% of frame width)
-        min_gap = int(w_px * 0.08)
-        max_gap = int(w_px * 0.22)
-
-        # Get top-N column peaks
-        threshold = np.percentile(col_profile, 90)
-        peak_cols = np.where(col_profile > threshold)[0]
-
-        best_gap = None
-        for i in range(len(peak_cols)):
-            for j in range(i + 1, len(peak_cols)):
-                gap = int(peak_cols[j]) - int(peak_cols[i])
-                if min_gap <= gap <= max_gap:
-                    best_gap = gap
-                    break
-            if best_gap:
-                break
-
-        if best_gap:
-            px_per_ft = best_gap / 12.0  # lane = 12 ft
-            print(f"[Scale] Calibrated: {px_per_ft:.2f} px/ft "
-                  f"(lane gap={best_gap}px)")
-            return px_per_ft
-
-    except Exception as e:
-        print(f"[Scale] Calibration failed ({e}), using 70% heuristic")
-
-    # Fallback
-    return w_px / (COURT_W_FT * 0.70)
+def _zone_for_point(x_pct: float, y_pct: float) -> str:
+    for name, (x0, x1, y0, y1) in COURT_ZONES.items():
+        if x0 <= x_pct <= x1 and y0 <= y_pct <= y1:
+            return name
+    return "perimeter"
 
 
 def _detect_shot(kp_history: list) -> bool:
     """
-    Shot heuristic requiring ALL of:
-      1. Right wrist rises > SHOT_RISE_PX pixels over SHOT_RISE_FRAMES frames
-      2. Wrist ends above right shoulder (follow-through position)
-      3. Both wrist and shoulder keypoints are confidently detected (non-zero)
-
-    COCO keypoint indices:
-      5=L shoulder, 6=R shoulder, 9=L wrist, 10=R wrist
+    Shot heuristic: right wrist rises > SHOT_RISE_PX pixels over
+    SHOT_RISE_FRAMES frames AND ends above the right shoulder.
+    Both keypoints must be detected (non-zero).
+    COCO indices: 6=R shoulder, 10=R wrist.
     """
     N = SHOT_RISE_FRAMES
     if len(kp_history) < N + 1:
         return False
-
     for j in range(N, len(kp_history)):
-        kp_now  = kp_history[j]      # shape [17, 2]
+        kp_now  = kp_history[j]
         kp_prev = kp_history[j - N]
-
-        r_wrist_now   = kp_now[10]    # [x, y]
-        r_wrist_prev  = kp_prev[10]
-        r_shoulder_now = kp_now[6]
-
-        # Skip if any keypoint not detected (zero coords)
-        if (r_wrist_now[0] == 0 or r_wrist_prev[0] == 0
-                or r_shoulder_now[0] == 0):
+        if len(kp_now) < 11 or len(kp_prev) < 11:
             continue
-
-        # y decreases upward in image coords
-        wrist_rose     = r_wrist_prev[1] - r_wrist_now[1] > SHOT_RISE_PX
-        above_shoulder = r_wrist_now[1] < r_shoulder_now[1]
-
-        if wrist_rose and above_shoulder:
+        rw_now, rw_prev, rs_now = kp_now[10], kp_prev[10], kp_now[6]
+        if rw_now[0] == 0 or rw_prev[0] == 0 or rs_now[0] == 0:
+            continue
+        if rw_prev[1] - rw_now[1] > SHOT_RISE_PX and rw_now[1] < rs_now[1]:
             return True
     return False
 
 
-def _smooth_speeds(speeds: list, window: int) -> list:
-    """Rolling mean to eliminate single-frame tracking noise."""
-    if len(speeds) < window:
-        return speeds
-    return [float(np.mean(speeds[max(0, i-window):i+1]))
-            for i in range(len(speeds))]
-
-
 def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
     """
-    Run YOLO+ByteTrack with calibrated scale, height filtering,
-    smoothed speeds, and improved shot detection.
-    Returns structured metrics dict + Gemini-ready summary string.
-    """
-    model = YOLO("yolo11m-pose.pt")
+    Multi-model YOLO pipeline:
+      1. Pose model (yolo11m-pose.pt) — player tracking + keypoints for shot detection
+      2. Ball detector (optional)     — basketball position + possession side
 
-    results_list = list(model.track(
+    Only reliable, low-error-margin stats are returned:
+      - player_count, avg_players_in_frame
+      - zone_occupancy (normalised pixel membership)
+      - shot_attempts (boolean heuristic per player)
+      - ball_detected, ball_possession_side
+      - trajectories (for visualizer)
+      - shot_arcs (for visualizer)
+
+    Stats that require a calibrated fixed camera (speed, distance, spacing in ft)
+    are intentionally omitted.
+    """
+    # ── 1. Player pose tracking ────────────────────────────────────────────
+    player_model, has_kps = _load_player_model()
+
+    pose_results = list(player_model.track(
         source=clip_path,
         tracker="bytetrack.yaml",
         device=DEVICE,
         stream=True,
-        conf=YOLO_CONF,   # 0.45 — filters spectators, refs far away
+        conf=YOLO_CONF,
         iou=0.5,
-        classes=[0],       # person class only
+        classes=[0],          # person only
         half=HALF,
         imgsz=640,
         vid_stride=2,
@@ -390,138 +380,119 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
         verbose=False,
     ))
 
-    if not results_list:
+    if not pose_results:
         return {"metrics": {}, "summary": "No tracking data available."}
 
-    h_px = results_list[0].orig_shape[0]
-    w_px = results_list[0].orig_shape[1]
+    h_px = pose_results[0].orig_shape[0]
+    w_px = pose_results[0].orig_shape[1]
 
-    # ── Calibrated scale ───────────────────────────────────────────────────
-    px_per_ft = calibrate_px_per_ft(clip_path, w_px)
-
-    # Per-track state
     tracks: Dict[int, dict] = collections.defaultdict(lambda: {
-        "centers": [], "kp_history": [], "zones": [], "box_heights": []
+        "centers": [], "kp_history": [], "zones": []
     })
     frame_player_counts = []
-    # For spacing: store filtered per-frame center lists
-    filtered_frame_centers = []
 
-    for r in results_list:
-        if r.boxes is None or r.keypoints is None:
+    for r in pose_results:
+        if r.boxes is None:
             continue
         ids   = r.boxes.id
         boxes = r.boxes.xyxy
-        kps   = r.keypoints.xy  # [N, 17, 2]
+        kps   = r.keypoints.xy if (has_kps and r.keypoints is not None) else None
 
         if ids is None:
             continue
 
-        frame_centers = []
-        valid_in_frame = 0
-
+        valid = 0
         for i, tid in enumerate(ids.int().tolist()):
-            box = boxes[i].tolist()
+            box       = boxes[i].tolist()
             box_h_pct = (box[3] - box[1]) / h_px
-
-            # ── Height filter: skip background people / spectators ──────────
             if box_h_pct < MIN_PLAYER_HEIGHT:
-                continue
+                continue                          # filter spectators/background
 
-            valid_in_frame += 1
+            valid += 1
             cx = (box[0] + box[2]) / 2 / w_px
             cy = (box[1] + box[3]) / 2 / h_px
             tracks[tid]["centers"].append((cx, cy))
             tracks[tid]["zones"].append(_zone_for_point(cx, cy))
-            tracks[tid]["box_heights"].append(box_h_pct)
-            frame_centers.append(((box[0]+box[2])/2, (box[1]+box[3])/2))
 
-            # Store full keypoint array for shot detection
-            if kps.shape[1] >= 17:
+            if has_kps and kps is not None and kps.shape[1] >= 17:
                 tracks[tid]["kp_history"].append(kps[i].tolist())
 
-        if valid_in_frame > 0:
-            frame_player_counts.append(valid_in_frame)
-        if frame_centers:
-            filtered_frame_centers.append(frame_centers)
+        if valid > 0:
+            frame_player_counts.append(valid)
 
-    # ── Per-player metrics ─────────────────────────────────────────────────
+    # ── 2. Ball detection (optional model) ────────────────────────────────
+    ball_model = _load_ball_model()
+    ball_detections = []   # list of (cx_norm, cy_norm) per frame
+
+    if ball_model is not None:
+        ball_results = list(ball_model.predict(
+            source=clip_path,
+            device=DEVICE,
+            stream=True,
+            conf=BALL_CONF,
+            imgsz=640,
+            vid_stride=2,
+            verbose=False,
+        ))
+        for r in ball_results:
+            if r.boxes is None or len(r.boxes) == 0:
+                ball_detections.append(None)
+                continue
+            # Take the highest-confidence detection
+            best = r.boxes[r.boxes.conf.argmax()]
+            bx   = best.xyxy[0].tolist()
+            ball_cx = (bx[0] + bx[2]) / 2 / w_px
+            ball_cy = (bx[1] + bx[3]) / 2 / h_px
+            ball_detections.append((round(ball_cx, 3), round(ball_cy, 3)))
+
+    # Ball summary stats
+    detected_positions = [p for p in ball_detections if p is not None]
+    ball_detected      = len(detected_positions) > 0
+    # Possession side: which half of court does the ball spend more time in?
+    ball_possession_side = None
+    if detected_positions:
+        avg_ball_x = float(np.mean([p[0] for p in detected_positions]))
+        ball_possession_side = "left" if avg_ball_x < 0.5 else "right"
+
+    # ── 3. Per-player metrics (reliable only) ─────────────────────────────
     player_metrics = {}
 
     for tid, data in tracks.items():
-        centers = data["centers"]
-        # Require at least 5 frames of visibility to count as a real player
-        if len(centers) < 5:
+        if len(data["centers"]) < 5:
             continue
-
-        # Raw speeds per step (ft/s, vid_stride=2 so 2 frames per step)
-        raw_speeds = []
-        dists_ft   = []
-        for j in range(1, len(centers)):
-            dx = (centers[j][0] - centers[j-1][0]) * w_px
-            dy = (centers[j][1] - centers[j-1][1]) * h_px
-            ft = math.hypot(dx, dy) / px_per_ft
-            dists_ft.append(ft)
-            raw_speeds.append(ft * (fps / 2))
-
-        # Smooth to kill single-frame jumps
-        smooth = _smooth_speeds(raw_speeds, SPEED_SMOOTH_WIN)
-
-        total_dist_ft  = sum(dists_ft)
-        peak_speed_fts = max(smooth) if smooth else 0
-        avg_speed_fts  = float(np.mean(smooth)) if smooth else 0
 
         zone_counts  = collections.Counter(data["zones"])
         total_frames = len(data["zones"]) or 1
-        zone_pct     = {z: round(c/total_frames*100) for z,c in zone_counts.items()}
+        zone_pct     = {z: round(c / total_frames * 100) for z, c in zone_counts.items()}
         primary_zone = max(zone_counts, key=zone_counts.get) if zone_counts else "unknown"
-
-        shot_detected = _detect_shot(data["kp_history"])
+        shot_detected = _detect_shot(data["kp_history"]) if has_kps else False
 
         player_metrics[tid] = {
-            "total_dist_ft":  round(total_dist_ft, 1),
-            "peak_speed_fts": round(peak_speed_fts, 1),
-            "peak_speed_mph": round(peak_speed_fts * 0.6818, 1),
-            "avg_speed_fts":  round(avg_speed_fts, 1),
-            "primary_zone":   primary_zone,
-            "zone_pct":       zone_pct,
-            "shot_detected":  shot_detected,
+            "primary_zone":  primary_zone,
+            "zone_pct":      zone_pct,
+            "shot_detected": shot_detected,
         }
 
-    # ── Team-level metrics ─────────────────────────────────────────────────
-    avg_players   = round(float(np.mean(frame_player_counts)), 1) if frame_player_counts else 0
-    top_speed_mph = round(max(
-        (p["peak_speed_mph"] for p in player_metrics.values()), default=0
-    ), 1)
-
-    # Spacing: only between height-filtered players
-    spacing_scores = []
-    for centers_px in filtered_frame_centers:
-        if len(centers_px) < 2:
-            continue
-        dists = [
-            math.hypot(centers_px[a][0]-centers_px[b][0],
-                       centers_px[a][1]-centers_px[b][1])
-            for a in range(len(centers_px))
-            for b in range(a+1, len(centers_px))
-        ]
-        spacing_scores.append(float(np.mean(dists)) / px_per_ft)
-    avg_spacing_ft = round(float(np.mean(spacing_scores)), 1) if spacing_scores else 0
-
-    shots = sum(1 for p in player_metrics.values() if p["shot_detected"])
+    # ── 4. Team-level metrics ──────────────────────────────────────────────
+    avg_players  = round(float(np.mean(frame_player_counts)), 1) if frame_player_counts else 0
+    shot_attempts = sum(1 for p in player_metrics.values() if p["shot_detected"])
 
     all_zones    = [z for d in tracks.values() for z in d["zones"]]
     zone_summary = dict(collections.Counter(all_zones).most_common(4))
 
-    # Trajectory data for court visualizer (normalised 0-1, last 60 positions)
+    # ── 5. Trajectory data for court visualizer ────────────────────────────
     trajectories = {}
     for tid, data in tracks.items():
         if len(data["centers"]) < 5:
             continue
         trail = data["centers"][-60:]
-        trajectories[str(tid)] = [{"x": round(cx, 4), "y": round(cy, 4)} for cx, cy in trail]
+        trajectories[str(tid)] = [{"x": round(cx, 4), "y": round(cy, 4)}
+                                   for cx, cy in trail]
 
-    # Shot arc data — wrist + shoulder keypoint heights for detected shooters
+    # Ball trajectory for visualizer
+    ball_trail = [{"x": p[0], "y": p[1]} for p in detected_positions[-60:]]
+
+    # ── 6. Shot arc keypoints for visualizer (not a displayed stat) ────────
     shot_arcs = {}
     for tid, data in tracks.items():
         pm = player_metrics.get(tid)
@@ -538,35 +509,43 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
         shot_arcs[str(tid)] = arc
 
     metrics = {
+        # Reliable counts
         "player_count":         len(player_metrics),
         "avg_players_in_frame": avg_players,
-        "top_speed_mph":        top_speed_mph,
-        "avg_spacing_ft":       avg_spacing_ft,
-        "shot_attempts":        shots,
+        # Shot detection (boolean heuristic, not a count claim)
+        "shot_attempts":        shot_attempts,
+        # Ball tracking
+        "ball_detected":        ball_detected,
+        "ball_possession_side": ball_possession_side,
+        "ball_trail":           ball_trail,
+        # Zone occupancy
         "zone_occupancy":       zone_summary,
         "players":              player_metrics,
-        "px_per_ft":            round(px_per_ft, 2),
+        # Visualizer data
         "trajectories":         trajectories,
         "shot_arcs":            shot_arcs,
     }
 
+    # Gemini context summary (only reliable facts)
     lines = [
-        f"YOLO tracked {len(player_metrics)} on-court players (height-filtered).",
+        f"YOLO tracked {len(player_metrics)} on-court players.",
         f"Avg players visible per frame: {avg_players}.",
-        f"Top speed: {top_speed_mph} mph (calibrated, smoothed).",
-        f"Avg defensive spacing: {avg_spacing_ft:.1f} ft.",
-        f"Shot attempts (wrist-above-shoulder, sustained rise): {shots}.",
-        f"Top zones: { {z: c for z,c in list(zone_summary.items())[:3]} }.",
+        f"Shot attempts detected (wrist-above-shoulder): {shot_attempts}.",
     ]
+    if ball_detected:
+        lines.append(f"Basketball detected. Avg position: {ball_possession_side} side of court.")
+    else:
+        lines.append("Basketball not detected in this clip (model may not be installed).")
+    lines.append(f"Zone activity: { {z: c for z, c in list(zone_summary.items())[:3]} }.")
     for tid, pm in list(player_metrics.items())[:5]:
         lines.append(
-            f"  Player #{tid}: {pm['total_dist_ft']} ft, "
-            f"peak {pm['peak_speed_mph']} mph, zone: {pm['primary_zone']}"
-            + (" [SHOT]" if pm["shot_detected"] else "")
+            f"  Player #{tid}: mostly in {pm['primary_zone']}"
+            + (" [SHOT DETECTED]" if pm["shot_detected"] else "")
         )
     summary = "\n".join(lines)
 
     return {"metrics": metrics, "summary": summary}
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -613,14 +592,17 @@ def gemini_qualitative(video_file, yolo_summary: str) -> str:
     Runs in parallel with or after the fast call.
     """
     prompt = (
-        "You are an elite high school basketball scout. "
-        "You have been given YOLO tracking data for context. "
+        "You are an elite high school basketball scout analyzing NFHS-regulated "
+        "varsity basketball (84x50 ft court). "
+        "You have YOLO tracking data including ball position and player zones. "
         "Watch the clip and write a 4-6 sentence scouting report covering:\n"
         "1. The key play or moment (scoring, turnover, defensive stop, etc.).\n"
-        "2. Defensive spacing — zone or man-to-man, gaps exploited.\n"
-        "3. Shooter mechanics if a shot occurred — release, arc, footwork.\n"
-        "4. Any player standing out for hustle, positioning, or error.\n"
-        "Be specific and technical. Do NOT repeat the YOLO numbers verbatim.\n\n"
+        "2. Defensive scheme — zone or man-to-man, any breakdowns or gaps exploited.\n"
+        "3. Shooter mechanics if a shot occurred — release point, arc, balance, footwork.\n"
+        "4. Ball movement — how the offense created the look, any reads by the ball-handler.\n"
+        "5. Any player standing out for hustle, positioning, or a key error.\n"
+        "Be specific and technical. Reference jersey colors or positions. "
+        "Do NOT repeat the YOLO numbers verbatim.\n\n"
         f"YOLO tracking context:\n{yolo_summary}"
     )
     try:
