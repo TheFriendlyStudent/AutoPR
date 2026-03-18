@@ -8,3 +8,6 @@ cache_reports/
 runs/
 *.mp4
 *.avi
+yolo11l-pose.pt
+yolo11m-pose.pt
+yolo11n-pose.pt
