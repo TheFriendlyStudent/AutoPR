@@ -1,0 +1,9 @@
+[project]
+name = "AutoPR"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+dependencies = [
+    "python-dotenv>=1.2.2",
+    "vision-agents[gemini]>=0.4.3",
+]

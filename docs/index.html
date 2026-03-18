@@ -515,6 +515,75 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   .rnk-row > .rnk-cell:nth-child(6) { display: none; }
 }
 
+/* ═══════════════════════════════
+   AI SCOUTING PANEL
+   ═══════════════════════════════ */
+#ai-scouting-panel{margin-top:18px;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;display:none}
+#ai-scouting-panel.visible{display:block}
+.ai-panel-hdr{background:linear-gradient(90deg,rgba(244,63,94,.15),rgba(37,99,212,.12));border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.ai-panel-title{font-family:var(--fd);font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--white);display:flex;align-items:center;gap:8px}
+.ai-panel-title .ai-icon{font-size:1rem}
+.ai-toggle-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ai-mode-label{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
+.ai-switch{position:relative;display:inline-block;width:38px;height:20px}
+.ai-switch input{opacity:0;width:0;height:0}
+.ai-slider{position:absolute;cursor:pointer;inset:0;background:var(--surf2);border-radius:20px;transition:background .2s}
+.ai-slider:before{content:"";position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.ai-switch input:checked+.ai-slider{background:var(--red)}
+.ai-switch input:checked+.ai-slider:before{transform:translateX(18px)}
+.ai-panel-body{padding:14px 16px}
+.ai-source-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.ai-source-lbl{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);white-space:nowrap}
+.ai-source-input{flex:1;min-width:180px;background:var(--navy-mid);border:1px solid var(--bdr);border-radius:5px;color:var(--white);font-family:var(--fb);font-size:.8rem;padding:6px 10px;outline:none;transition:border-color .2s}
+.ai-source-input:focus{border-color:var(--blue-b)}
+.ai-source-input::placeholder{color:var(--gray)}
+.ai-mode-select{background:var(--navy-mid);border:1px solid var(--bdr);border-radius:5px;color:var(--white);font-family:var(--fd);font-size:.7rem;font-weight:700;padding:6px 10px;outline:none;cursor:pointer}
+.ai-timeline-wrap{position:relative;height:14px;background:var(--navy-mid);border-radius:7px;overflow:hidden;margin-bottom:12px;cursor:pointer}
+.ai-timeline-bg{position:absolute;inset:0;background:var(--navy-mid);border-radius:7px}
+.ai-timeline-progress{position:absolute;top:0;left:0;height:100%;background:rgba(37,99,212,.35);transition:width .5s}
+.ai-timeline-marker{position:absolute;top:0;height:100%;background:#f43f5e;opacity:.85;border-radius:2px;min-width:3px}
+.ai-timeline-marker.viral{background:var(--gold);opacity:1}
+.ai-report-box{background:var(--navy-mid);border-radius:6px;border-left:3px solid #f43f5e;padding:12px 14px;min-height:72px;font-size:.83rem;line-height:1.6;color:var(--gray-l);position:relative}
+.ai-report-box.loading::after{content:'Analyzing…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--navy-mid);border-radius:6px;font-family:var(--fd);font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.ai-report-box .ai-score-badge{display:inline-block;background:rgba(240,180,41,.18);border:1px solid rgba(240,180,41,.4);color:var(--gold);font-family:var(--fd);font-size:.65rem;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:3px;margin-bottom:6px}
+.ai-bottom-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px}
+.ai-status-txt{font-family:var(--fd);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray)}
+.ai-viral-btn{background:rgba(240,180,41,.15);border:1px solid rgba(240,180,41,.4);color:var(--gold);font-family:var(--fd);font-size:.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:4px;cursor:pointer;transition:all .15s}
+.ai-viral-btn:hover{background:rgba(240,180,41,.3)}
+.ai-viral-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(240,180,41,.12);border:1px solid rgba(240,180,41,.35);border-radius:4px;padding:4px 10px;margin-bottom:8px;font-family:var(--fd);font-size:.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold)}
+.ai-live-score{display:flex;align-items:center;gap:12px;background:var(--navy-mid);border-radius:6px;padding:8px 14px;margin-bottom:10px;border:1px solid var(--bdr)}
+.ai-live-score .als-team{font-family:var(--fd);font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--gray-l);flex:1}
+.ai-live-score .als-score{font-family:var(--fd);font-size:1.3rem;font-weight:900;color:var(--white);min-width:28px;text-align:center}
+.ai-live-score .als-sep{font-family:var(--fd);font-size:.7rem;color:var(--gray)}
+.ai-live-score .als-period{font-family:var(--fd);font-size:.6rem;color:var(--red);letter-spacing:1px;text-transform:uppercase;font-weight:700;animation:blink 1.6s ease-in-out infinite}
+.ai-hosting-note{background:rgba(37,99,212,.08);border:1px solid rgba(37,99,212,.25);border-radius:6px;padding:10px 14px;margin-top:10px;font-size:.75rem;color:var(--gray-l);line-height:1.5;display:none}
+.ai-hosting-note a{color:var(--blue-b);text-decoration:none}
+.ai-hosting-note a:hover{text-decoration:underline}
+#ai-scouting-panel.disconnected .ai-hosting-note{display:block}
+
+/* ── AI STATS DASHBOARD ── */
+.ai-stats-dashboard{margin-top:10px;display:none;grid-template-columns:repeat(4,1fr);gap:6px}
+.ai-stats-dashboard.visible{display:grid}
+@media(max-width:600px){.ai-stats-dashboard{grid-template-columns:repeat(2,1fr)}}
+.ai-stat-card{background:var(--navy-mid);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;text-align:center}
+.ai-stat-card.highlight{border-color:var(--gold);background:rgba(240,180,41,.06)}
+.ai-stat-val{font-family:var(--fd);font-size:1.3rem;font-weight:900;color:var(--white);line-height:1}
+.ai-stat-lbl{font-family:var(--fd);font-size:.55rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-top:3px}
+.ai-stat-sub{font-family:var(--fd);font-size:.6rem;color:var(--gray);margin-top:2px}
+.ai-zone-bar{margin-top:8px;display:none}
+.ai-zone-bar.visible{display:block}
+.ai-zone-bar-lbl{font-family:var(--fd);font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:4px}
+.ai-zone-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.ai-zone-name{font-family:var(--fd);font-size:.6rem;color:var(--gray-l);width:80px;flex-shrink:0;text-transform:capitalize}
+.ai-zone-track{flex:1;height:5px;background:var(--navy);border-radius:3px;overflow:hidden}
+.ai-zone-fill{height:100%;background:var(--blue-b);border-radius:3px;transition:width .4s}
+.ai-zone-fill.hot{background:var(--red)}
+.ai-play-tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-bottom:6px}
+.ai-play-tag.score{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.ai-play-tag.turnover{background:rgba(212,37,37,.15);color:#f87171;border:1px solid rgba(212,37,37,.3)}
+.ai-play-tag.foul{background:rgba(251,191,36,.15);color:var(--gold);border:1px solid rgba(251,191,36,.3)}
+.ai-play-tag.other{background:rgba(138,154,181,.12);color:var(--gray-l);border:1px solid var(--bdr)}
 /* RESPONSIVE (existing) */
 @media(max-width:860px){
   .layout{flex-direction:column;margin:14px auto}
@@ -539,6 +608,128 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   .cmp-team-lbl,.cmp-vals{width:60px;font-size:.58rem}
   .common-item{grid-template-columns:1fr auto auto;gap:6px}
 }
+
+/* ════════════════════════════════════════════
+   AI SCOUT TAB STYLES
+   ════════════════════════════════════════════ */
+#sec-aiscout{display:none}
+.scout-layout{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+@media(max-width:980px){.scout-layout{grid-template-columns:1fr}}
+.scout-left{min-width:0}
+
+/* Mode bar */
+.scout-mode-bar{display:flex;gap:5px;margin-bottom:14px;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:5px;width:fit-content}
+.scout-mode-btn{font-family:var(--fd);font-size:.75rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;border-radius:6px;border:none;background:transparent;color:var(--gray);cursor:pointer;transition:all .2s}
+.scout-mode-btn.active{background:var(--blue-b);color:#fff}
+
+/* Input card */
+.scout-input-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.scout-input-title{font-family:var(--fd);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:8px}
+.scout-url-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.scout-url-input{flex:1;min-width:160px;background:var(--navy-mid);border:1px solid var(--bdr);border-radius:5px;color:var(--white);font-family:var(--fb);font-size:.83rem;padding:7px 11px;outline:none;transition:border-color .2s}
+.scout-url-input:focus{border-color:var(--blue-b)}
+.scout-url-input::placeholder{color:var(--gray)}
+.scout-btn{font-family:var(--fd);font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.scout-btn.primary{background:var(--blue-b);color:#fff}.scout-btn.primary:hover{background:#1a50b8}.scout-btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.scout-btn.danger{background:rgba(212,37,37,.18);color:#f87171;border:1px solid rgba(212,37,37,.3)}.scout-btn.danger:hover{background:rgba(212,37,37,.32)}
+.scout-btn.ghost{background:transparent;color:var(--gray-l);border:1px solid var(--bdr)}.scout-btn.ghost:hover{border-color:rgba(255,255,255,.2);color:var(--white)}.scout-btn.ghost:disabled{opacity:.4;cursor:not-allowed}
+
+/* Drop zone */
+.scout-drop{display:block;border:2px dashed var(--bdr);border-radius:6px;padding:16px;text-align:center;cursor:pointer;background:var(--navy-mid);transition:border-color .2s;margin-bottom:8px}
+.scout-drop:hover,.scout-drop.over{border-color:var(--blue-b);background:rgba(37,99,212,.07)}
+.scout-drop-icon{font-size:1.5rem;margin-bottom:5px}
+.scout-drop-txt{font-family:var(--fd);font-size:.63rem;letter-spacing:1px;text-transform:uppercase;color:var(--gray)}
+.scout-prog-wrap{height:4px;background:var(--navy);border-radius:2px;overflow:hidden;margin-top:7px;display:none}
+.scout-prog-bar{height:100%;background:var(--blue-b);transition:width .2s;width:0%}
+.scout-prog-lbl{font-family:var(--fd);font-size:.58rem;color:var(--gray);margin-top:3px;display:none}
+
+/* Video preview */
+.scout-video-wrap{display:none;margin-bottom:10px;border-radius:6px;overflow:hidden;background:#000;position:relative}
+.scout-video-wrap video{width:100%;display:block;max-height:260px}
+.scout-video-ts{position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,.72);color:var(--white);font-family:var(--fd);font-size:.6rem;padding:2px 7px;border-radius:3px;letter-spacing:1px;pointer-events:none}
+
+/* Live log */
+.scout-live-log{background:var(--navy-mid);border-radius:5px;padding:7px 10px;max-height:72px;overflow-y:auto;font-family:var(--fd);font-size:.58rem;letter-spacing:.4px;color:var(--gray-l);margin-top:7px;display:none}
+.scout-live-log .ll{margin-bottom:2px;line-height:1.4}.scout-live-log .ll.pause{opacity:.4}
+
+/* Score bar */
+.scout-score-bar{display:none;background:var(--navy-mid);border:1px solid var(--bdr);border-radius:6px;padding:9px 14px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap}
+.scout-score-bar.vis{display:flex}
+.ssb-team{font-family:var(--fd);font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--gray-l);flex:1;min-width:60px}
+.ssb-score{font-family:var(--fd);font-size:1.4rem;font-weight:900;color:var(--white);min-width:28px;text-align:center}
+.ssb-sep{color:var(--gray);font-size:.65rem;flex-shrink:0}
+.ssb-period{font-family:var(--fd);font-size:.58rem;color:var(--red);letter-spacing:1px;font-weight:700;text-transform:uppercase;animation:blink 1.6s ease-in-out infinite;flex-shrink:0}
+.ssb-poss{font-size:.85rem;flex-shrink:0}
+
+/* Play tag */
+.scout-play-tag{display:inline-flex;align-items:center;gap:3px;font-family:var(--fd);font-size:.58rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin:0 3px 5px 0}
+.scout-play-tag.score{background:rgba(74,222,128,.14);color:#4ade80;border:1px solid rgba(74,222,128,.28)}
+.scout-play-tag.turnover{background:rgba(212,37,37,.14);color:#f87171;border:1px solid rgba(212,37,37,.28)}
+.scout-play-tag.foul{background:rgba(251,191,36,.14);color:var(--gold);border:1px solid rgba(251,191,36,.28)}
+.scout-play-tag.rebound{background:rgba(56,189,248,.1);color:#7dd3fc;border:1px solid rgba(56,189,248,.22)}
+.scout-play-tag.other{background:rgba(138,154,181,.09);color:var(--gray-l);border:1px solid var(--bdr)}
+
+/* Timeline */
+.scout-timeline{display:none;position:relative;height:10px;background:var(--navy-mid);border-radius:5px;overflow:hidden;margin-bottom:10px;cursor:pointer}
+.scout-timeline.vis{display:block}
+.scout-tl-prog{position:absolute;inset:0;width:0%;background:rgba(37,99,212,.3);pointer-events:none}
+.scout-tl-marker{position:absolute;top:0;height:100%;background:#f43f5e;opacity:.8;min-width:2px;pointer-events:none;border-radius:1px}
+.scout-tl-marker.viral{background:var(--gold)}
+
+/* Report */
+.scout-report{background:var(--navy-mid);border-left:3px solid var(--blue-b);border-radius:6px;padding:13px 15px;font-size:.83rem;line-height:1.65;color:var(--gray-l);min-height:72px;position:relative;transition:opacity .25s;margin-bottom:10px}
+.scout-report.loading{opacity:.45}
+.scout-report.loading::after{content:'Analyzing…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray);animation:pulse 1.4s ease-in-out infinite}
+.scout-report-tags{display:flex;flex-wrap:wrap;gap:0;margin-bottom:5px}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* Stats grid */
+.scout-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+@media(max-width:560px){.scout-stats-grid{grid-template-columns:repeat(2,1fr)}}
+.sstat{background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:8px 9px;text-align:center}
+.sstat.hi{border-color:rgba(240,180,41,.4);background:rgba(240,180,41,.04)}
+.sstat-val{font-family:var(--fd);font-size:1.2rem;font-weight:900;color:var(--white);line-height:1}
+.sstat-lbl{font-family:var(--fd);font-size:.52rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-top:3px}
+.sstat-sub{font-size:.56rem;color:var(--gray);margin-top:1px}
+
+/* Zone bars */
+.scout-zones{margin-bottom:10px}
+.scout-zones-lbl{font-family:var(--fd);font-size:.57rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px}
+.sz-row{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.sz-name{font-family:var(--fd);font-size:.57rem;color:var(--gray-l);width:78px;flex-shrink:0;text-transform:capitalize}
+.sz-track{flex:1;height:4px;background:var(--navy);border-radius:2px;overflow:hidden}
+.sz-fill{height:100%;background:var(--blue-b);border-radius:2px;transition:width .4s}
+.sz-fill.hot{background:var(--red)}
+.sz-pct{font-family:var(--fd);font-size:.56rem;color:var(--gray);width:24px;text-align:right;flex-shrink:0}
+
+/* Actions / status */
+.scout-action-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.scout-status-row{display:flex;align-items:center;gap:5px;font-family:var(--fd);font-size:.57rem;letter-spacing:1px;text-transform:uppercase;color:var(--gray);margin-bottom:6px}
+.scout-status-dot{width:5px;height:5px;border-radius:50%;background:var(--gray);flex-shrink:0;transition:background .3s}
+.scout-status-dot.ok{background:#4ade80}
+.scout-status-dot.err{background:var(--red)}
+.scout-status-dot.busy{background:var(--gold);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Backend bar */
+.scout-backend-bar{display:none;background:var(--navy-mid);border:1px solid var(--bdr);border-radius:6px;padding:12px;margin-top:6px}
+.scout-backend-bar.show{display:block}
+
+/* ── COURT VISUALIZER ── */
+.scout-viz-panel{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;position:sticky;top:76px}
+.scout-viz-hdr{background:var(--navy-mid);padding:9px 13px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.scout-viz-title{font-family:var(--fd);font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gray)}
+.viz-pills{display:flex;gap:4px}
+.viz-pill{font-family:var(--fd);font-size:.57rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid var(--bdr);background:transparent;color:var(--gray);cursor:pointer;transition:all .15s}
+.viz-pill.active{background:var(--blue-b);border-color:var(--blue-b);color:#fff}
+.scout-viz-body{padding:10px}
+.court-svg-wrap{background:#000;border-radius:5px;overflow:hidden;min-height:160px;display:flex;align-items:center;justify-content:center}
+.court-svg-wrap svg{display:block;width:100%;height:auto}
+.scout-viz-empty{font-family:var(--fd);font-size:.62rem;letter-spacing:1px;text-transform:uppercase;color:var(--gray);padding:28px 16px;text-align:center}
+.scout-viz-legend{margin-top:8px;display:flex;flex-wrap:wrap;gap:7px}
+.viz-leg-item{display:flex;align-items:center;gap:4px;font-family:var(--fd);font-size:.54rem;color:var(--gray);letter-spacing:.4px}
+.viz-leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
 </style>
 </head>
 <body>
@@ -557,6 +748,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   <div class="tab" data-s="rankings">Rankings</div>
   <div class="tab" data-s="submit">Submit Score</div>
   <div class="tab" data-s="livestreams">Livestreams</div>
+  <div class="tab" data-s="aiscout">🤖 AI Scout</div>
 </div>
 
 <div class="layout">
@@ -619,7 +811,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
             <input type="file" id="fileInput" accept="image/*" style="display:none">
           </div>
           <div class="fprev" id="fprev">
-            <img id="prevImg" src="" alt="">
+            <img id="prevImg" src="#" alt="Game photo preview">
             <div class="fprev-name" id="prevName"></div>
           </div>
           <div class="err" id="photoErr">Please upload a game photo.</div>
@@ -643,7 +835,282 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
         <span id="msStatusTxt"></span>
       </div>
       <div class="ms-channel-list" id="msChipList" style="display:none"></div>
-    </div>
+
+      <!-- ── AI SCOUTING PANEL ── -->
+      <div id="ai-scouting-panel" class="visible">
+        <div class="ai-panel-hdr">
+          <div class="ai-panel-title">
+            <span class="ai-icon">🤖</span> AI Scouting Engine
+          </div>
+          <div class="ai-toggle-row">
+            <span class="ai-mode-label">Mode</span>
+            <select class="ai-mode-select" id="aiModeSelect">
+              <option value="upload">Upload Clip</option>
+              <option value="livestream">YouTube Live</option>
+            </select>
+            <span class="ai-mode-label" style="margin-left:6px">AI Analysis</span>
+            <label class="ai-switch">
+              <input type="checkbox" id="aiToggle">
+              <span class="ai-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ai-panel-body">
+
+          <!-- ── UPLOAD MODE ── -->
+          <div id="aiUploadPane">
+            <div class="ai-source-row" style="flex-wrap:wrap;gap:8px">
+              <!-- Drop zone -->
+              <label id="aiDropZone" style="flex:1;min-width:220px;border:2px dashed var(--bdr);border-radius:6px;padding:14px 16px;text-align:center;cursor:pointer;background:var(--navy-mid);transition:border-color .2s;display:block">
+                <input type="file" id="aiFileInput" accept="video/*" style="display:none">
+                <div id="aiDropIcon" style="font-size:1.4rem;margin-bottom:4px">🎬</div>
+                <div id="aiDropTxt" style="font-family:var(--fd);font-size:.68rem;letter-spacing:1px;text-transform:uppercase;color:var(--gray)">Drop video or <strong style="color:var(--blue-b)">click to browse</strong></div>
+                <div id="aiUploadProgress" style="display:none;margin-top:8px">
+                  <div style="height:4px;background:var(--navy);border-radius:2px;overflow:hidden">
+                    <div id="aiProgressBar" style="height:100%;background:var(--blue-b);width:0%;transition:width .2s"></div>
+                  </div>
+                  <div id="aiProgressTxt" style="font-family:var(--fd);font-size:.6rem;color:var(--gray);margin-top:4px;letter-spacing:1px">Uploading…</div>
+                </div>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+                <button class="ai-viral-btn" id="aiViralScanBtn" disabled style="opacity:.45">⚡ Scan Viral</button>
+                <button class="ai-viral-btn" id="aiClearUploadBtn" style="display:none">✕ Clear</button>
+              </div>
+            </div>
+            <!-- Preview player (shown after upload) -->
+            <div id="aiVideoWrap" style="display:none;margin-top:10px">
+              <video id="aiVideoPlayer" controls style="width:100%;border-radius:6px;background:#000;max-height:260px"></video>
+            </div>
+          </div>
+
+          <!-- ── YOUTUBE LIVE MODE ── -->
+          <div id="aiLivePane" style="display:none">
+            <div class="ai-source-row" style="flex-wrap:wrap;gap:8px">
+              <input class="ai-source-input" id="aiYouTubeUrl" placeholder="YouTube URL or video ID  (e.g. https://youtube.com/watch?v=…)" style="flex:1;min-width:220px"/>
+              <button class="ai-viral-btn" id="aiStartLiveBtn">▶ Start Live Analysis</button>
+              <button class="ai-viral-btn" id="aiStopLiveBtn" style="display:none">⏹ Stop</button>
+            </div>
+            <!-- Live segment feed -->
+            <div id="aiLiveFeed" style="display:none;margin-top:8px;background:var(--navy-mid);border-radius:6px;padding:8px 12px;max-height:90px;overflow-y:auto;font-family:var(--fd);font-size:.62rem;letter-spacing:.5px;color:var(--gray-l)"></div>
+          </div>
+
+          <!-- Live score display -->
+          <div class="ai-live-score" id="aiLiveScore" style="display:none">
+            <span class="als-team" id="alsTeamA">Team A</span>
+            <span class="als-score" id="alsScoreA">—</span>
+            <span class="als-sep">·</span>
+            <span class="als-score" id="alsScoreB">—</span>
+            <span class="als-team" style="text-align:right" id="alsTeamB">Team B</span>
+            <span class="als-period" id="alsPeriod">LIVE</span>
+          </div>
+
+          <!-- Timeline (upload mode only) -->
+          <div class="ai-timeline-wrap" id="aiTimeline" style="display:none" title="Red = analyzed · Gold = viral moment">
+            <div class="ai-timeline-bg"></div>
+            <div class="ai-timeline-progress" id="aiTimelineProgress" style="width:0%"></div>
+          </div>
+
+          <!-- Stats dashboard -->
+          <div class="ai-stats-dashboard" id="aiStatsDash">
+            <div class="ai-stat-card highlight" id="aiStatSpeed">
+              <div class="ai-stat-val" id="aiSpeedVal">—</div>
+              <div class="ai-stat-lbl">Top Speed</div>
+              <div class="ai-stat-sub" id="aiSpeedSub">mph</div>
+            </div>
+            <div class="ai-stat-card" id="aiStatSpacing">
+              <div class="ai-stat-val" id="aiSpacingVal">—</div>
+              <div class="ai-stat-lbl">Avg Spacing</div>
+              <div class="ai-stat-sub">ft between players</div>
+            </div>
+            <div class="ai-stat-card" id="aiStatShots">
+              <div class="ai-stat-val" id="aiShotsVal">—</div>
+              <div class="ai-stat-lbl">Shot Attempts</div>
+              <div class="ai-stat-sub" id="aiShotsSub">this clip</div>
+            </div>
+            <div class="ai-stat-card" id="aiStatPlayers">
+              <div class="ai-stat-val" id="aiPlayersVal">—</div>
+              <div class="ai-stat-lbl">Players Tracked</div>
+              <div class="ai-stat-sub" id="aiPlayersSub">avg in frame</div>
+            </div>
+          </div>
+
+          <!-- Zone bar chart -->
+          <div class="ai-zone-bar" id="aiZoneBar">
+            <div class="ai-zone-bar-lbl">Court Zone Occupancy</div>
+            <div id="aiZoneRows"></div>
+          </div>
+
+          <!-- Report -->
+          <div class="ai-report-box" id="aiReportBox">
+            Choose a mode above, then enable AI Analysis to begin scouting…
+          </div>
+
+          <div class="ai-bottom-row">
+            <span class="ai-status-txt" id="aiStatusTxt">AI is resting.</span>
+            <button class="ai-viral-btn" id="aiExportBtn" style="display:none">⬇ Export Report</button>
+          </div>
+
+          <!-- Backend note -->
+          <div class="ai-hosting-note" id="aiHostingNote">
+            <strong style="color:var(--white)">⚡ Backend not reachable.</strong>
+            The AI pipeline requires a GPU server running <code>videoLearning.py</code>.
+            Options to host it publicly:
+            <ul style="margin:6px 0 0 16px;line-height:1.8">
+              <li><a href="https://vast.ai" target="_blank">Vast.ai</a> — rent RTX GPUs from $0.20/hr.</li>
+              <li><a href="https://runpod.io" target="_blank">RunPod</a> — one-click pods with persistent storage.</li>
+              <li><a href="https://modal.com" target="_blank">Modal</a> — serverless GPU, auto-scaling.</li>
+              <li><strong>ngrok / Cloudflare Tunnel</strong> — expose your local server without port-forwarding.</li>
+            </ul>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span class="ai-source-lbl">Backend URL</span>
+              <input class="ai-source-input" id="aiBackendUrl" placeholder="http://127.0.0.1:8000" style="max-width:240px" />
+              <button class="ai-viral-btn" id="aiTestBackend">Test Connection</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ── /AI SCOUTING PANEL ── -->
+
+    </div><!-- /sec-livestreams -->
+
+    <!-- ════════════════════════════════════════
+         AI SCOUT TAB
+         ════════════════════════════════════════ -->
+    <div id="sec-aiscout" style="display:none">
+      <div class="scout-layout">
+
+        <!-- LEFT: Input + Analysis -->
+        <div class="scout-left">
+
+          <div class="scout-mode-bar">
+            <button class="scout-mode-btn active" id="scoutModeLive" onclick="scoutSetMode('live')">🔴 Live Stream</button>
+            <button class="scout-mode-btn" id="scoutModeClip" onclick="scoutSetMode('clip')">🎬 Clip / VOD</button>
+          </div>
+
+          <!-- LIVE INPUT -->
+          <div id="scoutLiveInput" class="scout-input-card">
+            <div class="scout-input-title">YouTube Live URL</div>
+            <div class="scout-url-row">
+              <input class="scout-url-input" id="scoutLiveUrl" placeholder="https://youtube.com/watch?v=… (live stream)"/>
+              <button class="scout-btn primary" id="scoutStartLiveBtn">▶ Start</button>
+              <button class="scout-btn danger" id="scoutStopLiveBtn" style="display:none">⏹ Stop</button>
+            </div>
+            <div class="scout-live-log" id="scoutLiveLog"></div>
+          </div>
+
+          <!-- CLIP INPUT -->
+          <div id="scoutClipInput" class="scout-input-card" style="display:none">
+            <div class="scout-input-title">Upload a Clip</div>
+            <label class="scout-drop" id="scoutDrop">
+              <input type="file" id="scoutFileInput" accept="video/*" style="display:none">
+              <div class="scout-drop-icon">🎬</div>
+              <div class="scout-drop-txt" id="scoutDropTxt">Drop video or <strong style="color:var(--blue-b)">click to browse</strong></div>
+              <div class="scout-prog-wrap" id="scoutProgWrap"><div class="scout-prog-bar" id="scoutProgBar"></div></div>
+              <div class="scout-prog-lbl" id="scoutProgLbl"></div>
+            </label>
+            <div class="scout-input-title" style="margin-top:12px;margin-bottom:8px">— or paste a YouTube VOD URL —</div>
+            <div class="scout-url-row">
+              <input class="scout-url-input" id="scoutVodUrl" placeholder="https://youtube.com/watch?v=… (non-live)"/>
+              <input class="scout-url-input" id="scoutVodTime" type="number" min="0" value="0" placeholder="Start (s)" style="max-width:88px"/>
+              <button class="scout-btn primary" id="scoutAnalyzeVodBtn">Analyze</button>
+            </div>
+          </div>
+
+          <!-- Video preview -->
+          <div class="scout-video-wrap" id="scoutVideoWrap">
+            <video id="scoutVideoPlayer" controls></video>
+            <div class="scout-video-ts" id="scoutVideoTs">0:00</div>
+          </div>
+
+          <!-- Score bar -->
+          <div class="scout-score-bar" id="scoutScoreBar">
+            <span class="ssb-team" id="scoutTeamA">Team A</span>
+            <span class="ssb-score" id="scoutScoreA">—</span>
+            <span class="ssb-sep">·</span>
+            <span class="ssb-score" id="scoutScoreB">—</span>
+            <span class="ssb-team" id="scoutTeamB" style="text-align:right">Team B</span>
+            <span class="ssb-period" id="scoutPeriod">LIVE</span>
+            <span class="ssb-poss" id="scoutPoss"></span>
+          </div>
+
+          <!-- Timeline -->
+          <div class="scout-timeline" id="scoutTimeline">
+            <div class="scout-tl-prog" id="scoutTlProg" style="width:0%"></div>
+          </div>
+
+          <!-- Report -->
+          <div class="scout-report" id="scoutReport">
+            Select a mode, then start a live stream or upload a clip to begin scouting…
+          </div>
+
+          <!-- Stats grid -->
+          <div class="scout-stats-grid" id="scoutStatsGrid" style="display:none">
+            <div class="sstat hi"><div class="sstat-val" id="sstatSpeed">—</div><div class="sstat-lbl">Top Speed</div><div class="sstat-sub">mph</div></div>
+            <div class="sstat"><div class="sstat-val" id="sstatSpacing">—</div><div class="sstat-lbl">Avg Spacing</div><div class="sstat-sub">ft between players</div></div>
+            <div class="sstat"><div class="sstat-val" id="sstatShots">—</div><div class="sstat-lbl">Shot Attempts</div><div class="sstat-sub">this clip</div></div>
+            <div class="sstat"><div class="sstat-val" id="sstatPlayers">—</div><div class="sstat-lbl">Players Tracked</div><div class="sstat-sub" id="sstatPlayersSub">—</div></div>
+          </div>
+
+          <!-- Zone bars -->
+          <div class="scout-zones" id="scoutZones" style="display:none">
+            <div class="scout-zones-lbl">Court Zone Occupancy</div>
+            <div id="scoutZoneRows"></div>
+          </div>
+
+          <!-- Actions -->
+          <div class="scout-action-row">
+            <button class="scout-btn ghost" id="scoutExportBtn" style="display:none">⬇ Export Report</button>
+            <button class="scout-btn ghost" id="scoutViralBtn" style="display:none" disabled>⚡ Scan Viral Moments</button>
+            <button class="scout-btn ghost" id="scoutClearBtn" style="display:none">✕ Clear</button>
+          </div>
+
+          <!-- Status -->
+          <div class="scout-status-row">
+            <div class="scout-status-dot" id="scoutStatusDot"></div>
+            <span id="scoutStatusTxt">Connect your backend to begin.</span>
+          </div>
+
+          <!-- Backend config -->
+          <div style="margin-top:10px">
+            <button class="scout-btn ghost" style="font-size:.55rem;padding:3px 8px"
+              onclick="document.getElementById('scoutBackendBar').classList.toggle('show')">⚙ Backend Config</button>
+            <div class="scout-backend-bar" id="scoutBackendBar">
+              <div class="scout-input-title" style="margin-bottom:6px">Backend URL</div>
+              <div class="scout-url-row">
+                <input class="scout-url-input" id="scoutBackendUrl" placeholder="http://127.0.0.1:8000" style="max-width:260px"/>
+                <button class="scout-btn primary" id="scoutTestBackend">Test</button>
+              </div>
+              <div style="margin-top:8px;font-size:.72rem;color:var(--gray);line-height:1.7">
+                Run <code>python videoLearning.py</code> locally, or host on
+                <a href="https://vast.ai" target="_blank" style="color:var(--blue-b)">Vast.ai</a> ·
+                <a href="https://runpod.io" target="_blank" style="color:var(--blue-b)">RunPod</a>.
+                Expose with ngrok or <code>cloudflared tunnel --url http://localhost:8000</code>.
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /scout-left -->
+
+        <!-- RIGHT: Court Visualizer -->
+        <div class="scout-viz-panel">
+          <div class="scout-viz-hdr">
+            <span class="scout-viz-title">Court Visualizer</span>
+            <div class="viz-pills">
+              <button class="viz-pill active" id="vizPillTop" onclick="vizSetView('top')">Top Down</button>
+              <button class="viz-pill" id="vizPillArc" onclick="vizSetView('arc')">Shot Arc</button>
+            </div>
+          </div>
+          <div class="scout-viz-body">
+            <div class="court-svg-wrap" id="courtSvgWrap">
+              <div class="scout-viz-empty" id="scoutVizEmpty">Run analysis to see player movement</div>
+            </div>
+            <div class="scout-viz-legend" id="vizLegend"></div>
+          </div>
+        </div>
+
+      </div><!-- /scout-layout -->
+    </div><!-- /sec-aiscout -->
 
   </div><!-- /content -->
 
@@ -1551,12 +2018,13 @@ document.querySelectorAll(".tab").forEach(t => {
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
     t.classList.add("active");
     const s = t.dataset.s;
-    ["scores","rankings","submit","livestreams"].forEach(id => {
+    ["scores","rankings","submit","livestreams","aiscout"].forEach(id => {
       const el = document.getElementById("sec-"+id);
       if (el) el.style.display = id === s ? "block" : "none";
     });
     if (s === "rankings") renderRankings();
     if (s === "livestreams") msInit();
+    if (s === "aiscout" && typeof scoutInit === "function") scoutInit();
   });
 });
 
@@ -1809,6 +2277,1250 @@ setInterval(async () => {
 })();
 
 loadData();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AI SCOUTING ENGINE v3 — file upload + YouTube live + local path
+// ═══════════════════════════════════════════════════════════════════════════════
+(function () {
+  const DEFAULT_BACKEND = "http://127.0.0.1:8000";
+  let BACKEND = localStorage.getItem("ai_backend_url") || DEFAULT_BACKEND;
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let uploadSessionId    = null;   // UUID from /api/upload_clip
+  let liveSessionId      = null;   // UUID from /api/start_live_session
+  let lastProcessedBucket = -1;
+  let isFetching          = false;
+  let viralTimestamps     = [];
+  let reportHistory       = [];
+  let videoDuration       = 0;
+  let backendReachable    = null;
+  let livePollInterval    = null;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────────
+  const panel          = document.getElementById("ai-scouting-panel");
+  const toggle         = document.getElementById("aiToggle");
+  const modeSelect     = document.getElementById("aiModeSelect");
+  const reportBox      = document.getElementById("aiReportBox");
+  const statusTxt      = document.getElementById("aiStatusTxt");
+  const timeline       = document.getElementById("aiTimeline");
+  const timelineProgress = document.getElementById("aiTimelineProgress");
+  const liveScoreEl    = document.getElementById("aiLiveScore");
+  const exportBtn      = document.getElementById("aiExportBtn");
+  const backendUrlInput = document.getElementById("aiBackendUrl");
+  const testBackendBtn  = document.getElementById("aiTestBackend");
+
+  // Upload mode
+  const uploadPane     = document.getElementById("aiUploadPane");
+  const dropZone       = document.getElementById("aiDropZone");
+  const fileInput      = document.getElementById("aiFileInput");
+  const dropTxt        = document.getElementById("aiDropTxt");
+  const uploadProgress = document.getElementById("aiUploadProgress");
+  const progressBar    = document.getElementById("aiProgressBar");
+  const progressTxt    = document.getElementById("aiProgressTxt");
+  const videoWrap      = document.getElementById("aiVideoWrap");
+  const videoPlayer    = document.getElementById("aiVideoPlayer");
+  const viralScanBtn   = document.getElementById("aiViralScanBtn");
+  const clearUploadBtn = document.getElementById("aiClearUploadBtn");
+
+  // Live mode
+  const livePane       = document.getElementById("aiLivePane");
+  const youtubeUrlInput = document.getElementById("aiYouTubeUrl");
+  const startLiveBtn   = document.getElementById("aiStartLiveBtn");
+  const stopLiveBtn    = document.getElementById("aiStopLiveBtn");
+  const liveFeed       = document.getElementById("aiLiveFeed");
+
+  // ── Panel visibility ──────────────────────────────────────────────────────
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      panel.style.display = t.dataset.s === "livestreams" ? "block" : "none";
+    });
+  });
+  if (document.querySelector(".tab.active")?.dataset.s !== "livestreams") {
+    panel.style.display = "none";
+  }
+
+  // ── Backend URL / test ────────────────────────────────────────────────────
+  backendUrlInput.value = BACKEND;
+
+  async function testBackend(url) {
+    try {
+      const r = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4000) });
+      if (r.ok) {
+        backendReachable = true;
+        panel.classList.remove("disconnected");
+        const info = await r.json();
+        setStatus(`✓ Connected · ${info.device || "CPU"} · yt-dlp: ${info.ytdlp_available ? "✓" : "✗"}`);
+        return true;
+      }
+    } catch (_) {}
+    backendReachable = false;
+    panel.classList.add("disconnected");
+    setStatus("⚠ Backend unreachable — see options below.");
+    return false;
+  }
+
+  testBackendBtn.addEventListener("click", async () => {
+    BACKEND = backendUrlInput.value.trim() || DEFAULT_BACKEND;
+    localStorage.setItem("ai_backend_url", BACKEND);
+    testBackendBtn.textContent = "Testing…";
+    await testBackend(BACKEND);
+    testBackendBtn.textContent = "Test Connection";
+  });
+  testBackend(BACKEND);
+
+  // ── Mode switcher ─────────────────────────────────────────────────────────
+  modeSelect.addEventListener("change", () => {
+    const isUpload = modeSelect.value === "upload";
+    uploadPane.style.display = isUpload ? "block" : "none";
+    livePane.style.display   = isUpload ? "none" : "block";
+    timeline.style.display   = isUpload && uploadSessionId ? "block" : "none";
+    liveScoreEl.style.display = "none";
+    reportBox.textContent = "Choose a mode above, then enable AI Analysis to begin scouting…";
+    setStatus("AI is resting.");
+    lastProcessedBucket = -1;
+    stopLiveSession();
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setStatus(msg) { statusTxt.textContent = msg; }
+
+  // Zone display name map
+  const ZONE_LABELS = {
+    paint_left:"Paint (L)", paint_right:"Paint (R)", mid_range:"Mid-Range",
+    perimeter:"Perimeter", three_left:"3PT (L)", three_right:"3PT (R)", backcourt:"Backcourt"
+  };
+
+  function renderStats(yoloMetrics) {
+    if (!yoloMetrics || !Object.keys(yoloMetrics).length) return;
+    const dash = document.getElementById("aiStatsDash");
+    const zoneBar = document.getElementById("aiZoneBar");
+    dash.classList.add("visible");
+
+    document.getElementById("aiSpeedVal").textContent =
+      yoloMetrics.top_speed_mph != null ? yoloMetrics.top_speed_mph : "—";
+    document.getElementById("aiSpacingVal").textContent =
+      yoloMetrics.avg_spacing_ft != null ? yoloMetrics.avg_spacing_ft : "—";
+    document.getElementById("aiShotsVal").textContent =
+      yoloMetrics.shot_attempts != null ? yoloMetrics.shot_attempts : "—";
+    document.getElementById("aiPlayersVal").textContent =
+      yoloMetrics.player_count != null ? yoloMetrics.player_count : "—";
+    document.getElementById("aiPlayersSub").textContent =
+      yoloMetrics.avg_players_in_frame
+        ? `${yoloMetrics.avg_players_in_frame} avg in frame`
+        : "avg in frame";
+
+    // Zone bars
+    const zones = yoloMetrics.zone_occupancy || {};
+    const total = Object.values(zones).reduce((a,b) => a+b, 0) || 1;
+    const sorted = Object.entries(zones).sort((a,b) => b[1]-a[1]).slice(0,5);
+    if (sorted.length) {
+      zoneBar.classList.add("visible");
+      document.getElementById("aiZoneRows").innerHTML = sorted.map(([z,c]) => {
+        const pct = Math.round(c/total*100);
+        const hot = pct > 30 ? " hot" : "";
+        return `<div class="ai-zone-row">
+          <span class="ai-zone-name">${ZONE_LABELS[z]||z}</span>
+          <div class="ai-zone-track"><div class="ai-zone-fill${hot}" style="width:${pct}%"></div></div>
+          <span style="font-family:var(--fd);font-size:.6rem;color:var(--gray);width:28px;text-align:right">${pct}%</span>
+        </div>`;
+      }).join("");
+    }
+  }
+
+  function playTypeTag(playType) {
+    if (!playType || playType === "other") return "";
+    const map = {score:"score",turnover:"turnover",foul:"foul",rebound:"other",timeout:"other"};
+    const cls = map[playType] || "other";
+    const icons = {score:"🏀",turnover:"↩",foul:"🚨",rebound:"↑",timeout:"⏱"};
+    return `<div class="ai-play-tag ${cls}">${icons[playType]||""} ${playType.toUpperCase()}</div>`;
+  }
+
+  function renderReport(report, label, isViral, scoreUpdate, period, playType, yoloMetrics) {
+    reportBox.classList.remove("loading");
+    let html = "";
+    if (isViral) html += `<div class="ai-viral-badge">⚡ Viral Moment · excitement ${label}</div>`;
+    if (playType && playType !== "other") html += playTypeTag(playType);
+    if (scoreUpdate) {
+      html += `<div class="ai-score-badge">SCORE · ${scoreUpdate}${period ? " · " + period : ""}</div>`;
+      liveScoreEl.style.display = "flex";
+      const parts = scoreUpdate.split(" – ");
+      if (parts.length === 2) {
+        const a = parts[0].trim().split(" "); const b = parts[1].trim().split(" ");
+        document.getElementById("alsScoreA").textContent = a.pop();
+        document.getElementById("alsTeamA").textContent  = a.join(" ");
+        document.getElementById("alsScoreB").textContent = b.pop();
+        document.getElementById("alsTeamB").textContent  = b.join(" ");
+      }
+      document.getElementById("alsPeriod").textContent = period || "LIVE";
+    }
+    const formatted = report
+      .replace(/\n\n+/g, "</p><p>").replace(/\n/g, "<br>")
+      .replace(/\b(score|three-pointer|dunk|steal|turnover|foul|timeout|buzzer)\b/gi, "<strong>$1</strong>");
+    html += `<p>${formatted}</p>`;
+    reportBox.innerHTML = html;
+    exportBtn.style.display = "inline-block";
+    if (yoloMetrics) renderStats(yoloMetrics);
+  }
+
+  function redrawTimeline() {
+    timeline.querySelectorAll(".ai-timeline-marker").forEach(m => m.remove());
+    if (!videoDuration || videoDuration <= 0) return;
+    reportHistory.forEach(({ bucket }) => {
+      const m = document.createElement("div");
+      m.className = "ai-timeline-marker";
+      m.style.left  = (bucket / videoDuration * 100) + "%";
+      m.style.width = Math.max(10 / videoDuration * 100, 0.4) + "%";
+      timeline.appendChild(m);
+    });
+    viralTimestamps.forEach(({ ts }) => {
+      const m = document.createElement("div");
+      m.className = "ai-timeline-marker viral";
+      m.style.left  = (ts / videoDuration * 100) + "%";
+      m.style.width = Math.max(5 / videoDuration * 100, 0.6) + "%";
+      m.title = "⚡ Viral";
+      timeline.appendChild(m);
+    });
+  }
+
+  // ── FILE UPLOAD ───────────────────────────────────────────────────────────
+  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.style.borderColor = "var(--blue-b)"; });
+  dropZone.addEventListener("dragleave", () => { dropZone.style.borderColor = ""; });
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.style.borderColor = "";
+    if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", e => { if (e.target.files[0]) handleFileSelect(e.target.files[0]); });
+
+  async function handleFileSelect(file) {
+    if (!file.type.startsWith("video/")) {
+      setStatus("Please select a video file."); return;
+    }
+    if (!backendReachable) {
+      setStatus("⚠ Backend not connected. Can't upload."); return;
+    }
+
+    // Show progress UI
+    uploadProgress.style.display = "block";
+    progressBar.style.width = "0%";
+    progressTxt.textContent = `Uploading ${file.name}…`;
+    dropTxt.style.display = "none";
+    viralScanBtn.disabled = true; viralScanBtn.style.opacity = ".45";
+
+    // XHR with progress (fetch doesn't support upload progress)
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BACKEND}/api/upload_clip`);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        progressBar.style.width = pct + "%";
+        progressTxt.textContent = `Uploading… ${pct}%`;
+      }
+    };
+    xhr.onload = () => {
+      uploadProgress.style.display = "none";
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        uploadSessionId = data.session_id;
+        progressTxt.textContent = "";
+        dropTxt.style.display = "block";
+        dropTxt.innerHTML = `<strong style="color:var(--white)">${file.name}</strong><br><span style="color:var(--gray);font-size:.6rem">${data.size_mb} MB · session ${uploadSessionId.slice(0,8)}</span>`;
+
+        // Show video player for preview
+        videoPlayer.src = `${BACKEND}${data.preview_url}`;
+        videoWrap.style.display = "block";
+        timeline.style.display  = "block";
+        clearUploadBtn.style.display = "inline-block";
+        viralScanBtn.disabled = false; viralScanBtn.style.opacity = "1";
+
+        setStatus(`✓ Uploaded · ${data.size_mb} MB — enable AI to analyze`);
+
+        // Hook video player time into analyzer
+        videoPlayer.addEventListener("timeupdate", onVideoTimeUpdate);
+        videoPlayer.addEventListener("loadedmetadata", () => {
+          videoDuration = videoPlayer.duration;
+        });
+      } else {
+        setStatus(`Upload failed: ${xhr.status}`);
+        dropTxt.style.display = "block";
+      }
+    };
+    xhr.onerror = () => { setStatus("Upload error."); dropTxt.style.display = "block"; uploadProgress.style.display = "none"; };
+    const fd = new FormData();
+    fd.append("file", file);
+    xhr.send(fd);
+    setStatus("Uploading…");
+  }
+
+  function onVideoTimeUpdate() {
+    if (!toggle.checked || !uploadSessionId) return;
+    const ct = videoPlayer.currentTime;
+    const dur = videoPlayer.duration || 0;
+    if (dur > 0) timelineProgress.style.width = (ct / dur * 100) + "%";
+    const bucket = Math.floor(ct / 10) * 10;
+    if (bucket !== lastProcessedBucket && !isFetching) {
+      lastProcessedBucket = bucket;
+      runBucketAnalysis(uploadSessionId, ct);
+    }
+  }
+
+  clearUploadBtn.addEventListener("click", () => {
+    videoPlayer.removeEventListener("timeupdate", onVideoTimeUpdate);
+    videoPlayer.src = "";
+    videoWrap.style.display = "none";
+    timeline.style.display  = "none";
+    uploadSessionId = null;
+    reportHistory   = [];
+    viralTimestamps = [];
+    lastProcessedBucket = -1;
+    dropTxt.innerHTML = 'Drop video or <strong style="color:var(--blue-b)">click to browse</strong>';
+    clearUploadBtn.style.display = "none";
+    viralScanBtn.disabled = true; viralScanBtn.style.opacity = ".45";
+    reportBox.textContent = "Choose a mode above, then enable AI Analysis to begin scouting…";
+    liveScoreEl.style.display = "none";
+    exportBtn.style.display = "none";
+    setStatus("AI is resting.");
+    // Optionally wipe server cache for this session
+    if (backendReachable) {
+      fetch(`${BACKEND}/api/clear_cache?session_id=${uploadSessionId}`, { method: "DELETE" }).catch(() => {});
+    }
+  });
+
+  // ── Viral scan (upload mode) ──────────────────────────────────────────────
+  viralScanBtn.addEventListener("click", async () => {
+    if (!uploadSessionId || !backendReachable) return;
+    viralScanBtn.textContent = "⚡ Scanning…";
+    viralScanBtn.disabled = true;
+    setStatus("Scanning for viral moments — this may take a few minutes…");
+    try {
+      const res = await fetch(`${BACKEND}/api/scan_viral`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: uploadSessionId })
+      });
+      const data = await res.json();
+      viralTimestamps = data.viral_moments || [];
+      redrawTimeline();
+      if (viralTimestamps.length) {
+        const top = viralTimestamps[0];
+        renderReport(top.reason, top.excitement + "/10", true, top.score_update, top.period, null, null);
+        setStatus(`⚡ ${viralTimestamps.length} viral moment(s) found`);
+        // Jump video to the top moment
+        if (videoPlayer) videoPlayer.currentTime = top.ts;
+      } else {
+        setStatus("No viral moments detected.");
+      }
+    } catch (e) {
+      setStatus("Viral scan failed — backend error.");
+    }
+    viralScanBtn.textContent = "⚡ Scan Viral";
+    viralScanBtn.disabled = false;
+  });
+
+  // ── Per-bucket analysis ────────────────────────────────────────────────────
+  // Two-phase: fast dead-time check first (~0.2s), then full analysis only
+  // if actual play is happening. This prevents wasting GPU time on ad breaks,
+  // halftime, and frozen feeds, and keeps the report box from going blank
+  // during pauses.
+  async function runBucketAnalysis(source, currentTime) {
+    if (isFetching) return;
+    isFetching = true;
+
+    // Phase 1 — fast pre-check
+    try {
+      const chk = await fetch(`${BACKEND}/api/check_dead_time`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: source, current_time: currentTime })
+      });
+      if (chk.ok) {
+        const chkData = await chk.json();
+        if (chkData.dead_time) {
+          // Show a non-intrusive pause notice without blanking the last report
+          setStatus(`⏸ Broadcast pause — ${chkData.reason}`);
+          // Dim the report box slightly but keep last report visible
+          reportBox.style.opacity = "0.45";
+          isFetching = false;
+          return;
+        }
+      }
+    } catch (_) {
+      // If pre-check fails just proceed to full analysis
+    }
+
+    // Restore opacity in case it was dimmed
+    reportBox.style.opacity = "1";
+    reportBox.classList.add("loading");
+    reportBox.innerHTML = "";
+    setStatus(`Analyzing ${Math.floor(currentTime)}s…`);
+
+    // Phase 2 — full YOLO + Gemini analysis
+    try {
+      const res = await fetch(`${BACKEND}/api/analyze_playhead`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: source, current_time: currentTime })
+      });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+
+      if (data.dead_time) {
+        // Backend also flagged it (cached dead-time result)
+        reportBox.classList.remove("loading");
+        reportBox.style.opacity = "0.45";
+        setStatus(`⏸ ${data.dead_reason || "Broadcast pause"}`);
+        isFetching = false;
+        return;
+      }
+
+      reportBox.style.opacity = "1";
+      reportHistory.push({ bucket: data.bucket_start, report: data.scouting_report,
+                           yolo: data.yolo_metrics, structured: data.structured });
+      renderReport(data.scouting_report, data.bucket_start, false,
+                   data.score_update, data.period, data.play_type, data.yolo_metrics);
+      setStatus(`Analysis ready · ${data.bucket_start}s${data.play_type ? " · " + data.play_type : ""}`);
+      redrawTimeline();
+    } catch (e) {
+      reportBox.classList.remove("loading");
+      reportBox.style.opacity = "1";
+      reportBox.textContent = "Analysis error — check backend connection.";
+      panel.classList.add("disconnected");
+      backendReachable = false;
+    }
+    isFetching = false;
+  }
+
+  // ── YOUTUBE LIVE ──────────────────────────────────────────────────────────
+  startLiveBtn.addEventListener("click", async () => {
+    const url = youtubeUrlInput.value.trim();
+    if (!url) { setStatus("Enter a YouTube URL or video ID."); return; }
+    if (!backendReachable) { setStatus("⚠ Backend not connected."); return; }
+    if (!toggle.checked) { toggle.checked = true; }
+
+    startLiveBtn.style.display = "none";
+    stopLiveBtn.style.display  = "inline-block";
+    liveFeed.style.display     = "block";
+    liveFeed.textContent       = "Starting live session…\n";
+    liveScoreEl.style.display  = "flex";
+    setStatus("Starting YouTube live analysis…");
+
+    try {
+      const res = await fetch(`${BACKEND}/api/start_live_session`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtube_url: url, auto_analyze: true })
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.detail || res.status);
+      }
+      const data = await res.json();
+      liveSessionId = data.session_id;
+      setStatus(`Live session started · ${liveSessionId.slice(0,8)}`);
+      startLivePoll();
+    } catch (e) {
+      setStatus(`Live start failed: ${e.message}`);
+      startLiveBtn.style.display = "inline-block";
+      stopLiveBtn.style.display  = "none";
+    }
+  });
+
+  stopLiveBtn.addEventListener("click", stopLiveSession);
+
+  function startLivePoll() {
+    if (livePollInterval) clearInterval(livePollInterval);
+    livePollInterval = setInterval(pollLiveSession, 5000);
+  }
+
+  async function pollLiveSession() {
+    if (!liveSessionId) return;
+    try {
+      const res = await fetch(`${BACKEND}/api/live_status/${liveSessionId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      setStatus(`Live · ${data.status} · ${data.segments_done} segment(s)`);
+
+      if (data.error) {
+        setStatus(`Live error: ${data.error}`);
+        stopLiveSession(); return;
+      }
+
+      if (data.latest) {
+        const r = data.latest;
+        if (r.dead_time) {
+          // Don't blank the last real report — just dim + show status
+          reportBox.style.opacity = "0.45";
+          setStatus(`⏸ ${r.dead_reason || "Broadcast pause detected"}`);
+        } else {
+          reportBox.style.opacity = "1";
+          renderReport(r.report, `seg ${r.segment}`, false,
+                       r.score_update, r.period, r.play_type, r.yolo_metrics);
+        }
+        // Always append to the feed log
+        const line = document.createElement("div");
+        const icon = r.dead_time ? "⏸" : "🏀";
+        line.textContent = `${icon} [seg ${r.segment}] ${r.report.slice(0, 80)}…`;
+        line.style.opacity = r.dead_time ? "0.5" : "1";
+        liveFeed.appendChild(line);
+        liveFeed.scrollTop = liveFeed.scrollHeight;
+      }
+
+      if (data.status === "stopped" || data.status === "error") {
+        reportBox.style.opacity = "1";
+        stopLiveSession();
+      }
+    } catch (_) {}
+  }
+
+  async function stopLiveSession() {
+    if (livePollInterval) { clearInterval(livePollInterval); livePollInterval = null; }
+    if (liveSessionId && backendReachable) {
+      await fetch(`${BACKEND}/api/stop_live/${liveSessionId}`, { method: "DELETE" }).catch(() => {});
+    }
+    liveSessionId = null;
+    startLiveBtn.style.display = "inline-block";
+    stopLiveBtn.style.display  = "none";
+    setStatus("Live session stopped.");
+  }
+
+  // ── AI toggle ─────────────────────────────────────────────────────────────
+  toggle.addEventListener("change", () => {
+    if (!toggle.checked) {
+      setStatus("AI is resting.");
+      lastProcessedBucket = -1;
+      exportBtn.style.display = "none";
+    } else {
+      setStatus("AI analysis active.");
+    }
+  });
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  exportBtn.addEventListener("click", () => {
+    if (!reportHistory.length) return;
+    const lines = reportHistory.map(h => {
+      let block = `=== ${h.bucket != null ? h.bucket+"s" : "Live"} ===\n${h.report}`;
+      if (h.yolo) {
+        block += `\n\n--- YOLO Metrics ---`;
+        if (h.yolo.top_speed_mph  != null) block += `\nTop speed: ${h.yolo.top_speed_mph} mph`;
+        if (h.yolo.avg_spacing_ft != null) block += `\nAvg spacing: ${h.yolo.avg_spacing_ft} ft`;
+        if (h.yolo.shot_attempts  != null) block += `\nShot attempts: ${h.yolo.shot_attempts}`;
+        if (h.yolo.player_count   != null) block += `\nPlayers tracked: ${h.yolo.player_count}`;
+      }
+      if (h.structured && h.structured.play_type)
+        block += `\nPlay type: ${h.structured.play_type}`;
+      return block;
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lines.join("\n\n")], { type: "text/plain" }));
+    a.download = `scouting_${Date.now()}.txt`;
+    a.click();
+  });
+
+  // ── Cached timeline sync ──────────────────────────────────────────────────
+  setInterval(async () => {
+    if (!backendReachable || !uploadSessionId) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/get_cached_timeline?session_id=${uploadSessionId}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      (d.processed_timestamps || []).forEach(ts => {
+        if (!reportHistory.find(h => h.bucket === ts))
+          reportHistory.push({ bucket: ts, report: "[cached]" });
+      });
+      redrawTimeline();
+    } catch (_) {}
+  }, 6000);
+
+})();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AI SCOUT — v4
+// Live Stream mode: continuous 10-second segment analysis with dead-time skip
+// Clip/VOD mode:    file upload OR YouTube non-live URL with timestamp
+// Court Visualizer: top-down player trajectories + side-view shot arcs
+// ═══════════════════════════════════════════════════════════════════════════════
+(function () {
+
+  // ── Config & state ──────────────────────────────────────────────────────────
+  const DEFAULT_BACKEND = "http://127.0.0.1:8000";
+  let BACKEND    = localStorage.getItem("scout_backend") || DEFAULT_BACKEND;
+  let mode       = "live";        // "live" | "clip"
+  let backendOk  = null;
+  let uploadSid  = null;          // session_id from /api/upload_clip
+  let liveSid    = null;          // session_id from /api/start_live_session
+  let livePoll   = null;          // setInterval handle
+  let isBusy     = false;
+  let reportHist = [];            // all result objects this session
+  let vizView    = "top";         // "top" | "arc"
+  let lastYolo   = null;          // most recent yolo_metrics for viz redraw
+  let vidDur     = 0;
+  let lastBucket = -1;
+
+  // Colour palette for player trails
+  const COLORS = [
+    "#38bdf8","#f43f5e","#4ade80","#fb923c","#a78bfa",
+    "#34d399","#fbbf24","#e879f9","#60a5fa","#f87171"
+  ];
+
+  // ── DOM helpers ─────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const reportEl   = $("scoutReport");
+  const scoreBar   = $("scoutScoreBar");
+  const timeline   = $("scoutTimeline");
+  const tlProg     = $("scoutTlProg");
+  const statsGrid  = $("scoutStatsGrid");
+  const zonesEl    = $("scoutZones");
+  const zoneRows   = $("scoutZoneRows");
+  const svgWrap    = $("courtSvgWrap");
+  const vizLegend  = $("vizLegend");
+  const liveLog    = $("scoutLiveLog");
+  const exportBtn  = $("scoutExportBtn");
+  const viralBtn   = $("scoutViralBtn");
+  const clearBtn   = $("scoutClearBtn");
+  const videoEl    = $("scoutVideoPlayer");
+
+  // ── Init (called when tab is clicked) ────────────────────────────────────────
+  window.scoutInit = function () {
+    if (backendOk === null) testBackend(BACKEND);
+  };
+
+  // ── Backend test ─────────────────────────────────────────────────────────────
+  $("scoutBackendUrl").value = BACKEND;
+
+  $("scoutTestBackend").addEventListener("click", async () => {
+    BACKEND = $("scoutBackendUrl").value.trim() || DEFAULT_BACKEND;
+    localStorage.setItem("scout_backend", BACKEND);
+    $("scoutTestBackend").textContent = "Testing…";
+    await testBackend(BACKEND);
+    $("scoutTestBackend").textContent = "Test";
+  });
+
+  async function testBackend(url) {
+    setStatus("busy", "Connecting…");
+    try {
+      const r = await fetch(`${url}/health`, { signal: AbortSignal.timeout(4000) });
+      if (r.ok) {
+        const d = await r.json();
+        backendOk = true;
+        setStatus("ok", `Connected · ${d.device || "CPU"} · yt-dlp: ${d.ytdlp_available ? "✓" : "✗"}`);
+        return true;
+      }
+    } catch (_) {}
+    backendOk = false;
+    setStatus("err", "Backend not reachable — check URL and run videoLearning.py");
+    return false;
+  }
+
+  // ── Mode switcher ─────────────────────────────────────────────────────────────
+  window.scoutSetMode = function (m) {
+    mode = m;
+    $("scoutModeLive").classList.toggle("active", m === "live");
+    $("scoutModeClip").classList.toggle("active", m === "clip");
+    $("scoutLiveInput").style.display = m === "live" ? "block" : "none";
+    $("scoutClipInput").style.display = m === "clip" ? "block" : "none";
+    $("scoutVideoWrap").style.display = "none";
+    timeline.classList.remove("vis");
+    stopLiveSession();
+    clearAll();
+  };
+
+  // ── Status helper ─────────────────────────────────────────────────────────────
+  function setStatus(state, msg) {
+    const dot = $("scoutStatusDot");
+    dot.className = "scout-status-dot" + (state === "ok" ? " ok" : state === "err" ? " err" : state === "busy" ? " busy" : "");
+    $("scoutStatusTxt").textContent = msg;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // LIVE STREAM MODE
+  // ════════════════════════════════════════════════════════════════════════════
+  $("scoutStartLiveBtn").addEventListener("click", startLive);
+  $("scoutStopLiveBtn").addEventListener("click",  () => stopLiveSession());
+
+  async function startLive() {
+    const url = $("scoutLiveUrl").value.trim();
+    if (!url) { setStatus("err", "Paste a YouTube live URL first."); return; }
+    if (!backendOk) { await testBackend(BACKEND); if (!backendOk) return; }
+
+    $("scoutStartLiveBtn").style.display = "none";
+    $("scoutStopLiveBtn").style.display  = "inline-block";
+    liveLog.style.display = "block";
+    liveLog.innerHTML     = "";
+    appendLog("🔴", "Starting live session…", false);
+    setStatus("busy", "Starting…");
+    scoreBar.classList.add("vis");
+
+    try {
+      const res = await fetch(`${BACKEND}/api/start_live_session`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtube_url: url, auto_analyze: true })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.detail || res.status); }
+      const d = await res.json();
+      liveSid  = d.session_id;
+      setStatus("busy", `Live · session ${liveSid.slice(0, 8)}`);
+      livePoll = setInterval(pollLive, 5000);
+    } catch (e) {
+      setStatus("err", `Failed to start: ${e.message}`);
+      $("scoutStartLiveBtn").style.display = "inline-block";
+      $("scoutStopLiveBtn").style.display  = "none";
+    }
+  }
+
+  async function pollLive() {
+    if (!liveSid) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/live_status/${liveSid}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      setStatus("busy", `Live · ${d.status} · ${d.segments_done} seg`);
+      if (d.error) { setStatus("err", d.error); stopLiveSession(); return; }
+      if (d.latest) renderResult(d.latest, d.latest.dead_time || false);
+      if (d.status === "stopped" || d.status === "error") stopLiveSession();
+    } catch (_) {}
+  }
+
+  async function stopLiveSession() {
+    if (livePoll) { clearInterval(livePoll); livePoll = null; }
+    if (liveSid && backendOk) {
+      fetch(`${BACKEND}/api/stop_live/${liveSid}`, { method: "DELETE" }).catch(() => {});
+    }
+    liveSid = null;
+    $("scoutStartLiveBtn").style.display = "inline-block";
+    $("scoutStopLiveBtn").style.display  = "none";
+    if (backendOk) setStatus("ok", "Session stopped.");
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // CLIP / VOD MODE — file upload
+  // ════════════════════════════════════════════════════════════════════════════
+  const dropEl   = $("scoutDrop");
+  const fileInp  = $("scoutFileInput");
+
+  dropEl.addEventListener("click",     () => fileInp.click());
+  dropEl.addEventListener("dragover",  e  => { e.preventDefault(); dropEl.classList.add("over"); });
+  dropEl.addEventListener("dragleave", () => dropEl.classList.remove("over"));
+  dropEl.addEventListener("drop",      e  => { e.preventDefault(); dropEl.classList.remove("over"); if (e.dataTransfer.files[0]) doUpload(e.dataTransfer.files[0]); });
+  fileInp.addEventListener("change",   e  => { if (e.target.files[0]) doUpload(e.target.files[0]); });
+
+  async function doUpload(file) {
+    if (!file.type.startsWith("video/")) { setStatus("err", "Please select a video file."); return; }
+    if (!backendOk) { await testBackend(BACKEND); if (!backendOk) return; }
+
+    const progWrap = $("scoutProgWrap");
+    const progBar  = $("scoutProgBar");
+    const progLbl  = $("scoutProgLbl");
+    progWrap.style.display = "block";
+    progLbl.style.display  = "block";
+    progBar.style.width    = "0%";
+    progLbl.textContent    = `Uploading ${file.name}…`;
+    setStatus("busy", "Uploading…");
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BACKEND}/api/upload_clip`);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const p = Math.round(e.loaded / e.total * 100);
+        progBar.style.width = p + "%";
+        progLbl.textContent = `Uploading… ${p}%`;
+      }
+    };
+    xhr.onload = () => {
+      progWrap.style.display = "none";
+      progLbl.style.display  = "none";
+      if (xhr.status === 200) {
+        const d = JSON.parse(xhr.responseText);
+        uploadSid = d.session_id;
+        $("scoutDropTxt").innerHTML =
+          `<strong style="color:var(--white)">${file.name}</strong><br>` +
+          `<span style="color:var(--gray);font-size:.58rem">${d.size_mb} MB uploaded</span>`;
+        videoEl.src = `${BACKEND}${d.preview_url}`;
+        $("scoutVideoWrap").style.display = "block";
+        timeline.classList.add("vis");
+        clearBtn.style.display  = "inline-block";
+        viralBtn.style.display  = "inline-block";
+        viralBtn.disabled       = false;
+        videoEl.addEventListener("timeupdate", onVideoTick);
+        videoEl.addEventListener("loadedmetadata", () => { vidDur = videoEl.duration; });
+        setStatus("ok", `${d.size_mb} MB ready — play to analyze automatically`);
+      } else {
+        setStatus("err", `Upload failed (${xhr.status})`);
+      }
+    };
+    xhr.onerror = () => setStatus("err", "Upload error.");
+    const fd = new FormData(); fd.append("file", file);
+    xhr.send(fd);
+  }
+
+  function onVideoTick() {
+    const ct  = videoEl.currentTime;
+    const dur = videoEl.duration || 0;
+    if (dur > 0) tlProg.style.width = (ct / dur * 100) + "%";
+    const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    $("scoutVideoTs").textContent = fmt(ct);
+    const bucket = Math.floor(ct / 10) * 10;
+    if (bucket !== lastBucket && !isBusy && uploadSid) {
+      lastBucket = bucket;
+      runClipBucket(uploadSid, ct);
+    }
+  }
+
+  // ── YouTube VOD ─────────────────────────────────────────────────────────────
+  $("scoutAnalyzeVodBtn").addEventListener("click", async () => {
+    const url = $("scoutVodUrl").value.trim();
+    const sec = parseFloat($("scoutVodTime").value) || 0;
+    if (!url) { setStatus("err", "Paste a YouTube URL."); return; }
+    if (!backendOk) { await testBackend(BACKEND); if (!backendOk) return; }
+    isBusy = true;
+    setStatus("busy", "Downloading clip from YouTube…");
+    reportEl.classList.add("loading"); reportEl.innerHTML = "";
+    try {
+      const r = await fetch(`${BACKEND}/api/analyze_youtube_vod`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtube_url: url, start_time: sec })
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || r.status); }
+      const d = await r.json();
+      renderResult(d, d.dead_time || false);
+    } catch (e) {
+      reportEl.classList.remove("loading");
+      reportEl.textContent = `Error: ${e.message}`;
+      setStatus("err", e.message);
+    }
+    isBusy = false;
+  });
+
+  // ── Clip bucket analysis (upload mode, triggered by video playback) ──────────
+  async function runClipBucket(source, currentTime) {
+    isBusy = true;
+    // Phase 1 — fast dead-time pre-check (~0.2s, no GPU)
+    try {
+      const chk = await fetch(`${BACKEND}/api/check_dead_time`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: source, current_time: currentTime })
+      });
+      if (chk.ok) {
+        const cd = await chk.json();
+        if (cd.dead_time) {
+          reportEl.style.opacity = "0.4";
+          setStatus("ok", `⏸ Pause — ${cd.reason}`);
+          isBusy = false; return;
+        }
+      }
+    } catch (_) {}
+
+    // Phase 2 — full YOLO + Gemini
+    reportEl.style.opacity = "1";
+    reportEl.classList.add("loading"); reportEl.innerHTML = "";
+    setStatus("busy", `Analyzing ${Math.floor(currentTime)}s…`);
+
+    try {
+      const r = await fetch(`${BACKEND}/api/analyze_playhead`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: source, current_time: currentTime })
+      });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      renderResult(d, d.dead_time || false);
+      addTlMarker(d.bucket_start, false);
+    } catch (e) {
+      reportEl.classList.remove("loading");
+      reportEl.style.opacity = "1";
+      reportEl.textContent = "Analysis error — check backend connection.";
+      setStatus("err", "Analysis failed.");
+    }
+    isBusy = false;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // RENDER RESULT — shared by live, upload, and VOD paths
+  // ════════════════════════════════════════════════════════════════════════════
+  function renderResult(d, isDead) {
+    reportEl.classList.remove("loading");
+    reportEl.style.opacity = "1";
+
+    if (isDead) {
+      reportEl.style.opacity = "0.4";
+      setStatus("ok", `⏸ ${d.dead_reason || "Broadcast pause"}`);
+      appendLog("⏸", d.report || "Pause detected", true);
+      return;
+    }
+
+    reportHist.push(d);
+    exportBtn.style.display = "inline-block";
+
+    // Score bar update
+    const s = d.structured || {};
+    if (s.team_a || d.score_update) {
+      scoreBar.classList.add("vis");
+      if (s.team_a)     $("scoutTeamA").textContent  = s.team_a;
+      if (s.team_b)     $("scoutTeamB").textContent  = s.team_b;
+      if (s.score_a != null) $("scoutScoreA").textContent = s.score_a;
+      if (s.score_b != null) $("scoutScoreB").textContent = s.score_b;
+      $("scoutPeriod").textContent = d.period || s.period || "LIVE";
+      $("scoutPoss").textContent   = d.possession === "team_a" ? "◀" : d.possession === "team_b" ? "▶" : "";
+    }
+
+    // Play type tags
+    const TAG_ICONS  = { score: "🏀", turnover: "↩", foul: "🚨", rebound: "↑", timeout: "⏱" };
+    const TAG_COLORS = { score: "score", turnover: "turnover", foul: "foul", rebound: "rebound" };
+    let tags = "";
+    const pt = d.play_type;
+    if (pt && pt !== "other" && pt !== "null" && pt !== null) {
+      const cls = TAG_COLORS[pt] || "other";
+      tags += `<span class="scout-play-tag ${cls}">${TAG_ICONS[pt] || ""} ${pt.toUpperCase()}</span>`;
+    }
+    if (d.shot_made === true)  tags += `<span class="scout-play-tag score">✓ SHOT MADE</span>`;
+    if (d.shot_made === false && pt === "score") tags += `<span class="scout-play-tag turnover">✗ MISSED</span>`;
+
+    // Format report text
+    const text = (d.scouting_report || d.report || "No report.");
+    const html = text
+      .replace(/\n\n+/g, "</p><p>")
+      .replace(/\n/g, "<br>")
+      .replace(/\b(score|three-pointer|dunk|steal|turnover|foul|timeout|buzzer|block|assist)\b/gi, "<strong>$1</strong>");
+
+    reportEl.innerHTML = (tags ? `<div class="scout-report-tags">${tags}</div>` : "") + `<p>${html}</p>`;
+
+    // YOLO stats + visualizer
+    const ym = d.yolo_metrics;
+    if (ym && Object.keys(ym).length) {
+      lastYolo = ym;
+      renderStats(ym);
+      renderZones(ym);
+      renderViz(ym);
+    }
+
+    appendLog("🏀", text, false);
+    setStatus("ok", `Ready${d.period ? " · " + d.period : ""}${pt && pt !== "null" ? " · " + pt : ""}`);
+  }
+
+  // ── Log helper ────────────────────────────────────────────────────────────────
+  function appendLog(icon, text, isPause) {
+    if (liveLog.style.display === "none") return;
+    const el = document.createElement("div");
+    el.className = "ll" + (isPause ? " pause" : "");
+    el.textContent = `${icon} ${text.slice(0, 90)}${text.length > 90 ? "…" : ""}`;
+    liveLog.appendChild(el);
+    liveLog.scrollTop = liveLog.scrollHeight;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // STATS & ZONES
+  // ════════════════════════════════════════════════════════════════════════════
+  function renderStats(ym) {
+    statsGrid.style.display = "grid";
+    $("sstatSpeed").textContent   = ym.top_speed_mph   != null ? ym.top_speed_mph   : "—";
+    $("sstatSpacing").textContent = ym.avg_spacing_ft  != null ? ym.avg_spacing_ft  : "—";
+    $("sstatShots").textContent   = ym.shot_attempts   != null ? ym.shot_attempts   : "—";
+    $("sstatPlayers").textContent = ym.player_count    != null ? ym.player_count    : "—";
+    $("sstatPlayersSub").textContent = ym.avg_players_in_frame
+      ? `${ym.avg_players_in_frame} avg/frame` : "tracked";
+  }
+
+  const ZONE_LABELS = {
+    paint_left:"Paint (L)", paint_right:"Paint (R)",
+    mid_range:"Mid-Range",  perimeter:"Perimeter",
+    three_left:"3PT (L)",   three_right:"3PT (R)",
+    backcourt:"Backcourt"
+  };
+
+  function renderZones(ym) {
+    const z     = ym.zone_occupancy || {};
+    const total = Object.values(z).reduce((a, b) => a + b, 0) || 1;
+    const top5  = Object.entries(z).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (!top5.length) return;
+    zonesEl.style.display = "block";
+    zoneRows.innerHTML    = top5.map(([name, cnt]) => {
+      const pct = Math.round(cnt / total * 100);
+      const hot = pct > 30 ? " hot" : "";
+      return `<div class="sz-row">
+        <span class="sz-name">${ZONE_LABELS[name] || name}</span>
+        <div class="sz-track"><div class="sz-fill${hot}" style="width:${pct}%"></div></div>
+        <span class="sz-pct">${pct}%</span>
+      </div>`;
+    }).join("");
+  }
+
+  // ── Timeline markers ──────────────────────────────────────────────────────────
+  function addTlMarker(bucket, isViral) {
+    if (!vidDur) return;
+    const m = document.createElement("div");
+    m.className = "scout-tl-marker" + (isViral ? " viral" : "");
+    m.style.left  = (bucket / vidDur * 100) + "%";
+    m.style.width = Math.max(10 / vidDur * 100, 0.4) + "%";
+    timeline.appendChild(m);
+  }
+
+  // ── Viral scan ────────────────────────────────────────────────────────────────
+  viralBtn.addEventListener("click", async () => {
+    if (!uploadSid || !backendOk) return;
+    viralBtn.textContent = "⚡ Scanning…"; viralBtn.disabled = true;
+    setStatus("busy", "Scanning for viral moments — this may take a few minutes…");
+    try {
+      const r = await fetch(`${BACKEND}/api/scan_viral`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_source: uploadSid })
+      });
+      const d = await r.json();
+      (d.viral_moments || []).forEach(m => addTlMarker(m.ts, true));
+      if (d.viral_moments?.length) {
+        setStatus("ok", `⚡ ${d.viral_moments.length} viral moment(s) — gold markers on timeline`);
+        if (videoEl) videoEl.currentTime = d.viral_moments[0].ts;
+      } else {
+        setStatus("ok", "No viral moments detected.");
+      }
+    } catch (e) { setStatus("err", "Viral scan failed."); }
+    viralBtn.textContent = "⚡ Scan Viral Moments"; viralBtn.disabled = false;
+  });
+
+  // ── Export ────────────────────────────────────────────────────────────────────
+  exportBtn.addEventListener("click", () => {
+    if (!reportHist.length) return;
+    const txt = reportHist.map((d, i) => {
+      let b = `=== Report ${i + 1}${d.bucket_start != null ? " · " + d.bucket_start + "s" : ""} ===\n`;
+      b += (d.scouting_report || d.report || "") + "\n";
+      if (d.score_update) b += `Score: ${d.score_update}\n`;
+      if (d.period)       b += `Period: ${d.period}\n`;
+      if (d.play_type)    b += `Play type: ${d.play_type}\n`;
+      const ym = d.yolo_metrics;
+      if (ym) {
+        if (ym.top_speed_mph  != null) b += `\nTop speed: ${ym.top_speed_mph} mph`;
+        if (ym.avg_spacing_ft != null) b += `\nAvg spacing: ${ym.avg_spacing_ft} ft`;
+        if (ym.shot_attempts  != null) b += `\nShot attempts: ${ym.shot_attempts}`;
+        if (ym.player_count   != null) b += `\nPlayers tracked: ${ym.player_count}`;
+      }
+      return b;
+    }).join("\n\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain" }));
+    a.download = `scout_${Date.now()}.txt`;
+    a.click();
+  });
+
+  // ── Clear ─────────────────────────────────────────────────────────────────────
+  clearBtn.addEventListener("click", clearAll);
+
+  function clearAll() {
+    videoEl.removeEventListener("timeupdate", onVideoTick);
+    videoEl.src = "";
+    $("scoutVideoWrap").style.display = "none";
+    timeline.classList.remove("vis");
+    timeline.querySelectorAll(".scout-tl-marker").forEach(m => m.remove());
+    uploadSid = null; lastBucket = -1; reportHist = [];
+    lastYolo = null; vidDur = 0;
+    reportEl.textContent = "Select a mode, then start a live stream or upload a clip to begin scouting…";
+    reportEl.style.opacity = "1";
+    scoreBar.classList.remove("vis");
+    statsGrid.style.display = "none";
+    zonesEl.style.display   = "none";
+    exportBtn.style.display = "none";
+    viralBtn.style.display  = "none";
+    clearBtn.style.display  = "none";
+    liveLog.innerHTML = "";
+    $("scoutDropTxt").innerHTML = 'Drop video or <strong style="color:var(--blue-b)">click to browse</strong>';
+    clearViz();
+    setStatus("ok", "Cleared.");
+  }
+
+  // Cached timeline sync (keeps markers up to date if analysis runs in background)
+  setInterval(async () => {
+    if (!backendOk || !uploadSid) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/get_cached_timeline?session_id=${uploadSid}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      (d.processed_timestamps || []).forEach(ts => {
+        if (!reportHist.find(h => h.bucket_start === ts)) addTlMarker(ts, false);
+      });
+    } catch (_) {}
+  }, 8000);
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // COURT VISUALIZER
+  // ════════════════════════════════════════════════════════════════════════════
+
+  window.vizSetView = function (v) {
+    vizView = v;
+    $("vizPillTop").classList.toggle("active", v === "top");
+    $("vizPillArc").classList.toggle("active", v === "arc");
+    if (lastYolo) renderViz(lastYolo); else clearViz();
+  };
+
+  function clearViz() {
+    svgWrap.innerHTML = `<div class="scout-viz-empty">Run analysis to see player movement</div>`;
+    vizLegend.innerHTML = "";
+  }
+
+  function renderViz(ym) {
+    if (vizView === "top") drawTopDown(ym); else drawShotArc(ym);
+  }
+
+  // ── SVG constants (100 units = 1 ft for readability) ──────────────────────
+  const CW = 9400, CH = 5000;   // top-down court viewport (94ft × 50ft)
+  const AW = 6000, AH = 3000;   // arc view
+
+  // ── Top-down court lines (NBA spec, normalised to CW×CH) ─────────────────
+  function courtSVG() {
+    const s = [];
+    // Background
+    s.push(`<rect width="${CW}" height="${CH}" fill="#0a0a0a"/>`);
+    // Boundary
+    s.push(`<rect x="50" y="50" width="${CW-100}" height="${CH-100}" fill="none" stroke="#fff" stroke-width="28" rx="0"/>`);
+    // Half-court
+    s.push(`<line x1="${CW/2}" y1="50" x2="${CW/2}" y2="${CH-50}" stroke="#fff" stroke-width="20"/>`);
+    // Centre circle r=600 (6ft)
+    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<circle cx="${CW/2}" cy="${CH/2}" r="40" fill="#fff"/>`);
+    // Paint boxes (19ft×12ft = 1900×1200, centred vertically)
+    const py = (CH - 1200) / 2;
+    s.push(`<rect x="50" y="${py}" width="1900" height="1200" fill="none" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<rect x="${CW-50-1900}" y="${py}" width="1900" height="1200" fill="none" stroke="#fff" stroke-width="20"/>`);
+    // Free-throw circles (r=600)
+    s.push(`<circle cx="${50+1900}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20" stroke-dasharray="80 50"/>`);
+    s.push(`<circle cx="${CW-50-1900}" cy="${CH/2}" r="600" fill="none" stroke="#fff" stroke-width="20" stroke-dasharray="80 50"/>`);
+    // Baskets — red circles
+    s.push(`<circle cx="${50+90}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="30"/>`);
+    s.push(`<circle cx="${CW-50-90}" cy="${CH/2}" r="75" fill="none" stroke="#f43f5e" stroke-width="30"/>`);
+    // 3-point arcs (~23.75ft = 2375 radius)
+    const r3 = 2375;
+    const c3y = CH / 2;
+    const c3yOff = 2200; // corner 3 height offset
+    s.push(`<path d="M50,${c3y-c3yOff} A${r3},${r3} 0 0,1 50,${c3y+c3yOff}" fill="none" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<line x1="50" y1="${c3y-c3yOff}" x2="550" y2="${c3y-c3yOff}" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<line x1="50" y1="${c3y+c3yOff}" x2="550" y2="${c3y+c3yOff}" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<path d="M${CW-50},${c3y-c3yOff} A${r3},${r3} 0 0,0 ${CW-50},${c3y+c3yOff}" fill="none" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<line x1="${CW-50}" y1="${c3y-c3yOff}" x2="${CW-550}" y2="${c3y-c3yOff}" stroke="#fff" stroke-width="20"/>`);
+    s.push(`<line x1="${CW-50}" y1="${c3y+c3yOff}" x2="${CW-550}" y2="${c3y+c3yOff}" stroke="#fff" stroke-width="20"/>`);
+    return s.join("");
+  }
+
+  function drawTopDown(ym) {
+    const trajs = ym.trajectories || {};
+    const ids   = Object.keys(trajs);
+    if (!ids.length) { clearViz(); return; }
+
+    let inner = courtSVG();
+    const legItems = [];
+
+    ids.forEach((tid, idx) => {
+      const color = COLORS[idx % COLORS.length];
+      const pts   = trajs[tid];
+      if (!pts || pts.length < 2) return;
+
+      // Map normalised (0–1) to SVG coords
+      const sp = pts.map(p => [Math.round(p.x * CW), Math.round(p.y * CH)]);
+      const n  = sp.length;
+
+      // Trail with opacity gradient
+      for (let i = 1; i < n; i++) {
+        const op = (0.2 + 0.8 * (i / n)).toFixed(2);
+        inner += `<line x1="${sp[i-1][0]}" y1="${sp[i-1][1]}" x2="${sp[i][0]}" y2="${sp[i][1]}" stroke="${color}" stroke-width="55" opacity="${op}" stroke-linecap="round"/>`;
+      }
+
+      // Current position
+      const [lx, ly] = sp[n - 1];
+      inner += `<circle cx="${lx}" cy="${ly}" r="160" fill="${color}" opacity="0.92"/>`;
+      inner += `<text x="${lx+200}" y="${ly+60}" fill="${color}" font-size="280" font-family="monospace" font-weight="bold" opacity="0.9">#${tid}</text>`;
+
+      // Speed label
+      const pm = ym.players?.[tid];
+      if (pm?.peak_speed_mph) {
+        inner += `<text x="${lx+200}" y="${ly+370}" fill="${color}" font-size="200" font-family="monospace" opacity="0.7">${pm.peak_speed_mph}mph</text>`;
+      }
+
+      legItems.push({ color, tid, zone: pm?.primary_zone || "" });
+    });
+
+    svgWrap.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg" style="border-radius:5px;width:100%">${inner}</svg>`;
+    vizLegend.innerHTML = legItems.map(item =>
+      `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:${item.color}"></div>#${item.tid}${item.zone ? " · " + item.zone : ""}</div>`
+    ).join("");
+  }
+
+  // ── Shot arc view ─────────────────────────────────────────────────────────────
+  function arcBackground() {
+    const s = [];
+    s.push(`<rect width="${AW}" height="${AH}" fill="#0a0a0a"/>`);
+    // Floor
+    s.push(`<line x1="0" y1="${AH-150}" x2="${AW}" y2="${AH-150}" stroke="#fff" stroke-width="18"/>`);
+    // Rim (10ft ≈ 20% from top of court area)
+    const rimY = Math.round(AH * 0.22);
+    s.push(`<line x1="${AW*0.80}" y1="${rimY}" x2="${AW*0.88}" y2="${rimY}" stroke="#f43f5e" stroke-width="30"/>`);
+    s.push(`<text x="${AW*0.89}" y="${rimY+50}" fill="#f43f5e" font-size="120" font-family="monospace">RIM</text>`);
+    // Shoulder height guide (~5ft = 50%)
+    const shoulderY = Math.round(AH * 0.50);
+    s.push(`<line x1="0" y1="${shoulderY}" x2="${AW}" y2="${shoulderY}" stroke="#fff" stroke-width="10" stroke-dasharray="60 40" opacity="0.2"/>`);
+    s.push(`<text x="30" y="${shoulderY-30}" fill="#fff" font-size="110" font-family="monospace" opacity="0.3">shoulder height</text>`);
+    // Axis label
+    s.push(`<text x="${AW/2-300}" y="${AH-20}" fill="#fff" font-size="110" font-family="monospace" opacity="0.3">time →</text>`);
+    return s.join("");
+  }
+
+  function drawShotArc(ym) {
+    const arcs = ym.shot_arcs || {};
+    const ids  = Object.keys(arcs);
+
+    let inner = arcBackground();
+
+    if (!ids.length) {
+      inner += `<text x="${AW/2-900}" y="${AH/2+50}" fill="#fff" font-size="160" font-family="monospace" opacity="0.4">No shot arcs detected this clip</text>`;
+      svgWrap.innerHTML = `<svg viewBox="0 0 ${AW} ${AH}" xmlns="http://www.w3.org/2000/svg" style="border-radius:5px;width:100%">${inner}</svg>`;
+      vizLegend.innerHTML = "";
+      return;
+    }
+
+    const legItems = [];
+
+    ids.forEach((tid, idx) => {
+      const color  = COLORS[idx % COLORS.length];
+      const frames = arcs[tid].filter(f => f.wrist_y !== null);
+      if (frames.length < 4) return;
+
+      const n     = frames.length;
+      const xOff  = AW * 0.05;
+      const xStep = (AW * 0.80) / Math.max(n - 1, 1);
+      // y: normalised 0=top,1=bottom → SVG, restricted to court-height area
+      const toY = ny => Math.round(ny * (AH - 150));
+
+      // Wrist points
+      const wpts = frames.map((f, i) => [Math.round(xOff + i * xStep), toY(f.wrist_y)]);
+
+      // Smooth bezier path
+      let d = `M ${wpts[0][0]} ${wpts[0][1]}`;
+      for (let i = 1; i < wpts.length - 1; i++) {
+        const mx = (wpts[i][0] + wpts[i+1][0]) / 2;
+        const my = (wpts[i][1] + wpts[i+1][1]) / 2;
+        d += ` Q ${wpts[i][0]} ${wpts[i][1]} ${mx} ${my}`;
+      }
+      d += ` L ${wpts[wpts.length-1][0]} ${wpts[wpts.length-1][1]}`;
+
+      inner += `<path d="${d}" fill="none" stroke="${color}" stroke-width="35" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+      // Shoulder dashed
+      const spts = frames
+        .filter(f => f.shoulder_y !== null)
+        .map((f, i) => [Math.round(xOff + i * xStep), toY(f.shoulder_y)]);
+      if (spts.length > 1) {
+        const sd = spts.map((p, i) => (i === 0 ? `M` : `L`) + ` ${p[0]} ${p[1]}`).join(" ");
+        inner += `<path d="${sd}" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="50 35" opacity="0.35"/>`;
+      }
+
+      // Peak dot + drop line
+      const peak = wpts.reduce((a, b) => a[1] < b[1] ? a : b);
+      inner += `<line x1="${peak[0]}" y1="${peak[1]}" x2="${peak[0]}" y2="${AH-150}" stroke="${color}" stroke-width="14" stroke-dasharray="40 30" opacity="0.3"/>`;
+      inner += `<circle cx="${peak[0]}" cy="${peak[1]}" r="80" fill="${color}" opacity="0.9"/>`;
+      inner += `<text x="${peak[0]+100}" y="${peak[1]-50}" fill="${color}" font-size="130" font-family="monospace" opacity="0.8">#${tid} peak</text>`;
+
+      legItems.push({ color, tid });
+    });
+
+    svgWrap.innerHTML = `<svg viewBox="0 0 ${AW} ${AH}" xmlns="http://www.w3.org/2000/svg" style="border-radius:5px;width:100%">${inner}</svg>`;
+    vizLegend.innerHTML = legItems.map(item =>
+      `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:${item.color}"></div>Player #${item.tid} wrist arc</div>`
+    ).join("") + `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:#f43f5e"></div>Rim (10 ft)</div>`;
+  }
+
+})(); // end AI Scout IIFE
+
 </script>
 </body>
 </html>

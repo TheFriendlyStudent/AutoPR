@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Demand AI Scouting</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        video { width: 100%; border-radius: 4px; background: #000; }
+        .controls { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; }
+        .toggle-container { font-weight: bold; color: #333; }
+        #aiReportBox { margin-top: 20px; padding: 15px; border-left: 5px solid #ff4500; background: #f9f9f9; min-height: 80px; font-size: 16px; line-height: 1.5; }
+        .status { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Game Film Analysis</h2>
+    
+    <video id="gameVideo" controls>
+        <source src="full_game_temp.mp4" type="video/mp4">
+        Browswer does not support the video tag
+    </video>
+    
+    <div id="timelineContainer" style="width: 100%; height: 10px; background: #ddd; position: relative; margin-top: 5px; border-radius: 5px; overflow: hidden;">
+        </div>
+    
+
+    <div class="controls">
+        <label class="toggle-container">
+            <input type="checkbox" id="aiToggle"> 🟢 ENABLE AI SCOUTING
+        </label>
+        <div class="status" id="statusText">AI is resting.</div>
+    </div>
+
+    <div id="aiReportBox">
+        Turn on the AI switch to generate a scouting report for this play...
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById("gameVideo");
+    const aiToggle = document.getElementById("aiToggle");
+    const reportBox = document.getElementById("aiReportBox");
+    const statusText = document.getElementById("statusText");
+
+    // We track the last bucket we processed so we don't spam the server
+    let lastProcessedBucket = -1;
+    let isFetching = false;
+
+    // This event fires continuously as the video plays or scrubs
+    video.addEventListener("timeupdate", () => {
+        // If AI is off, do nothing
+        if (!aiToggle.checked) {
+            statusText.innerText = "AI is resting.";
+            return;
+        }
+
+        // Calculate current 10-second bucket (e.g., 84 seconds = Bucket 80)
+        let currentBucket = Math.floor(video.currentTime / 10) * 10;
+
+        // If we entered a new bucket AND we aren't currently waiting for the server
+        if (currentBucket !== lastProcessedBucket && !isFetching) {
+            
+            lastProcessedBucket = currentBucket;
+            isFetching = true;
+            statusText.innerText = `Fetching data for timeframe ${currentBucket}s...`;
+            
+            // Send the request to your Python FastAPI backend
+            fetch("http://127.0.0.1:8000/api/analyze_playhead", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    video_source: "full_game_temp.mp4", 
+                    current_time: video.currentTime
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                reportBox.innerText = data.scouting_report;
+                statusText.innerText = `Displaying analysis for timeframe ${data.bucket_start}s`;
+                isFetching = false;
+            })
+            .catch(error => {
+                console.error("API Error:", error);
+                statusText.innerText = "Error connecting to backend.";
+                isFetching = false;
+            });
+        }
+    });
+
+    // Reset when the user toggles the switch
+    aiToggle.addEventListener("change", () => {
+        if (!aiToggle.checked) {
+            reportBox.innerText = "Turn on the AI switch to generate a scouting report for this play...";
+            lastProcessedBucket = -1; // Reset tracker
+        }
+    });
+
+    const timelineContainer = document.getElementById("timelineContainer");
+
+    // Automated loop: Check for processed AI clips every 3 seconds
+    setInterval(() => {
+        // We need the video's total duration to calculate where to put the markers
+        if (isNaN(video.duration) || video.duration === 0) return;
+
+        fetch("http://127.0.0.1:8000/api/get_cached_timeline")
+        .then(response => response.json())
+        .then(data => {
+            timelineContainer.innerHTML = ""; // Clear old markers
+            
+            // Draw a new orange marker for every processed bucket
+            data.processed_timestamps.forEach(bucketStart => {
+                // Calculate percentage position on the timeline
+                let leftPercent = (bucketStart / video.duration) * 100;
+                // 10 seconds represented as a percentage of total width
+                let widthPercent = (10 / video.duration) * 100; 
+
+                let marker = document.createElement("div");
+                marker.style.position = "absolute";
+                marker.style.left = leftPercent + "%";
+                marker.style.width = widthPercent + "%";
+                marker.style.height = "100%";
+                marker.style.backgroundColor = "#ff4500"; // Orange AI color
+                
+                timelineContainer.appendChild(marker);
+            });
+        })
+        .catch(err => console.error("Timeline sync error", err));
+    }, 3000); // Runs every 3000ms (3 seconds)
+</script>
+
+</body>
+</html>

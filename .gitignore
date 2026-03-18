@@ -4,3 +4,7 @@ admin_console.py
 __pycache__/
 *.pyc
 *.pyo
+cache_reports/
+runs/
+*.mp4
+*.avi
