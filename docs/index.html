@@ -748,7 +748,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
   <div class="tab" data-s="rankings">Rankings</div>
   <div class="tab" data-s="submit">Submit Score</div>
   <div class="tab" data-s="livestreams">Livestreams</div>
-  <div class="tab" data-s="aiscout">🤖 AI Scout</div>
+  <div class="tab" data-s="aiscout">AI Scout</div>
 </div>
 
 <div class="layout">
@@ -1061,6 +1061,7 @@ input[type="number"].si{width:68px;text-align:center;font-family:var(--fd);font-
           <!-- Actions -->
           <div class="scout-action-row">
             <button class="scout-btn ghost" id="scoutExportBtn" style="display:none">⬇ Export Report</button>
+            <button class="scout-btn ghost" id="scoutReAnalyzeBtn" style="display:none" title="Force re-run AI analysis on current position">↺ Re-Analyze</button>
             <button class="scout-btn ghost" id="scoutViralBtn" style="display:none" disabled>⚡ Scan Viral Moments</button>
             <button class="scout-btn ghost" id="scoutClearBtn" style="display:none">✕ Clear</button>
           </div>
@@ -3036,8 +3037,9 @@ loadData();
         $("scoutVideoWrap").style.display = "block";
         timeline.classList.add("vis");
         clearBtn.style.display  = "inline-block";
-        viralBtn.style.display  = "inline-block";
-        viralBtn.disabled       = false;
+        viralBtn.style.display       = "inline-block";
+        viralBtn.disabled            = false;
+        reAnalyzeBtn.style.display   = "inline-block";
         videoEl.addEventListener("timeupdate", onVideoTick);
         videoEl.addEventListener("loadedmetadata", () => { vidDur = videoEl.duration; });
         setStatus("ok", `${d.size_mb} MB ready — play to analyze automatically`);
@@ -3312,6 +3314,38 @@ loadData();
   // ── Clear ─────────────────────────────────────────────────────────────────────
   clearBtn.addEventListener("click", clearAll);
 
+  // Re-analyze — force re-run on current video position
+  const reAnalyzeBtn = $("scoutReAnalyzeBtn");
+  reAnalyzeBtn.addEventListener("click", async () => {
+    if (!uploadSid || isBusy) return;
+    const ct = videoEl.currentTime || 0;
+    lastBucket = -1;  // reset so the bucket triggers fresh
+    reAnalyzeBtn.textContent = "↺ Analyzing…";
+    reAnalyzeBtn.disabled    = true;
+    // Call with force=true to bypass cache
+    isBusy = true;
+    reportEl.style.opacity = "1";
+    reportEl.classList.add("loading"); reportEl.innerHTML = "";
+    setStatus(`Force re-analyzing ${Math.floor(ct)}s…`);
+    try {
+      const r = await fetch(`${BACKEND}/api/analyze_playhead`, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ video_source: uploadSid, current_time: ct, force: true })
+      });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      renderResult(d, d.dead_time || false);
+      addTlMarker(d.bucket_start, false);
+    } catch(e) {
+      reportEl.classList.remove("loading");
+      reportEl.textContent = "Re-analysis failed.";
+      setStatus("err", "Re-analysis failed.");
+    }
+    isBusy = false;
+    reAnalyzeBtn.textContent = "↺ Re-Analyze";
+    reAnalyzeBtn.disabled    = false;
+  });
+
   function clearAll() {
     videoEl.removeEventListener("timeupdate", onVideoTick);
     videoEl.src = "";
@@ -3326,8 +3360,9 @@ loadData();
     statsGrid.style.display = "none";
     zonesEl.style.display   = "none";
     exportBtn.style.display = "none";
-    viralBtn.style.display  = "none";
-    clearBtn.style.display  = "none";
+    viralBtn.style.display      = "none";
+    clearBtn.style.display      = "none";
+    reAnalyzeBtn.style.display  = "none";
     liveLog.innerHTML = "";
     $("scoutDropTxt").innerHTML = 'Drop video or <strong style="color:var(--blue-b)">click to browse</strong>';
     clearViz();

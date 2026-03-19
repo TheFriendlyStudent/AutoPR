@@ -23,12 +23,25 @@ Unchanged endpoints:
   GET    /health                       (now reports ytdlp, active sessions)
 """
 
-import os, time, subprocess, glob, math, json, re, shutil, uuid, threading, collections
+import os, time, subprocess, glob, math, json, re, shutil, uuid, threading, collections, urllib.request, urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, List, Dict
 
 import numpy as np
+try:
+    from pytubefix import YouTube as PyTube
+    from pytubefix.cli import on_progress
+    _PYTUBEFIX_AVAILABLE = True
+except ImportError:
+    _PYTUBEFIX_AVAILABLE = False
+
+def _verify_streamlink() -> bool:
+    try:
+        r = subprocess.run(["streamlink", "--version"], capture_output=True, timeout=5)
+        return r.returncode == 0
+    except FileNotFoundError:
+        return False
 from google import genai
 from ultralytics import YOLO
 from dotenv import load_dotenv
@@ -37,6 +50,77 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
+
+# ── YouTube API helpers ───────────────────────────────────────────────────────
+YT_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+
+def _extract_video_id(url_or_id: str) -> str:
+    """Extract 11-char video ID from any YouTube URL format."""
+    patterns = [
+        r"(?:v=|youtu\.be/|embed/|shorts/|live/)([A-Za-z0-9_-]{11})",
+        r"^([A-Za-z0-9_-]{11})$",
+    ]
+    for p in patterns:
+        m = re.search(p, url_or_id)
+        if m:
+            return m.group(1)
+    return url_or_id
+
+
+def _yt_api_get(endpoint: str, params: dict) -> dict:
+    """Make a YouTube Data API v3 GET request. Raises on error."""
+    if not YT_API_KEY:
+        raise ValueError("YOUTUBE_API_KEY not set in .env")
+    params["key"] = YT_API_KEY
+    url = f"https://www.googleapis.com/youtube/v3/{endpoint}?" + urllib.parse.urlencode(params)
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            return json.loads(r.read())
+    except Exception as e:
+        raise ValueError(f"YouTube API error: {e}")
+
+
+def get_live_hls_url(video_id: str) -> Optional[str]:
+    """
+    Use the YouTube Data API to get the HLS manifest URL for a live stream.
+    Returns None if the video is not currently live.
+    """
+    data = _yt_api_get("videos", {
+        "part": "liveStreamingDetails,snippet",
+        "id":   video_id,
+    })
+    items = data.get("items", [])
+    if not items:
+        return None
+    details = items[0].get("liveStreamingDetails", {})
+    hls_url = details.get("hlsManifestUrl")
+    if not hls_url:
+        # Not live or HLS not available
+        return None
+    print(f"[YouTube API] HLS URL found for {video_id}")
+    return hls_url
+
+
+def get_video_info(video_id: str) -> dict:
+    """Return basic metadata for a video (title, duration, live status)."""
+    data = _yt_api_get("videos", {
+        "part": "snippet,contentDetails,liveStreamingDetails",
+        "id":   video_id,
+    })
+    items = data.get("items", [])
+    if not items:
+        return {}
+    item = items[0]
+    snippet = item.get("snippet", {})
+    details = item.get("liveStreamingDetails", {})
+    return {
+        "title":       snippet.get("title", ""),
+        "channel":     snippet.get("channelTitle", ""),
+        "is_live":     snippet.get("liveBroadcastContent") == "live",
+        "hls_url":     details.get("hlsManifestUrl"),
+        "duration":    item.get("contentDetails", {}).get("duration", ""),
+    }
+
 
 # ── Optional ngrok ─────────────────────────────────────────────────────────────
 try:
@@ -90,6 +174,7 @@ MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "2000"))
 class PlayheadRequest(BaseModel):
     video_source: str   # session_id UUID, or local file path
     current_time: float
+    force: bool = False
 
 class ViralScanRequest(BaseModel):
     video_source: str
@@ -126,6 +211,33 @@ def _verify_ytdlp() -> bool:
         return r.returncode == 0
     except FileNotFoundError:
         return False
+
+
+def _ytdlp_js_flags() -> list:
+    """
+    Detect an available JS runtime and return the correct yt-dlp flag.
+    yt-dlp uses --js-runtimes (plural) as of recent versions.
+    On Windows, node.exe may only be found via full path or 'node.exe'.
+    """
+    candidates = ["node", "node.exe", "nodejs", "deno"]
+    for runtime in candidates:
+        try:
+            r = subprocess.run(
+                [runtime, "--version"],
+                capture_output=True, timeout=3,
+                # Windows needs shell=False but PATH lookup
+            )
+            if r.returncode == 0:
+                name = "node" if "node" in runtime else runtime
+                print(f"[yt-dlp] JS runtime found: {runtime} → passing --js-runtimes {name}")
+                return ["--js-runtimes", name]
+        except FileNotFoundError:
+            continue
+        except Exception:
+            continue
+    # Last resort: pass node anyway — if it's on PATH yt-dlp will find it
+    print("[yt-dlp] Runtime detection failed, passing --js-runtimes node as fallback")
+    return ["--js-runtimes", "node"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -259,14 +371,41 @@ MIN_PLAYER_HEIGHT = float(os.environ.get("MIN_PLAYER_HEIGHT", "0.10"))
 SHOT_RISE_PX      = float(os.environ.get("SHOT_RISE_PX",      "40"))
 SHOT_RISE_FRAMES  = int(os.environ.get("SHOT_RISE_FRAMES",    "5"))
 
-# Ball detector model — Roboflow basketball detection
-# Download once: pip install roboflow
-# from roboflow import Roboflow
-# rf = Roboflow(api_key="..."); rf.workspace("...").project("basketball-ball-detection").version(1).download("yolov8")
-# Then point BALL_MODEL_PATH to the downloaded weights.
-# Falls back gracefully if the model file is not present.
-BALL_MODEL_PATH   = os.environ.get("BALL_MODEL_PATH", "ball_detector.pt")
-PLAYER_MODEL_PATH = os.environ.get("PLAYER_MODEL_PATH", "")  # optional Roboflow player model
+# Roboflow model auto-download — weights cached to models/ on first run
+os.makedirs("models", exist_ok=True)
+ROBOFLOW_API_KEY  = os.environ.get("ROBOFLOW_API_KEY", "")
+BALL_ROBOFLOW_ID  = os.environ.get("BALL_ROBOFLOW_ID",  "cricket-qnb5l/basketball-xil7x/1")
+PLAYER_ROBOFLOW_ID= os.environ.get("PLAYER_ROBOFLOW_ID","")          # optional
+BALL_MODEL_PATH   = os.environ.get("BALL_MODEL_PATH",   "")          # override with local .pt
+PLAYER_MODEL_PATH = os.environ.get("PLAYER_MODEL_PATH", "")          # override with local .pt
+
+
+def _roboflow_download(model_id: str) -> Optional[str]:
+    """Download Roboflow weights via REST API, cache locally. Returns .pt path or None."""
+    safe  = model_id.replace("/", "_")
+    dest  = f"models/{safe}.pt"
+    if os.path.exists(dest):
+        return dest
+    if not ROBOFLOW_API_KEY:
+        print(f"[Roboflow] ROBOFLOW_API_KEY not set — cannot download {model_id}")
+        return None
+    try:
+        parts = model_id.split("/")
+        ws, proj, ver = parts[0], parts[1], parts[2] if len(parts) > 2 else "1"
+        url = (f"https://api.roboflow.com/{ws}/{proj}/{ver}"
+               f"/yolov8pytorch?api_key={ROBOFLOW_API_KEY}")
+        with urllib.request.urlopen(url, timeout=15) as r:
+            meta = json.loads(r.read())
+        w_url = (meta.get("model", {}).get("weightsUrl")
+                 or meta.get("weightsUrl"))
+        if not w_url:
+            raise ValueError(f"No weightsUrl in response")
+        print(f"[Roboflow] Downloading {model_id} → {dest}")
+        urllib.request.urlretrieve(w_url, dest)
+        return dest
+    except Exception as e:
+        print(f"[Roboflow] Download failed for {model_id}: {e}")
+        return None
 
 # Court zone boundaries as (x_min, x_max, y_min, y_max) in normalised [0,1] coords.
 # Calibrated for NFHS 84x50 court viewed from a standard mid-court elevated camera.
@@ -290,29 +429,175 @@ def _zone_for_point(x_pct: float, y_pct: float) -> str:
 
 
 def _load_ball_model():
-    """Load basketball detector if available, else return None."""
-    if os.path.exists(BALL_MODEL_PATH):
+    """Try local path, then Roboflow download, then None."""
+    pt = BALL_MODEL_PATH if (BALL_MODEL_PATH and os.path.exists(BALL_MODEL_PATH)) else None
+    if pt is None and BALL_ROBOFLOW_ID:
+        pt = _roboflow_download(BALL_ROBOFLOW_ID)
+    if pt:
         try:
-            m = YOLO(BALL_MODEL_PATH)
-            print(f"[YOLO] Ball detector loaded: {BALL_MODEL_PATH}")
+            m = YOLO(pt)
+            print(f"[YOLO] Ball detector loaded: {pt}")
             return m
         except Exception as e:
             print(f"[YOLO] Ball model load failed: {e}")
-    else:
-        print(f"[YOLO] Ball detector not found at {BALL_MODEL_PATH} — ball tracking disabled.")
+    print("[YOLO] Ball detector unavailable — ball tracking disabled.")
     return None
 
 
 def _load_player_model():
-    """Load Roboflow player model if available, else fall back to pose model."""
-    if PLAYER_MODEL_PATH and os.path.exists(PLAYER_MODEL_PATH):
+    """Try local path, then Roboflow download, then pose-model fallback."""
+    pt = PLAYER_MODEL_PATH if (PLAYER_MODEL_PATH and os.path.exists(PLAYER_MODEL_PATH)) else None
+    if pt is None and PLAYER_ROBOFLOW_ID:
+        pt = _roboflow_download(PLAYER_ROBOFLOW_ID)
+    if pt:
         try:
-            m = YOLO(PLAYER_MODEL_PATH)
-            print(f"[YOLO] Roboflow player model loaded: {PLAYER_MODEL_PATH}")
-            return m, False   # (model, has_keypoints)
+            m = YOLO(pt)
+            print(f"[YOLO] Player model loaded: {pt}")
+            return m, False   # no keypoints
         except Exception as e:
-            print(f"[YOLO] Player model load failed: {e}, falling back to pose model")
-    return YOLO("yolo11m-pose.pt"), True  # (model, has_keypoints)
+            print(f"[YOLO] Player model failed: {e} — using pose fallback")
+    print("[YOLO] Using yolo11m-pose.pt (pose model fallback).")
+    return YOLO("yolo11m-pose.pt"), True
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PLAYER IDENTITY REGISTRY
+# Persists stable player identities across YOLO track-ID changes between clips.
+# Two matching strategies (fastest-first):
+#   1. Jersey number (Gemini reads crop) — most reliable, cached permanently
+#   2. Colour histogram — fast local matching for same-session re-ID
+# ═══════════════════════════════════════════════════════════════════════════════
+_player_registries: Dict[str, "PlayerRegistry"] = {}
+
+
+class PlayerRegistry:
+    def __init__(self):
+        self.players: Dict[str, dict] = {}   # stable_id → data
+        self._tid_map: Dict[int, str] = {}   # bytetrack_id → stable_id
+        self._idx = 1
+
+    def _new_sid(self, jersey: Optional[str]) -> str:
+        if jersey:
+            return f"#{jersey}"
+        s = f"P{self._idx}"; self._idx += 1; return s
+
+    def _hist_sim(self, a: list, b: list) -> float:
+        if not a or not b: return 0.0
+        a, b = np.array(a, np.float32), np.array(b, np.float32)
+        a /= a.sum() + 1e-6; b /= b.sum() + 1e-6
+        return float(np.sum(np.sqrt(a * b)))
+
+    def compute_hist(self, frame: np.ndarray, box: list) -> list:
+        x1,y1,x2,y2 = [int(v) for v in box]
+        crop = frame[max(0,y1):y2, max(0,x1):x2]
+        if crop.size == 0: return []
+        hist = []
+        for ch in range(3):
+            h, _ = np.histogram(crop[:,:,ch], bins=16, range=(0,256))
+            hist.extend(h.tolist())
+        return hist
+
+    def resolve(self, tid: int, jersey: Optional[str],
+                hist: list, center: tuple, zone: str) -> str:
+        if tid in self._tid_map:
+            sid = self._tid_map[tid]
+            self._update(sid, zone, center, hist); return sid
+        # Jersey match
+        if jersey:
+            sid = f"#{jersey}"
+            if sid not in self.players:
+                self.players[sid] = {"track_ids":{tid},"jersey":jersey,
+                                     "hist":hist,"zones":collections.Counter({zone:1}),
+                                     "shots":0,"last_center":center}
+            else:
+                self.players[sid]["track_ids"].add(tid)
+                self._update(sid, zone, center, hist)
+            self._tid_map[tid] = sid; return sid
+        # Appearance match
+        best_sid, best_sim = None, 0.40
+        for sid, d in self.players.items():
+            sim = self._hist_sim(hist, d["hist"])
+            if sim > best_sim: best_sim, best_sid = sim, sid
+        if best_sid:
+            self.players[best_sid]["track_ids"].add(tid)
+            if not self.players[best_sid]["jersey"] and jersey:
+                self.players[best_sid]["jersey"] = jersey
+            self._update(best_sid, zone, center, hist)
+            self._tid_map[tid] = best_sid; return best_sid
+        # New player
+        sid = self._new_sid(None)
+        self.players[sid] = {"track_ids":{tid},"jersey":None,
+                             "hist":hist,"zones":collections.Counter({zone:1}),
+                             "shots":0,"last_center":center}
+        self._tid_map[tid] = sid; return sid
+
+    def _update(self, sid: str, zone: str, center: tuple, hist: list):
+        d = self.players[sid]
+        d["zones"][zone] += 1; d["last_center"] = center
+        if hist:
+            old = np.array(d["hist"] or hist, np.float32)
+            d["hist"] = (old*0.8 + np.array(hist,np.float32)*0.2).tolist()
+
+    def record_shot(self, sid: str):
+        if sid in self.players: self.players[sid]["shots"] += 1
+
+    def upgrade_jersey(self, sid: str, jersey: str):
+        """Rename anonymous P-id to jersey number."""
+        if sid not in self.players or not sid.startswith("P"): return sid
+        new_sid = f"#{jersey}"
+        if new_sid in self.players:
+            # Merge
+            self.players[new_sid]["track_ids"] |= self.players[sid]["track_ids"]
+            del self.players[sid]
+        else:
+            self.players[new_sid] = self.players.pop(sid)
+            self.players[new_sid]["jersey"] = jersey
+        for k,v in self._tid_map.items():
+            if v == sid: self._tid_map[k] = new_sid
+        return new_sid
+
+    def summary(self) -> dict:
+        return {
+            sid: {"jersey": d["jersey"],
+                  "primary_zone": d["zones"].most_common(1)[0][0] if d["zones"] else "unknown",
+                  "shots": d["shots"],
+                  "last_center": d["last_center"]}
+            for sid, d in self.players.items()
+        }
+
+
+def get_registry(session_id: str) -> PlayerRegistry:
+    if session_id not in _player_registries:
+        _player_registries[session_id] = PlayerRegistry()
+    return _player_registries[session_id]
+
+
+def _read_jersey(frame: np.ndarray, box: list) -> Optional[str]:
+    """Send player crop to Gemini to read jersey number. Returns digit string or None."""
+    import tempfile
+    try:
+        x1,y1,x2,y2 = [int(v) for v in box]
+        pad = 15
+        crop = frame[max(0,y1-pad):y2+pad, max(0,x1-pad):x2+pad]
+        if crop.size == 0: return None
+        import cv2 as _cv2
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
+            tmp = tf.name
+        _cv2.imwrite(tmp, crop)
+        vf = client.files.upload(file=tmp)
+        while vf.state.name == "PROCESSING":
+            time.sleep(1); vf = client.files.get(name=vf.name)
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=["What is the jersey number on this player? Reply with ONLY "
+                      "the digits (e.g. '23'). If unreadable reply 'unknown'.", vf]
+        )
+        client.files.delete(name=vf.name)
+        os.remove(tmp)
+        text = resp.text.strip().strip("'\"").lower()
+        return text if text.isdigit() else None
+    except Exception as e:
+        print(f"[Jersey] {e}"); return None
 
 
 def _zone_for_point(x_pct: float, y_pct: float) -> str:
@@ -345,7 +630,7 @@ def _detect_shot(kp_history: list) -> bool:
     return False
 
 
-def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
+def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "default") -> dict:
     """
     Multi-model YOLO pipeline:
       1. Pose model (yolo11m-pose.pt) — player tracking + keypoints for shot detection
@@ -386,39 +671,80 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
     h_px = pose_results[0].orig_shape[0]
     w_px = pose_results[0].orig_shape[1]
 
-    tracks: Dict[int, dict] = collections.defaultdict(lambda: {
-        "centers": [], "kp_history": [], "zones": []
+    import cv2 as _cv2
+    registry = get_registry(session_id)
+    # local_tracks: bytetrack_id → accumulated data for this clip
+    local_tracks: Dict[int, dict] = collections.defaultdict(lambda: {
+        "centers": [], "kp_history": [], "zones": [],
+        "stable_id": None, "first_frame": None, "first_box": None,
     })
     frame_player_counts = []
+    cap = _cv2.VideoCapture(clip_path)
+    frame_num = 0
 
     for r in pose_results:
         if r.boxes is None:
-            continue
+            frame_num += 1; continue
         ids   = r.boxes.id
         boxes = r.boxes.xyxy
         kps   = r.keypoints.xy if (has_kps and r.keypoints is not None) else None
-
         if ids is None:
-            continue
+            frame_num += 1; continue
+
+        cap.set(_cv2.CAP_PROP_POS_FRAMES, frame_num * 2)  # vid_stride=2
+        ok, frame_bgr = cap.read()
 
         valid = 0
         for i, tid in enumerate(ids.int().tolist()):
             box       = boxes[i].tolist()
             box_h_pct = (box[3] - box[1]) / h_px
             if box_h_pct < MIN_PLAYER_HEIGHT:
-                continue                          # filter spectators/background
-
+                continue
             valid += 1
-            cx = (box[0] + box[2]) / 2 / w_px
-            cy = (box[1] + box[3]) / 2 / h_px
-            tracks[tid]["centers"].append((cx, cy))
-            tracks[tid]["zones"].append(_zone_for_point(cx, cy))
+            cx   = (box[0] + box[2]) / 2 / w_px
+            cy   = (box[1] + box[3]) / 2 / h_px
+            zone = _zone_for_point(cx, cy)
 
+            hist = registry.compute_hist(frame_bgr, box) if ok else []
+
+            # Resolve stable ID via registry (appearance match)
+            if local_tracks[tid]["stable_id"] is None:
+                sid = registry.resolve(tid, None, hist, (cx, cy), zone)
+                local_tracks[tid]["stable_id"] = sid
+                # Save first good frame for jersey reading
+                if ok and local_tracks[tid]["first_frame"] is None:
+                    local_tracks[tid]["first_frame"] = frame_bgr.copy()
+                    local_tracks[tid]["first_box"]   = box
+            else:
+                registry._update(local_tracks[tid]["stable_id"], zone, (cx, cy), hist)
+
+            local_tracks[tid]["centers"].append((cx, cy))
+            local_tracks[tid]["zones"].append(zone)
             if has_kps and kps is not None and kps.shape[1] >= 17:
-                tracks[tid]["kp_history"].append(kps[i].tolist())
+                local_tracks[tid]["kp_history"].append(kps[i].tolist())
 
         if valid > 0:
             frame_player_counts.append(valid)
+        frame_num += 1
+
+    cap.release()
+
+    # ── Jersey reading for anonymous players (max 4 Gemini calls per clip) ──
+    jersey_calls = 0
+    for tid, data in local_tracks.items():
+        sid = data["stable_id"]
+        if not sid or not sid.startswith("P"): continue
+        if jersey_calls >= 4: break
+        if data["first_frame"] is None: continue
+        jersey = _read_jersey(data["first_frame"], data["first_box"])
+        if jersey:
+            new_sid = registry.upgrade_jersey(sid, jersey)
+            data["stable_id"] = new_sid
+            print(f"[Registry] Track #{tid} → Jersey #{jersey} ({sid} → {new_sid})")
+        jersey_calls += 1
+
+    # Use stable IDs as the tracking key going forward
+    tracks = local_tracks
 
     # ── 2. Ball detection (optional model) ────────────────────────────────
     ball_model = _load_ball_model()
@@ -454,23 +780,25 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
         avg_ball_x = float(np.mean([p[0] for p in detected_positions]))
         ball_possession_side = "left" if avg_ball_x < 0.5 else "right"
 
-    # ── 3. Per-player metrics (reliable only) ─────────────────────────────
+    # ── 3. Per-player metrics — keyed by stable registry ID ──────────────
     player_metrics = {}
 
     for tid, data in tracks.items():
         if len(data["centers"]) < 5:
             continue
+        sid  = data.get("stable_id") or str(tid)
+        shot = _detect_shot(data["kp_history"]) if has_kps else False
+        if shot:
+            registry.record_shot(sid)
 
         zone_counts  = collections.Counter(data["zones"])
-        total_frames = len(data["zones"]) or 1
-        zone_pct     = {z: round(c / total_frames * 100) for z, c in zone_counts.items()}
         primary_zone = max(zone_counts, key=zone_counts.get) if zone_counts else "unknown"
-        shot_detected = _detect_shot(data["kp_history"]) if has_kps else False
 
-        player_metrics[tid] = {
+        player_metrics[sid] = {
             "primary_zone":  primary_zone,
-            "zone_pct":      zone_pct,
-            "shot_detected": shot_detected,
+            "zone_pct":      {z: round(c/len(data["zones"])*100) for z,c in zone_counts.items()},
+            "shot_detected": shot,
+            "jersey":        registry.players.get(sid, {}).get("jersey"),
         }
 
     # ── 4. Team-level metrics ──────────────────────────────────────────────
@@ -485,9 +813,9 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
     for tid, data in tracks.items():
         if len(data["centers"]) < 5:
             continue
+        sid   = data.get("stable_id") or str(tid)
         trail = data["centers"][-60:]
-        trajectories[str(tid)] = [{"x": round(cx, 4), "y": round(cy, 4)}
-                                   for cx, cy in trail]
+        trajectories[sid] = [{"x": round(cx,4), "y": round(cy,4)} for cx,cy in trail]
 
     # Ball trajectory for visualizer
     ball_trail = [{"x": p[0], "y": p[1]} for p in detected_positions[-60:]]
@@ -495,18 +823,19 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
     # ── 6. Shot arc keypoints for visualizer (not a displayed stat) ────────
     shot_arcs = {}
     for tid, data in tracks.items():
-        pm = player_metrics.get(tid)
+        sid = data.get("stable_id") or str(tid)
+        pm  = player_metrics.get(sid)
         if not pm or not pm["shot_detected"]:
             continue
         arc = []
         for kp in data["kp_history"][-30:]:
             wy = kp[10][1] if len(kp) > 10 and kp[10][0] != 0 else None
             sy = kp[6][1]  if len(kp) > 6  and kp[6][0]  != 0 else None
-            arc.append({
-                "wrist_y":    round(wy / h_px, 4) if wy else None,
-                "shoulder_y": round(sy / h_px, 4) if sy else None,
-            })
-        shot_arcs[str(tid)] = arc
+            arc.append({"wrist_y": round(wy/h_px,4) if wy else None,
+                        "shoulder_y": round(sy/h_px,4) if sy else None})
+        shot_arcs[sid] = arc
+
+    registry_summary = registry.summary()
 
     metrics = {
         # Reliable counts
@@ -526,24 +855,26 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0) -> dict:
         "shot_arcs":            shot_arcs,
     }
 
-    # Gemini context summary (only reliable facts)
+    metrics["registry"] = registry_summary
+
     lines = [
-        f"YOLO tracked {len(player_metrics)} on-court players.",
-        f"Avg players visible per frame: {avg_players}.",
-        f"Shot attempts detected (wrist-above-shoulder): {shot_attempts}.",
+        f"YOLO tracked {len(player_metrics)} on-court players (stable IDs across clips).",
+        f"Avg visible per frame: {avg_players}.",
+        f"Shot attempts this clip: {shot_attempts}.",
     ]
     if ball_detected:
-        lines.append(f"Basketball detected. Avg position: {ball_possession_side} side of court.")
+        lines.append(f"Ball detected — {ball_possession_side} side of court.")
     else:
-        lines.append("Basketball not detected in this clip (model may not be installed).")
-    lines.append(f"Zone activity: { {z: c for z, c in list(zone_summary.items())[:3]} }.")
-    for tid, pm in list(player_metrics.items())[:5]:
-        lines.append(
-            f"  Player #{tid}: mostly in {pm['primary_zone']}"
-            + (" [SHOT DETECTED]" if pm["shot_detected"] else "")
-        )
+        lines.append("Ball not detected (ball model may not be loaded).")
+    lines.append(f"Zone activity: { {z: cnt for z, cnt in list(zone_summary.items())[:3]} }.")
+    for sid, pm in list(player_metrics.items())[:6]:
+        label = f"Jersey #{pm['jersey']}" if pm.get("jersey") else sid
+        lines.append(f"  {label}: {pm['primary_zone']}"
+                     + (" [SHOT]" if pm["shot_detected"] else ""))
+    for sid, rp in list(registry_summary.items())[:5]:
+        if rp["shots"] > 0:
+            lines.append(f"  {sid} session shots: {rp['shots']}")
     summary = "\n".join(lines)
-
     return {"metrics": metrics, "summary": summary}
 
 
@@ -689,11 +1020,17 @@ def gemini_confirm_viral(clip_path: str) -> dict:
 # CORE ANALYSIS — 10-second bucket
 # ═══════════════════════════════════════════════════════════════════════════════
 def analyze_time_bucket(source_path: str, bucket_start: float,
-                        cache_prefix: str = "bucket") -> dict:
+                        cache_prefix: str = "bucket",
+                        force: bool = False) -> dict:
     clip_name   = f"cache_clips/{cache_prefix}_{int(bucket_start)}.mp4"
     report_name = f"cache_reports/{cache_prefix}_{int(bucket_start)}.json"
 
-    if os.path.exists(report_name):
+    if force:
+        for f in [clip_name, report_name]:
+            try: os.remove(f)
+            except: pass
+        print(f"[FORCE] Re-analyzing {cache_prefix}_{int(bucket_start)}s")
+    elif os.path.exists(report_name):
         print(f"[CACHE HIT] {cache_prefix}_{int(bucket_start)}s")
         with open(report_name) as f: return json.load(f)
 
@@ -725,7 +1062,7 @@ def analyze_time_bucket(source_path: str, bucket_start: float,
 
     # ── YOLO metrics + ByteTrack ────────────────────────────────────────────
     print("[YOLO] Running pose tracking (ByteTrack)...")
-    yolo_metrics = extract_yolo_metrics(clip_name)
+    yolo_metrics = extract_yolo_metrics(clip_name, session_id=cache_prefix)
 
     # ── Gemini dual-call (fast JSON + qualitative in parallel) ───────────────
     print("[Gemini] Running dual-call analysis...")
@@ -793,16 +1130,39 @@ def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
         # Resolve live HLS URL via yt-dlp
         session["status"] = "resolving"
         print(f"[Live {session_id[:8]}] Resolving stream URL via yt-dlp...")
-        r = subprocess.run(
-            ["yt-dlp", "-f", "best[ext=mp4]/best", "-g", youtube_url],
-            capture_output=True, text=True, timeout=30
-        )
-        if r.returncode != 0 or not r.stdout.strip():
-            session["status"] = "error"
-            session["error"]  = f"yt-dlp failed: {r.stderr.strip()[:300]}"
-            return
+        # ── Resolve HLS URL via YouTube Data API ──────────────────────────
+        # The Data API returns hlsManifestUrl directly for live streams —
+        # no yt-dlp, no JS challenge, no bot detection issues.
+        video_id = _extract_video_id(youtube_url)
+        stream_url = None
 
-        stream_url = r.stdout.strip().split("\n")[0]
+        try:
+            stream_url = get_live_hls_url(video_id)
+            if stream_url:
+                print(f"[Live {session_id[:8]}] HLS URL from YouTube Data API: OK")
+        except Exception as e:
+            print(f"[Live {session_id[:8]}] Data API failed: {e} — trying yt-dlp fallback")
+
+        # ── yt-dlp fallback if API fails ───────────────────────────────────
+        if not stream_url:
+            print(f"[Live {session_id[:8]}] Falling back to yt-dlp...")
+            cookies_from = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
+            live_cmd = ["yt-dlp"]
+            if cookies_from:
+                live_cmd += ["--cookies-from-browser", cookies_from]
+            live_cmd += ["-f", "best[ext=mp4]/best", "-g", youtube_url]
+            r = subprocess.run(live_cmd, capture_output=True, text=True, timeout=30)
+            if r.returncode == 0 and r.stdout.strip():
+                stream_url = r.stdout.strip().split("\n")[0]
+                print(f"[Live {session_id[:8]}] yt-dlp fallback OK")
+            else:
+                session["status"] = "error"
+                session["error"]  = (
+                    "Could not resolve stream URL. "
+                    "Check YOUTUBE_API_KEY in .env and that the stream is currently live."
+                )
+                return
+
         print(f"[Live {session_id[:8]}] Stream URL resolved. Starting capture...")
         session["status"] = "buffering"
 
@@ -935,16 +1295,129 @@ def analyze_youtube_vod(request: YoutubeVodRequest):
             return json.load(f)
 
     print(f"[VOD] Downloading from {request.youtube_url} at {request.start_time}s")
-    dl = subprocess.run([
-        "yt-dlp",
-        "-f", "best[ext=mp4]/best",
-        "--download-sections", f"*{int(request.start_time)}-{int(request.start_time)+30}",
-        "-o", clip_path,
-        request.youtube_url
-    ], capture_output=True, timeout=120)
+    # ── Get video metadata from YouTube Data API ──────────────────────────
+    video_id = _extract_video_id(request.youtube_url)
+    try:
+        info = get_video_info(video_id)
+        print(f"[VOD] '{info.get('title', video_id)}' by {info.get('channel', '?')}")
+        if info.get("is_live"):
+            raise HTTPException(400, "This video is a live stream — use /api/start_live_session instead.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[VOD] Metadata fetch failed (non-fatal): {e}")
 
-    if not os.path.exists(clip_path):
-        raise HTTPException(500, f"yt-dlp download failed: {dl.stderr.decode()[:300]}")
+    # ── Download via pytubefix (OAuth, no JS challenge) ────────────────────
+    # pytubefix on first run opens a browser tab for one-time OAuth login.
+    # After that it caches the token in a local file automatically.
+    # This completely bypasses YouTube bot detection and signature challenges.
+    downloaded = False
+
+    # Download cascade — three methods tried in order:
+    #   1. streamlink   — most reliable for YouTube, no JS parsing needed
+    #   2. pytubefix    — OAuth authenticated, good when streamlink not installed
+    #   3. yt-dlp       — last resort
+    downloaded  = False
+    last_error  = "No download method succeeded."
+    tmp_full    = f"cache_clips/vod_full_{cache_key}.mp4"
+    yt_url      = f"https://www.youtube.com/watch?v={video_id}"
+    start       = int(request.start_time)
+
+    # ── Method 1: streamlink (pip install streamlink) ──────────────────────
+    # streamlink fetches the HLS manifest directly — no JS signature parsing,
+    # no bot detection, no OAuth needed. It pipes directly into FFmpeg.
+    if not downloaded and _verify_streamlink():
+        try:
+            print("[VOD] Trying streamlink...")
+            r = subprocess.run([
+                "streamlink",
+                "--stdout",               # pipe stream to stdout
+                "-o", "-",
+                yt_url,
+                "best",
+            ], capture_output=False, stdout=subprocess.PIPE, timeout=20)
+            # Pipe streamlink stdout → ffmpeg for slicing
+            proc = subprocess.Popen([
+                "streamlink", "--stdout", yt_url, "best",
+            ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            slice_proc = subprocess.run([
+                "ffmpeg", "-y",
+                "-ss", str(start),
+                "-i", "pipe:0",
+                "-t", "30",
+                "-c:v", CODEC, "-c:a", "aac",
+                clip_path
+            ], stdin=proc.stdout, capture_output=True, timeout=120)
+            proc.stdout.close()
+            proc.wait()
+            if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                downloaded = True
+                print("[VOD] streamlink OK")
+        except Exception as e:
+            last_error = f"streamlink: {e}"
+            print(f"[VOD] streamlink failed: {e}")
+
+    # ── Method 2: pytubefix (OAuth) ───────────────────────────────────────
+    if not downloaded and _PYTUBEFIX_AVAILABLE:
+        try:
+            print("[VOD] Trying pytubefix (OAuth)...")
+            yt = PyTube(yt_url, use_oauth=True, allow_oauth_cache=True)
+            print("[VOD] If prompted below, open the URL and enter the code.")
+            stream = (
+                yt.streams.filter(progressive=True, file_extension="mp4")
+                  .order_by("resolution").desc().first()
+                or
+                yt.streams.filter(file_extension="mp4", only_video=True)
+                  .order_by("resolution").desc().first()
+            )
+            if stream:
+                stream.download(filename=tmp_full)
+                subprocess.run([
+                    "ffmpeg", "-y",
+                    "-ss", str(start), "-i", tmp_full,
+                    "-t", "30", "-c:v", CODEC, "-c:a", "aac", clip_path
+                ], capture_output=True, timeout=120)
+                try: os.remove(tmp_full)
+                except: pass
+                if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                    downloaded = True
+                    print("[VOD] pytubefix OK")
+                else:
+                    last_error = "pytubefix: FFmpeg slice failed"
+            else:
+                last_error = "pytubefix: no suitable stream found"
+        except Exception as e:
+            last_error = f"pytubefix: {e}"
+            print(f"[VOD] pytubefix failed: {e}")
+
+    # ── Method 3: yt-dlp ─────────────────────────────────────────────────
+    if not downloaded:
+        try:
+            print("[VOD] Trying yt-dlp...")
+            cookies_from = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
+            cmd = ["yt-dlp"]
+            if cookies_from:
+                cmd += ["--cookies-from-browser", cookies_from]
+            cmd += [
+                "-f", "best[ext=mp4]/best",
+                "--download-sections", f"*{start}-{start+30}",
+                "-o", clip_path,
+                yt_url,
+            ]
+            dl = subprocess.run(cmd, capture_output=True, timeout=180)
+            if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                downloaded = True
+                print("[VOD] yt-dlp OK")
+            else:
+                last_error = dl.stderr.decode(errors="replace")[:300]
+        except Exception as e:
+            last_error = f"yt-dlp: {e}"
+
+    if not downloaded:
+        raise HTTPException(500,
+            f"All download methods failed. Last error: {last_error}\n"
+            "Install streamlink for best results: pip install streamlink"
+        )
 
     dead, reason = is_dead_time(clip_path)
     if dead:
@@ -1043,7 +1516,7 @@ def handle_playhead(request: PlayheadRequest):
         raise HTTPException(404, f"Source not found: {request.video_source}")
     prefix       = request.video_source if _is_uuid(request.video_source) else "bucket"
     bucket_start = math.floor(request.current_time / 10.0) * 10
-    result       = analyze_time_bucket(source_path, bucket_start, cache_prefix=prefix)
+    result       = analyze_time_bucket(source_path, bucket_start, cache_prefix=prefix, force=request.force)
     return {
         "bucket_start":    bucket_start,
         "scouting_report": result["report"],
