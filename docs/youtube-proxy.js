@@ -29,6 +29,30 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    if (url.pathname === "/get_hls") {
+      const ytUrl = url.searchParams.get("url");
+      if (!ytUrl) return Response.json({ error: "Missing url" }, { status: 400, headers: cors });
+
+      try {
+        // Fetch the raw HTML of the YouTube page
+        const ytResp = await fetch(ytUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+        });
+        const html = await ytResp.text();
+
+        // Regex to find the hidden HLS manifest URL YouTube uses for its web player
+        const match = html.match(/"hlsManifestUrl":"([^"]+)"/);
+        
+        if (match && match[1]) {
+          return Response.json({ hls_url: match[1] }, { headers: cors });
+        } else {
+          return Response.json({ error: "Stream is not live or HLS not found" }, { status: 404, headers: cors });
+        }
+      } catch (err) {
+        return Response.json({ error: err.message }, { status: 500, headers: cors });
+      }
+    }
+
     if (url.pathname === "/health") {
       return Response.json({ ok: true, ts: Date.now() }, { headers: cors });
     }

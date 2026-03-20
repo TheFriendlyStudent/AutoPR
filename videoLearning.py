@@ -89,8 +89,26 @@ load_dotenv()
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
+
+# ── inference-sdk (local model — no per-frame HTTP round-trip) ────────────────
+# pip install inference-sdk
+# Falls back to cloud API if not installed or model not cached locally.
+try:
+    from inference_sdk import InferenceHTTPClient as _RFClient
+    _RF_SDK_CLIENT = _RFClient(
+        api_url="https://detect.roboflow.com",
+        api_key=os.environ.get("ROBOFLOW_API_KEY", ""),
+    )
+    _RF_SDK_AVAILABLE = True
+    print("[inference-sdk] Available ✓ — local inference client ready")
+except ImportError:
+    _RF_SDK_AVAILABLE = False
+    _RF_SDK_CLIENT    = None
+    print("[inference-sdk] Not installed — pip install inference-sdk for local tracking")
+    print("                Falling back to Roboflow cloud API for all calls.")
 
 # ── API clients ───────────────────────────────────────────────────────────────
 client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
@@ -191,7 +209,7 @@ class ViralScanRequest(BaseModel):
     sensitivity:  float = 0.65
 
 class LiveSessionRequest(BaseModel):
-    youtube_url:  str
+    stream_url:  str
     auto_analyze: bool = True
 
 class YoutubeVodRequest(BaseModel):
@@ -326,7 +344,41 @@ def _roboflow_infer_frame(frame_bgr: np.ndarray) -> List[dict]:
         return []
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+def _infer_frame(frame_bgr: np.ndarray) -> List[dict]:
+    """
+    Unified inference entry point.
+    Uses inference-sdk local client when available (faster, no per-call latency).
+    Falls back to the cloud HTTP API if SDK is not installed.
+
+    Both paths return the same list-of-dict format:
+        [{"class": str, "confidence": float,
+          "x": cx_px, "y": cy_px, "width": w_px, "height": h_px}, ...]
+    """
+    if _RF_SDK_AVAILABLE and _RF_SDK_CLIENT:
+        try:
+            import cv2 as _cv2
+            _, buf  = _cv2.imencode(".jpg", frame_bgr, [_cv2.IMWRITE_JPEG_QUALITY, 85])
+            b64     = base64.b64encode(buf.tobytes()).decode("utf-8")
+            result  = _RF_SDK_CLIENT.infer(
+                inference_input=b64,
+                model_id=f"{RF_PROJECT}/{RF_VERSION}",
+            )
+            # SDK returns a dict with "predictions" list
+            preds = result.get("predictions", []) if isinstance(result, dict) else []
+            return preds
+        except Exception as e:
+            print(f"[inference-sdk] Error: {e} — falling back to cloud API")
+    return _roboflow_infer_frame(frame_bgr)
+
+
+# ─── Streaming-tracking session store ────────────────────────────────────────
+# session_id → {"status": str, "frames_done": int, "total_frames": int,
+#               "queue": list[dict], "lock": Lock, "done": Event,
+#               "tracker": IoUTracker, "stats": dict}
+_tracking_sessions: Dict[str, dict] = {}
+
+
+
 # IoU TRACKER — lightweight ByteTrack-style matching (no model download)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tracks player detections across frames using IoU overlap.
@@ -555,7 +607,7 @@ def extract_yolo_metrics(clip_path: str, session_id: str = "default") -> dict:
     frame_preds: List[Optional[List[dict]]] = [None] * n
 
     def _infer(idx: int) -> Tuple[int, List[dict]]:
-        return idx, _roboflow_infer_frame(frames[idx])
+        return idx, _infer_frame(frames[idx])
 
     with ThreadPoolExecutor(max_workers=RF_WORKERS) as pool:
         futs = {pool.submit(_infer, i): i for i in range(n)}
@@ -1277,45 +1329,17 @@ def _verify_ytdlp() -> bool:
         return False
 
 
-def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
+def _live_buffer_worker(session_id: str, stream_url: str, auto_analyze: bool):
+    """
+    Consumes a raw HLS stream URL (provided by the JS Proxy), segments it via FFmpeg,
+    and runs the analysis worker thread on the segments.
+    """
     session = live_sessions[session_id]
     stop    = session["stop_event"]
     buf_dir = f"live_buffers/{session_id}"
     os.makedirs(buf_dir, exist_ok=True)
 
     try:
-        session["status"] = "resolving"
-        video_id   = _extract_video_id(youtube_url)
-        stream_url = None
-
-        # Method 1: YouTube Data API
-        try:
-            stream_url = get_live_hls_url(video_id)
-            if stream_url:
-                print(f"[Live {session_id[:8]}] HLS via YouTube Data API ✓")
-        except Exception as e:
-            print(f"[Live {session_id[:8]}] Data API failed: {e}")
-
-        # Method 2: yt-dlp fallback
-        if not stream_url:
-            print(f"[Live {session_id[:8]}] Trying yt-dlp fallback...")
-            cookies_from = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
-            cmd = ["yt-dlp"]
-            if cookies_from:
-                cmd += ["--cookies-from-browser", cookies_from]
-            cmd += ["-f", "best[ext=mp4]/best", "-g", youtube_url]
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            if r.returncode == 0 and r.stdout.strip():
-                stream_url = r.stdout.strip().split("\n")[0]
-                print(f"[Live {session_id[:8]}] yt-dlp fallback ✓")
-            else:
-                session["status"] = "error"
-                session["error"]  = (
-                    "Could not resolve stream URL. "
-                    "Check YOUTUBE_API_KEY in .env and confirm the stream is live."
-                )
-                return
-
         session["status"] = "buffering"
 
         seg_queue  = []
@@ -1327,9 +1351,12 @@ def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
                 with queue_lock:
                     item = seg_queue.pop(0) if seg_queue else None
                 if item is None:
-                    time.sleep(0.5); continue
+                    time.sleep(0.5)
+                    continue
 
                 idx, path = item["idx"], item["path"]
+                
+                # Phase 1: Fast dead-time pre-check
                 dead, reason = is_dead_time(path)
                 if dead:
                     result = {
@@ -1345,6 +1372,7 @@ def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
                     except: pass
                     continue
 
+                # Phase 2: Full YOLO + Gemini Analysis
                 yolo_metrics = extract_yolo_metrics(path)
                 result = gemini_scout(path, yolo_metrics)
                 result.update({
@@ -1353,6 +1381,7 @@ def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
                     "dead_time":    False,
                     "yolo_metrics": yolo_metrics.get("metrics", {}),
                 })
+                
                 session["results"].append(result)
                 session["latest"] = result
                 session["status"] = "live"
@@ -1362,25 +1391,33 @@ def _live_buffer_worker(session_id: str, youtube_url: str, auto_analyze: bool):
 
             analysis_done.set()
 
+        # Start the analysis consumer thread if auto_analyze is enabled
         if auto_analyze:
             threading.Thread(target=_analysis_worker, daemon=True).start()
 
+        # Main producer loop: ingest the HLS stream and slice it into 10-second segments
         seg_index = 0
         while not stop.is_set():
             seg_path = f"{buf_dir}/seg_{seg_index:04d}.mp4"
+            
+            # FFmpeg natively reads the .m3u8 HLS url with zero issues
             subprocess.run([
                 "ffmpeg", "-y", "-i", stream_url,
                 "-t", "10", "-c:v", CODEC, "-c:a", "aac", seg_path
             ], capture_output=True, timeout=40)
 
-            if stop.is_set(): break
+            if stop.is_set(): 
+                break
 
             if not os.path.exists(seg_path) or os.path.getsize(seg_path) < 1000:
                 print(f"[Live {session_id[:8]}] Segment {seg_index} empty, retrying...")
-                time.sleep(3); continue
+                time.sleep(3)
+                continue
 
+            # Push the new segment to the analysis queue
             if auto_analyze:
                 with queue_lock:
+                    # Prevent unbounded memory/disk usage if backend falls behind
                     if len(seg_queue) > 4:
                         dropped = seg_queue.pop(0)
                         try: os.remove(dropped["path"])
@@ -1516,7 +1553,7 @@ def start_live_session(request: LiveSessionRequest):
     session_id = str(uuid.uuid4())
     stop_event = threading.Event()
     session    = {
-        "youtube_url":  request.youtube_url,
+        "stream_url":   request.stream_url,  # <-- Update here
         "auto_analyze": request.auto_analyze,
         "status":       "starting",
         "results":      [],
@@ -1526,14 +1563,15 @@ def start_live_session(request: LiveSessionRequest):
         "thread":       None,
     }
     live_sessions[session_id] = session
+    
     t = threading.Thread(
         target=_live_buffer_worker,
-        args=(session_id, request.youtube_url, request.auto_analyze),
+        args=(session_id, request.stream_url, request.auto_analyze), # <-- Update here
         daemon=True
     )
     session["thread"] = t
     t.start()
-    print(f"[Live] Started session {session_id[:8]} for {request.youtube_url}")
+    print(f"[Live] Started session {session_id[:8]}")
     return {"session_id": session_id, "status": "starting"}
 
 
@@ -1723,16 +1761,317 @@ def list_debug_renders():
 @app.get("/health")
 def health():
     return {
-        "status":           "ok",
-        "device":           DEVICE,
-        "codec":            CODEC,
-        "roboflow_key_set": bool(ROBOFLOW_API_KEY),
-        "roboflow_model":   f"{RF_PROJECT}/{RF_VERSION}",
-        "rf_calls_total":   _rf_call_count,
-        "ytdlp_available":  _verify_ytdlp(),
-        "active_sessions":  len(live_sessions),
-        "gemini_quota_ok":  not _gemini_quota_exhausted,
+        "status":              "ok",
+        "device":              DEVICE,
+        "codec":               CODEC,
+        "roboflow_key_set":    bool(ROBOFLOW_API_KEY),
+        "roboflow_model":      f"{RF_PROJECT}/{RF_VERSION}",
+        "rf_sdk_available":    _RF_SDK_AVAILABLE,
+        "rf_calls_total":      _rf_call_count,
+        "ytdlp_available":     _verify_ytdlp(),
+        "active_sessions":     len(live_sessions),
+        "tracking_sessions":   len(_tracking_sessions),
+        "gemini_quota_ok":     not _gemini_quota_exhausted,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LIVE TRACKING STREAM — SSE endpoint for real-time annotated frame delivery
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Colour palette — consistent player ID → BGR colour
+_TRACK_COLORS = [
+    (56, 189, 248), (244, 63, 94),  (74, 222, 128), (251, 146, 60),
+    (167, 139, 250),(52, 211, 153), (251, 191, 36),  (232, 121, 249),
+    (96, 165, 250), (248, 113, 113),(34, 211, 238),  (163, 230, 53),
+]
+
+ZONE_SHORT = {
+    "paint_left": "PNT-L", "paint_right": "PNT-R",
+    "mid_range":  "MID",   "perimeter":   "PERIM",
+    "three_left": "3PT-L", "three_right": "3PT-R",
+    "backcourt":  "BACK",
+}
+
+
+def _annotate_frame(frame_bgr: np.ndarray,
+                    preds: List[dict],
+                    tracker: "IoUTracker",
+                    w: int, h: int,
+                    track_colors: dict,
+                    hoop_center: Optional[Tuple[float, float]]) -> np.ndarray:
+    """
+    Draw bounding boxes, player IDs, zone labels, ball, hoop, and refs
+    onto a copy of `frame_bgr`. Returns the annotated frame.
+    """
+    import cv2 as _cv2
+    vis = frame_bgr.copy()
+
+    for det in preds:
+        cls  = det["class"]
+        conf = det.get("confidence", 0)
+        x1   = int(det["x"] - det["width"]  / 2)
+        y1   = int(det["y"] - det["height"] / 2)
+        x2   = int(det["x"] + det["width"]  / 2)
+        y2   = int(det["y"] + det["height"] / 2)
+
+        if cls == RF_CLS_PLAYER:
+            # Stable track colour
+            cx_n = det["x"] / w
+            cy_n = det["y"] / h
+            # Find which track this detection belongs to (nearest centre)
+            best_tid, best_d = None, 999.0
+            for t in tracker._tracks:
+                if t["history"]:
+                    tx, ty = t["history"][-1]
+                    d = math.hypot(cx_n - tx, cy_n - ty)
+                    if d < best_d:
+                        best_d, best_tid = d, t["id"]
+            color = _TRACK_COLORS[(best_tid or 1) % len(_TRACK_COLORS)] if best_tid else (56, 189, 248)
+            if best_tid not in track_colors:
+                track_colors[best_tid] = color
+            color = track_colors.get(best_tid, (56, 189, 248))
+
+            _cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
+            zone  = _zone_for_point(det["x"] / w, det["y"] / h)
+            label = f"P{best_tid} {ZONE_SHORT.get(zone, zone)}" if best_tid else "P?"
+            lw, lh = _cv2.getTextSize(label, _cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)[0]
+            _cv2.rectangle(vis, (x1, y1 - lh - 5), (x1 + lw + 4, y1), color, -1)
+            _cv2.putText(vis, label, (x1 + 2, y1 - 3),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.45, (10, 10, 10), 1)
+
+        elif cls == RF_CLS_BALL:
+            cx, cy = int(det["x"]), int(det["y"])
+            _cv2.circle(vis, (cx, cy), 14, (0, 140, 255), -1)
+            _cv2.circle(vis, (cx, cy), 14, (255, 255, 255), 2)
+            _cv2.putText(vis, "BALL", (cx + 16, cy + 5),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 140, 255), 1)
+
+        elif cls == RF_CLS_HOOP:
+            cx, cy = int(det["x"]), int(det["y"])
+            _cv2.circle(vis, (cx, cy), 20, (0, 230, 80), 3)
+            _cv2.putText(vis, "HOOP", (cx + 22, cy + 5),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 230, 80), 1)
+
+        elif cls == RF_CLS_REF:
+            _cv2.rectangle(vis, (x1, y1), (x2, y2), (160, 160, 160), 1)
+            _cv2.putText(vis, "REF", (x1, y1 - 4),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.38, (180, 180, 180), 1)
+
+        elif cls in RF_SCOREBOARD_CLASSES:
+            _cv2.rectangle(vis, (x1, y1), (x2, y2), (240, 180, 41), 1)
+            _cv2.putText(vis, cls[:10], (x1, y1 - 4),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.35, (240, 180, 41), 1)
+
+    return vis
+
+
+def _run_tracking_worker(session_id: str, source_path: str, stride: int):
+    """
+    Background thread: reads every `stride`-th frame from source_path,
+    runs inference, annotates, and pushes results into the session queue.
+    The SSE endpoint drains the queue.
+    """
+    import cv2 as _cv2
+    sess    = _tracking_sessions[session_id]
+    tracker = sess["tracker"]
+    colors  : dict = {}
+    cap     = _cv2.VideoCapture(source_path)
+
+    total   = int(cap.get(_cv2.CAP_PROP_FRAME_COUNT)) or 1
+    src_fps = cap.get(_cv2.CAP_PROP_FPS) or 30.0
+    # Normalise stride so we process at roughly RF_SAMPLE_FPS equivalent
+    # but never send more than ~8 fps to the browser (keeps SSE smooth)
+    target_browser_fps = min(RF_SAMPLE_FPS, 8.0)
+    stride  = max(1, round(src_fps / target_browser_fps))
+
+    sess["total_frames"] = max(1, total // stride)
+    print(f"[Tracking {session_id[:8]}] {total} source frames  "
+          f"stride={stride}  →  ~{sess['total_frames']} annotated frames")
+
+    zone_counter  = collections.Counter()
+    ball_xs       = []
+    hoop_positions = []
+    frame_idx     = 0
+    sent          = 0
+
+    while True:
+        cap.set(_cv2.CAP_PROP_POS_FRAMES, frame_idx * stride)
+        ok, frame = cap.read()
+        if not ok or sess.get("cancelled"):
+            break
+
+        h, w = frame.shape[:2]
+        preds = _infer_frame(frame)
+
+        # Update tracker (players only — refs excluded)
+        players = [p for p in preds if p["class"] == RF_CLS_PLAYER]
+        tracker.update(players, w, h)
+
+        # Accumulate stats
+        for p in preds:
+            if p["class"] == RF_CLS_PLAYER:
+                zone = _zone_for_point(p["x"] / w, p["y"] / h)
+                zone_counter[zone] += 1
+            elif p["class"] == RF_CLS_BALL:
+                ball_xs.append(p["x"] / w)
+            elif p["class"] == RF_CLS_HOOP:
+                hoop_positions.append((p["x"] / w, p["y"] / h))
+
+        # Annotate
+        hoop_c = None
+        if hoop_positions:
+            hoop_c = (float(np.median([p[0] for p in hoop_positions])),
+                      float(np.median([p[1] for p in hoop_positions])))
+        annotated = _annotate_frame(frame, preds, tracker, w, h, colors, hoop_c)
+
+        # Encode as JPEG → base64 (resize to max 640px wide for bandwidth)
+        max_w = 640
+        if w > max_w:
+            scale     = max_w / w
+            annotated = _cv2.resize(annotated,
+                                    (max_w, int(h * scale)),
+                                    interpolation=_cv2.INTER_LINEAR)
+        _, jpeg_buf = _cv2.imencode(".jpg", annotated,
+                                    [_cv2.IMWRITE_JPEG_QUALITY, 72])
+        frame_b64 = base64.b64encode(jpeg_buf.tobytes()).decode("utf-8")
+
+        # Build live stats snapshot
+        confirmed = [t for t in tracker._tracks
+                     if t["hits"] >= IoUTracker.MIN_HITS and t["age"] == 0]
+        ball_side = None
+        if ball_xs:
+            ball_side = "left" if float(np.mean(ball_xs)) < 0.5 else "right"
+
+        payload = {
+            "frame_b64":    frame_b64,
+            "frame_num":    sent,
+            "total_frames": sess["total_frames"],
+            "progress_pct": round(sent / sess["total_frames"] * 100),
+            "player_count": len(confirmed),
+            "ball_detected": any(p["class"] == RF_CLS_BALL for p in preds),
+            "ball_side":    ball_side,
+            "hoop_detected": any(p["class"] == RF_CLS_HOOP for p in preds),
+            "zone_counts":  dict(zone_counter.most_common(5)),
+            "shot_event":   _is_shot_event(preds, w, h, hoop_c),
+            "trajectories": {
+                str(t["id"]): [{"x": cx, "y": cy}
+                                for cx, cy in t["history"][-20:]]
+                for t in confirmed if len(t["history"]) >= 2
+            },
+        }
+
+        with sess["lock"]:
+            # Cap queue at 30 items so slow clients don't OOM
+            if len(sess["queue"]) < 30:
+                sess["queue"].append(payload)
+        sess["frames_done"] = sent
+        sent += 1
+        frame_idx += 1
+
+    cap.release()
+    sess["status"] = "done"
+    sess["done"].set()
+    print(f"[Tracking {session_id[:8]}] Worker finished — {sent} frames sent")
+
+
+def _is_shot_event(preds: List[dict], w: int, h: int,
+                   hoop_c: Optional[Tuple[float, float]]) -> bool:
+    """True when ball is within RF_SHOT_PROXIMITY of hoop this frame."""
+    if hoop_c is None:
+        return False
+    balls = [p for p in preds if p["class"] == RF_CLS_BALL]
+    if not balls:
+        return False
+    best = max(balls, key=lambda p: p["confidence"])
+    dist = math.hypot(best["x"] / w - hoop_c[0], best["y"] / h - hoop_c[1])
+    return dist <= RF_SHOT_PROXIMITY
+
+
+@app.post("/api/start_tracking/{session_id}")
+def start_tracking(session_id: str):
+    """
+    Launch the background tracking worker for an already-uploaded clip.
+    The client then connects to /api/stream_tracking/{session_id} via SSE.
+    """
+    source_path = resolve_source(session_id)
+    if source_path is None:
+        raise HTTPException(404, f"Upload not found: {session_id}")
+    if session_id in _tracking_sessions:
+        # Already running — return current status
+        s = _tracking_sessions[session_id]
+        return {"status": s["status"], "frames_done": s["frames_done"],
+                "total_frames": s["total_frames"]}
+
+    sess = {
+        "status":       "running",
+        "frames_done":  0,
+        "total_frames": 1,
+        "queue":        [],
+        "lock":         threading.Lock(),
+        "done":         threading.Event(),
+        "tracker":      IoUTracker(),
+        "cancelled":    False,
+    }
+    _tracking_sessions[session_id] = sess
+
+    t = threading.Thread(
+        target=_run_tracking_worker,
+        args=(session_id, source_path, 1),  # stride computed inside worker
+        daemon=True,
+    )
+    t.start()
+    return {"status": "started", "session_id": session_id}
+
+
+@app.delete("/api/stop_tracking/{session_id}")
+def stop_tracking(session_id: str):
+    sess = _tracking_sessions.get(session_id)
+    if sess:
+        sess["cancelled"] = True
+        sess["done"].wait(timeout=5)
+        del _tracking_sessions[session_id]
+    return {"status": "stopped"}
+
+
+@app.get("/api/stream_tracking/{session_id}")
+def stream_tracking(session_id: str):
+    """
+    Server-Sent Events stream.  Each event is a JSON payload:
+        { frame_b64, frame_num, total_frames, progress_pct,
+          player_count, ball_detected, ball_side, hoop_detected,
+          zone_counts, shot_event, trajectories }
+
+    A final event with type "done" is sent when processing completes.
+    """
+    sess = _tracking_sessions.get(session_id)
+    if sess is None:
+        raise HTTPException(404, "No tracking session found. Call /api/start_tracking first.")
+
+    def _event_generator():
+        last_sent = 0
+        while True:
+            with sess["lock"]:
+                pending = sess["queue"][last_sent:]
+
+            for payload in pending:
+                yield f"data: {json.dumps(payload)}\n\n"
+                last_sent += 1
+
+            if sess["status"] == "done" and last_sent >= len(sess["queue"]):
+                yield f"event: done\ndata: {json.dumps({'status': 'done', 'total_frames': sess['total_frames']})}\n\n"
+                break
+
+            time.sleep(0.04)  # ~25 fps poll ceiling
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":  "no-cache",
+            "X-Accel-Buffering": "no",   # disable nginx buffering
+        },
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

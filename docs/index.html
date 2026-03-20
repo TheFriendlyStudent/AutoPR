@@ -2936,7 +2936,7 @@ loadData();
   $("scoutStartLiveBtn").addEventListener("click", startLive);
   $("scoutStopLiveBtn").addEventListener("click",  () => stopLiveSession());
 
-  async function startLive() {
+async function startLive() {
     const url = $("scoutLiveUrl").value.trim();
     if (!url) { setStatus("err", "Paste a YouTube live URL first."); return; }
     if (!backendOk) { await testBackend(BACKEND); if (!backendOk) return; }
@@ -2945,15 +2945,27 @@ loadData();
     $("scoutStopLiveBtn").style.display  = "inline-block";
     liveLog.style.display = "block";
     liveLog.innerHTML     = "";
-    appendLog("🔴", "Starting live session…", false);
-    setStatus("busy", "Starting…");
+    appendLog("🔴", "Resolving stream via Proxy...", false);
+    setStatus("busy", "Resolving stream...");
     scoreBar.classList.add("vis");
 
     try {
+      // 1. Get the raw HLS stream from your efficient JS Proxy
+      const proxyRes = await fetch(`${PROXY_BASE}/get_hls?url=${encodeURIComponent(url)}`);
+      const proxyData = await proxyRes.json();
+      
+      if (!proxyRes.ok || !proxyData.hls_url) {
+          throw new Error(proxyData.error || "Could not extract HLS manifest.");
+      }
+
+      // 2. Send the raw HLS URL to Python
+      appendLog("🟢", "Stream resolved. Starting AI...", false);
       const res = await fetch(`${BACKEND}/api/start_live_session`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ youtube_url: url, auto_analyze: true })
+        // Make sure the key here is 'stream_url'
+        body: JSON.stringify({ stream_url: proxyData.hls_url, auto_analyze: true }) 
       });
+      
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail || res.status); }
       const d = await res.json();
       liveSid  = d.session_id;
