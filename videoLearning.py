@@ -45,6 +45,7 @@ def _verify_streamlink() -> bool:
 from google import genai
 from ultralytics import YOLO
 from dotenv import load_dotenv
+load_dotenv()  # must run before reading os.environ
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -129,7 +130,6 @@ try:
 except ImportError:
     _NGROK_AVAILABLE = False
 
-load_dotenv()
 client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 # ── FFmpeg (Windows path; ignored on Linux/Mac) ────────────────────────────────
@@ -159,6 +159,8 @@ for _d in ["cache_clips", "cache_reports", "uploads", "live_buffers"]:
 app = FastAPI(title="Nutmeg Sports AI Scouting Engine")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+os.makedirs("debug_renders", exist_ok=True)
+app.mount("/debug", StaticFiles(directory="debug_renders"), name="debug")
 
 executor = ThreadPoolExecutor(max_workers=3)
 
@@ -364,240 +366,98 @@ def is_dead_time(clip_path: str) -> tuple:
 COURT_W_FT = 84.0
 COURT_H_FT = 50.0
 
-# Tunable via .env
-YOLO_CONF         = float(os.environ.get("YOLO_CONF",         "0.45"))
-BALL_CONF         = float(os.environ.get("BALL_CONF",         "0.35"))
-MIN_PLAYER_HEIGHT = float(os.environ.get("MIN_PLAYER_HEIGHT", "0.10"))
-SHOT_RISE_PX      = float(os.environ.get("SHOT_RISE_PX",      "40"))
-SHOT_RISE_FRAMES  = int(os.environ.get("SHOT_RISE_FRAMES",    "5"))
-
-# Roboflow model auto-download — weights cached to models/ on first run
-os.makedirs("models", exist_ok=True)
-ROBOFLOW_API_KEY  = os.environ.get("ROBOFLOW_API_KEY", "")
-BALL_ROBOFLOW_ID  = os.environ.get("BALL_ROBOFLOW_ID",  "cricket-qnb5l/basketball-xil7x/1")
-PLAYER_ROBOFLOW_ID= os.environ.get("PLAYER_ROBOFLOW_ID","")          # optional
-BALL_MODEL_PATH   = os.environ.get("BALL_MODEL_PATH",   "")          # override with local .pt
-PLAYER_MODEL_PATH = os.environ.get("PLAYER_MODEL_PATH", "")          # override with local .pt
-
-
-def _roboflow_download(model_id: str) -> Optional[str]:
-    """Download Roboflow weights via REST API, cache locally. Returns .pt path or None."""
-    safe  = model_id.replace("/", "_")
-    dest  = f"models/{safe}.pt"
-    if os.path.exists(dest):
-        return dest
-    if not ROBOFLOW_API_KEY:
-        print(f"[Roboflow] ROBOFLOW_API_KEY not set — cannot download {model_id}")
-        return None
-    try:
-        parts = model_id.split("/")
-        ws, proj, ver = parts[0], parts[1], parts[2] if len(parts) > 2 else "1"
-        url = (f"https://api.roboflow.com/{ws}/{proj}/{ver}"
-               f"/yolov8pytorch?api_key={ROBOFLOW_API_KEY}")
-        with urllib.request.urlopen(url, timeout=15) as r:
-            meta = json.loads(r.read())
-        w_url = (meta.get("model", {}).get("weightsUrl")
-                 or meta.get("weightsUrl"))
-        if not w_url:
-            raise ValueError(f"No weightsUrl in response")
-        print(f"[Roboflow] Downloading {model_id} → {dest}")
-        urllib.request.urlretrieve(w_url, dest)
-        return dest
-    except Exception as e:
-        print(f"[Roboflow] Download failed for {model_id}: {e}")
-        return None
-
-# Court zone boundaries as (x_min, x_max, y_min, y_max) in normalised [0,1] coords.
-# Calibrated for NFHS 84x50 court viewed from a standard mid-court elevated camera.
-# Paint = 19ft deep (19/84 = 0.226), lane width = 12ft (12/50 = 0.24)
+# Zone boundaries: (x_min, x_max, y_min, y_max) normalised [0,1]
+# Paint depth = 19ft (19/84 = 0.226), lane half-width = 6ft (6/50 = 0.12)
 COURT_ZONES = {
-    "paint_left":  (0.00, 0.226, 0.28, 0.72),
-    "paint_right": (0.774, 1.00, 0.28, 0.72),
-    "mid_range":   (0.226, 0.40, 0.00, 1.00),
-    "perimeter":   (0.40,  0.60, 0.00, 1.00),
-    "three_left":  (0.00, 0.226, 0.00, 0.28),
-    "three_right": (0.774, 1.00, 0.72, 1.00),
-    "backcourt":   (0.60,  1.00, 0.00, 1.00),
+    "paint_left":  (0.00,  0.226, 0.28, 0.72),
+    "paint_right": (0.774, 1.00,  0.28, 0.72),
+    "mid_range":   (0.226, 0.40,  0.00, 1.00),
+    "perimeter":   (0.40,  0.60,  0.00, 1.00),
+    "three_left":  (0.00,  0.226, 0.00, 0.28),
+    "three_right": (0.774, 1.00,  0.72, 1.00),
+    "backcourt":   (0.60,  1.00,  0.00, 1.00),
 }
 
+# Tunable via .env
+YOLO_CONF         = float(os.environ.get("YOLO_CONF",         "0.35"))
+MIN_PLAYER_HEIGHT = float(os.environ.get("MIN_PLAYER_HEIGHT", "0.05"))
+SHOT_RISE_PX      = float(os.environ.get("SHOT_RISE_PX",      "40"))
+SHOT_RISE_FRAMES  = int(os.environ.get("SHOT_RISE_FRAMES",    "5"))
+YOLO_DEBUG        = os.environ.get("YOLO_DEBUG", "0") == "1"  # set YOLO_DEBUG=1 in .env
+YOLO_DEBUG_DIR    = os.environ.get("YOLO_DEBUG_DIR", "debug_renders")  # output folder
 
-def _zone_for_point(x_pct: float, y_pct: float) -> str:
-    for name, (x0, x1, y0, y1) in COURT_ZONES.items():
-        if x0 <= x_pct <= x1 and y0 <= y_pct <= y1:
-            return name
-    return "perimeter"
+# ── Roboflow hosted inference config ─────────────────────────────────────────
+# Uses Roboflow's cloud API — no model download needed.
+# Model: roboflow-universe-projects/basketball-players-fy4c2/25
+# Classes: ball(0), made(1), player(2), rim(3)
+ROBOFLOW_API_KEY    = os.environ.get("ROBOFLOW_API_KEY", "")
+RF_PROJECT          = os.environ.get("RF_PROJECT",    "basketball-players-fy4c2")
+RF_WORKSPACE        = os.environ.get("RF_WORKSPACE",  "roboflow-universe-projects")
+RF_VERSION          = int(os.environ.get("RF_VERSION", "25"))
+RF_BALL_CLASS       = os.environ.get("RF_BALL_CLASS",   "ball")
+RF_PLAYER_CLASS     = os.environ.get("RF_PLAYER_CLASS", "player")
+RF_RIM_CLASS        = os.environ.get("RF_RIM_CLASS",    "rim")
+RF_MADE_CLASS       = os.environ.get("RF_MADE_CLASS",   "made")
+RF_CONF             = float(os.environ.get("RF_CONF",   "0.40"))
 
+# Roboflow inference endpoint (built lazily so .env key is always current)
+_rf_session = None   # requests.Session, lazy-init
 
-def _load_ball_model():
-    """Try local path, then Roboflow download, then None."""
-    pt = BALL_MODEL_PATH if (BALL_MODEL_PATH and os.path.exists(BALL_MODEL_PATH)) else None
-    if pt is None and BALL_ROBOFLOW_ID:
-        pt = _roboflow_download(BALL_ROBOFLOW_ID)
-    if pt:
-        try:
-            m = YOLO(pt)
-            print(f"[YOLO] Ball detector loaded: {pt}")
-            return m
-        except Exception as e:
-            print(f"[YOLO] Ball model load failed: {e}")
-    print("[YOLO] Ball detector unavailable — ball tracking disabled.")
-    return None
+def _get_rf_url() -> str:
+    return (f"https://detect.roboflow.com/{RF_PROJECT}/{RF_VERSION}"
+            f"?api_key={ROBOFLOW_API_KEY}")
+
+def _log_rf_status():
+    if ROBOFLOW_API_KEY:
+        print(f"[Roboflow] Hosted inference ready: {RF_WORKSPACE}/{RF_PROJECT} v{RF_VERSION}")
+        print(f"[Roboflow] Classes: {RF_BALL_CLASS}(ball) {RF_PLAYER_CLASS}(player) {RF_RIM_CLASS}(rim) {RF_MADE_CLASS}(made)")
+    else:
+        print("[Roboflow] WARNING: ROBOFLOW_API_KEY not set — ball/rim tracking disabled.")
+        print("[Roboflow] Add ROBOFLOW_API_KEY=your_key to .env")
+
+_log_rf_status()  # runs at startup, after load_dotenv()
+_rf_call_count = 0
+
+def _rf_predict_frame(frame_bgr: "np.ndarray") -> list:
+    """
+    Send one BGR frame to the Roboflow hosted inference API.
+    Returns list of dicts: [{class, confidence, x, y, width, height}, ...]
+    Coordinates are centre-x, centre-y, width, height in PIXELS.
+    Returns [] on error or if API key not set.
+    """
+    global _rf_session, _rf_call_count
+    if not ROBOFLOW_API_KEY:
+        return []
+    try:
+        import requests as _req, cv2 as _cv2, base64 as _b64
+        if _rf_session is None:
+            _rf_session = _req.Session()
+        _, buf = _cv2.imencode(".jpg", frame_bgr, [_cv2.IMWRITE_JPEG_QUALITY, 85])
+        b64 = _b64.b64encode(buf.tobytes()).decode("utf-8")
+        resp = _rf_session.post(
+            _get_rf_url(),
+            data=b64,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            params={"confidence": RF_CONF, "overlap": 30},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        preds = resp.json().get("predictions", [])
+        _rf_call_count += 1
+        # Log first call and every 10th so you can confirm it's working
+        if _rf_call_count == 1 or _rf_call_count % 10 == 0:
+            classes_seen = list({p["class"] for p in preds})
+            print(f"[Roboflow] API call #{_rf_call_count} → {len(preds)} predictions {classes_seen}")
+        return preds
+    except Exception as e:
+        print(f"[Roboflow] Inference error: {e}")
+        return []
 
 
 def _load_player_model():
-    """Try local path, then Roboflow download, then pose-model fallback."""
-    pt = PLAYER_MODEL_PATH if (PLAYER_MODEL_PATH and os.path.exists(PLAYER_MODEL_PATH)) else None
-    if pt is None and PLAYER_ROBOFLOW_ID:
-        pt = _roboflow_download(PLAYER_ROBOFLOW_ID)
-    if pt:
-        try:
-            m = YOLO(pt)
-            print(f"[YOLO] Player model loaded: {pt}")
-            return m, False   # no keypoints
-        except Exception as e:
-            print(f"[YOLO] Player model failed: {e} — using pose fallback")
-    print("[YOLO] Using yolo11m-pose.pt (pose model fallback).")
+    """Always use yolo11m-pose for player tracking — gives keypoints for shot detection."""
+    print("[YOLO] Loading yolo11m-pose.pt for player tracking + keypoints.")
     return YOLO("yolo11m-pose.pt"), True
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# PLAYER IDENTITY REGISTRY
-# Persists stable player identities across YOLO track-ID changes between clips.
-# Two matching strategies (fastest-first):
-#   1. Jersey number (Gemini reads crop) — most reliable, cached permanently
-#   2. Colour histogram — fast local matching for same-session re-ID
-# ═══════════════════════════════════════════════════════════════════════════════
-_player_registries: Dict[str, "PlayerRegistry"] = {}
-
-
-class PlayerRegistry:
-    def __init__(self):
-        self.players: Dict[str, dict] = {}   # stable_id → data
-        self._tid_map: Dict[int, str] = {}   # bytetrack_id → stable_id
-        self._idx = 1
-
-    def _new_sid(self, jersey: Optional[str]) -> str:
-        if jersey:
-            return f"#{jersey}"
-        s = f"P{self._idx}"; self._idx += 1; return s
-
-    def _hist_sim(self, a: list, b: list) -> float:
-        if not a or not b: return 0.0
-        a, b = np.array(a, np.float32), np.array(b, np.float32)
-        a /= a.sum() + 1e-6; b /= b.sum() + 1e-6
-        return float(np.sum(np.sqrt(a * b)))
-
-    def compute_hist(self, frame: np.ndarray, box: list) -> list:
-        x1,y1,x2,y2 = [int(v) for v in box]
-        crop = frame[max(0,y1):y2, max(0,x1):x2]
-        if crop.size == 0: return []
-        hist = []
-        for ch in range(3):
-            h, _ = np.histogram(crop[:,:,ch], bins=16, range=(0,256))
-            hist.extend(h.tolist())
-        return hist
-
-    def resolve(self, tid: int, jersey: Optional[str],
-                hist: list, center: tuple, zone: str) -> str:
-        if tid in self._tid_map:
-            sid = self._tid_map[tid]
-            self._update(sid, zone, center, hist); return sid
-        # Jersey match
-        if jersey:
-            sid = f"#{jersey}"
-            if sid not in self.players:
-                self.players[sid] = {"track_ids":{tid},"jersey":jersey,
-                                     "hist":hist,"zones":collections.Counter({zone:1}),
-                                     "shots":0,"last_center":center}
-            else:
-                self.players[sid]["track_ids"].add(tid)
-                self._update(sid, zone, center, hist)
-            self._tid_map[tid] = sid; return sid
-        # Appearance match
-        best_sid, best_sim = None, 0.40
-        for sid, d in self.players.items():
-            sim = self._hist_sim(hist, d["hist"])
-            if sim > best_sim: best_sim, best_sid = sim, sid
-        if best_sid:
-            self.players[best_sid]["track_ids"].add(tid)
-            if not self.players[best_sid]["jersey"] and jersey:
-                self.players[best_sid]["jersey"] = jersey
-            self._update(best_sid, zone, center, hist)
-            self._tid_map[tid] = best_sid; return best_sid
-        # New player
-        sid = self._new_sid(None)
-        self.players[sid] = {"track_ids":{tid},"jersey":None,
-                             "hist":hist,"zones":collections.Counter({zone:1}),
-                             "shots":0,"last_center":center}
-        self._tid_map[tid] = sid; return sid
-
-    def _update(self, sid: str, zone: str, center: tuple, hist: list):
-        d = self.players[sid]
-        d["zones"][zone] += 1; d["last_center"] = center
-        if hist:
-            old = np.array(d["hist"] or hist, np.float32)
-            d["hist"] = (old*0.8 + np.array(hist,np.float32)*0.2).tolist()
-
-    def record_shot(self, sid: str):
-        if sid in self.players: self.players[sid]["shots"] += 1
-
-    def upgrade_jersey(self, sid: str, jersey: str):
-        """Rename anonymous P-id to jersey number."""
-        if sid not in self.players or not sid.startswith("P"): return sid
-        new_sid = f"#{jersey}"
-        if new_sid in self.players:
-            # Merge
-            self.players[new_sid]["track_ids"] |= self.players[sid]["track_ids"]
-            del self.players[sid]
-        else:
-            self.players[new_sid] = self.players.pop(sid)
-            self.players[new_sid]["jersey"] = jersey
-        for k,v in self._tid_map.items():
-            if v == sid: self._tid_map[k] = new_sid
-        return new_sid
-
-    def summary(self) -> dict:
-        return {
-            sid: {"jersey": d["jersey"],
-                  "primary_zone": d["zones"].most_common(1)[0][0] if d["zones"] else "unknown",
-                  "shots": d["shots"],
-                  "last_center": d["last_center"]}
-            for sid, d in self.players.items()
-        }
-
-
-def get_registry(session_id: str) -> PlayerRegistry:
-    if session_id not in _player_registries:
-        _player_registries[session_id] = PlayerRegistry()
-    return _player_registries[session_id]
-
-
-def _read_jersey(frame: np.ndarray, box: list) -> Optional[str]:
-    """Send player crop to Gemini to read jersey number. Returns digit string or None."""
-    import tempfile
-    try:
-        x1,y1,x2,y2 = [int(v) for v in box]
-        pad = 15
-        crop = frame[max(0,y1-pad):y2+pad, max(0,x1-pad):x2+pad]
-        if crop.size == 0: return None
-        import cv2 as _cv2
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf:
-            tmp = tf.name
-        _cv2.imwrite(tmp, crop)
-        vf = client.files.upload(file=tmp)
-        while vf.state.name == "PROCESSING":
-            time.sleep(1); vf = client.files.get(name=vf.name)
-        resp = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=["What is the jersey number on this player? Reply with ONLY "
-                      "the digits (e.g. '23'). If unreadable reply 'unknown'.", vf]
-        )
-        client.files.delete(name=vf.name)
-        os.remove(tmp)
-        text = resp.text.strip().strip("'\"").lower()
-        return text if text.isdigit() else None
-    except Exception as e:
-        print(f"[Jersey] {e}"); return None
 
 
 def _zone_for_point(x_pct: float, y_pct: float) -> str:
@@ -605,6 +465,7 @@ def _zone_for_point(x_pct: float, y_pct: float) -> str:
         if x0 <= x_pct <= x1 and y0 <= y_pct <= y1:
             return name
     return "perimeter"
+
 
 
 def _detect_shot(kp_history: list) -> bool:
@@ -628,6 +489,270 @@ def _detect_shot(kp_history: list) -> bool:
         if rw_prev[1] - rw_now[1] > SHOT_RISE_PX and rw_now[1] < rs_now[1]:
             return True
     return False
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PLAYER IDENTITY REGISTRY — stable IDs across YOLO track resets
+# ═══════════════════════════════════════════════════════════════════════════════
+_player_registries: Dict[str, "PlayerRegistry"] = {}
+_gemini_quota_exhausted = False  # set True on first 429; clears on restart
+
+class PlayerRegistry:
+    def __init__(self):
+        self.players: Dict[str, dict] = {}
+        self._tid_map: Dict[int, str] = {}
+        self._idx = 1
+
+    def _new_sid(self) -> str:
+        s = f"P{self._idx}"; self._idx += 1; return s
+
+    def _hist_sim(self, a: list, b: list) -> float:
+        if not a or not b: return 0.0
+        a, b = np.array(a, np.float32), np.array(b, np.float32)
+        a /= a.sum()+1e-6; b /= b.sum()+1e-6
+        return float(np.sum(np.sqrt(a*b)))
+
+    def compute_hist(self, frame: np.ndarray, box: list) -> list:
+        x1,y1,x2,y2 = [int(v) for v in box]
+        crop = frame[max(0,y1):y2, max(0,x1):x2]
+        if crop.size == 0: return []
+        hist = []
+        for ch in range(3):
+            h,_ = np.histogram(crop[:,:,ch], bins=16, range=(0,256))
+            hist.extend(h.tolist())
+        return hist
+
+    def resolve(self, tid: int, jersey: Optional[str], hist: list,
+                center: tuple, zone: str) -> str:
+        if tid in self._tid_map:
+            sid = self._tid_map[tid]; self._update(sid,zone,center,hist); return sid
+        if jersey:
+            sid = f"#{jersey}"
+            if sid not in self.players:
+                self.players[sid] = {"track_ids":{tid},"jersey":jersey,"hist":hist,
+                                     "zones":collections.Counter({zone:1}),"shots":0,"last_center":center}
+            else:
+                self.players[sid]["track_ids"].add(tid); self._update(sid,zone,center,hist)
+            self._tid_map[tid] = sid; return sid
+        best_sid, best_sim = None, 0.40
+        for sid, d in self.players.items():
+            sim = self._hist_sim(hist, d["hist"])
+            if sim > best_sim: best_sim, best_sid = sim, sid
+        if best_sid:
+            self.players[best_sid]["track_ids"].add(tid)
+            self._update(best_sid, zone, center, hist)
+            self._tid_map[tid] = best_sid; return best_sid
+        sid = self._new_sid()
+        self.players[sid] = {"track_ids":{tid},"jersey":None,"hist":hist,
+                             "zones":collections.Counter({zone:1}),"shots":0,"last_center":center}
+        self._tid_map[tid] = sid; return sid
+
+    def _update(self, sid, zone, center, hist):
+        d = self.players[sid]; d["zones"][zone]+=1; d["last_center"]=center
+        if hist:
+            old = np.array(d["hist"] or hist, np.float32)
+            d["hist"] = (old*0.8 + np.array(hist,np.float32)*0.2).tolist()
+
+    def record_shot(self, sid):
+        if sid in self.players: self.players[sid]["shots"] += 1
+
+    def upgrade_jersey(self, old_sid: str, jersey: str) -> str:
+        if old_sid not in self.players or not old_sid.startswith("P"): return old_sid
+        new_sid = f"#{jersey}"
+        if new_sid in self.players:
+            self.players[new_sid]["track_ids"] |= self.players[old_sid]["track_ids"]
+            del self.players[old_sid]
+        else:
+            self.players[new_sid] = self.players.pop(old_sid)
+            self.players[new_sid]["jersey"] = jersey
+        for k,v in self._tid_map.items():
+            if v == old_sid: self._tid_map[k] = new_sid
+        return new_sid
+
+    def summary(self) -> dict:
+        return {sid: {"jersey":d["jersey"],
+                      "primary_zone": d["zones"].most_common(1)[0][0] if d["zones"] else "unknown",
+                      "shots":d["shots"],"last_center":d["last_center"]}
+                for sid,d in self.players.items()}
+
+
+def get_registry(session_id: str) -> "PlayerRegistry":
+    if session_id not in _player_registries:
+        _player_registries[session_id] = PlayerRegistry()
+    return _player_registries[session_id]
+
+
+def _is_quota_error(e: Exception) -> bool:
+    s = str(e)
+    return "429" in s or "RESOURCE_EXHAUSTED" in s or "quota" in s.lower()
+
+
+def _read_jersey(frame: np.ndarray, box: list) -> Optional[str]:
+    """Read jersey number from a player crop. Returns digit string or None."""
+    global _gemini_quota_exhausted
+    if _gemini_quota_exhausted:
+        return None
+    import tempfile, cv2 as _cv2
+    tmp = None
+    try:
+        x1,y1,x2,y2 = [int(v) for v in box]; pad=15
+        crop = frame[max(0,y1-pad):y2+pad, max(0,x1-pad):x2+pad]
+        if crop.size == 0: return None
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf: tmp=tf.name
+        _cv2.imwrite(tmp, crop)
+        vf = client.files.upload(file=tmp)
+        while vf.state.name == "PROCESSING": time.sleep(1); vf = client.files.get(name=vf.name)
+        resp = client.models.generate_content(model="gemini-2.5-flash",
+            contents=["What is the jersey number? Reply ONLY with digits (e.g. '23'). "
+                      "If unreadable reply 'unknown'.", vf])
+        client.files.delete(name=vf.name)
+        text = resp.text.strip().strip("'\"").lower()
+        return text if text.isdigit() else None
+    except Exception as e:
+        if _is_quota_error(e):
+            _gemini_quota_exhausted = True
+            print("[Jersey] Quota exhausted — jersey reading disabled.")
+        else:
+            print(f"[Jersey] {e}")
+        return None
+    finally:
+        if tmp:
+            try: os.remove(tmp)
+            except: pass
+
+
+def render_debug_video(clip_path: str, pose_results: list,
+                       ball_detections: list, registry: "PlayerRegistry",
+                       local_tracks: dict, h_px: int, w_px: int) -> str:
+    """
+    Render an annotated debug video showing:
+      - Player bounding boxes with stable ID labels (coloured by player)
+      - Pose keypoint skeleton overlay
+      - Ball position (orange circle)
+      - Shot detection flag (red dot over shooter)
+      - Zone label under each player
+
+    Saves to YOLO_DEBUG_DIR/<clip_basename>_debug.mp4
+    Returns the output path.
+    """
+    import cv2 as _cv2
+
+    os.makedirs(YOLO_DEBUG_DIR, exist_ok=True)
+    base    = os.path.splitext(os.path.basename(clip_path))[0]
+    out_path = os.path.join(YOLO_DEBUG_DIR, f"{base}_debug.mp4")
+
+    cap = _cv2.VideoCapture(clip_path)
+    fps_src = cap.get(_cv2.CAP_PROP_FPS) or 30.0
+    fourcc  = _cv2.VideoWriter_fourcc(*"mp4v")
+    writer  = _cv2.VideoWriter(out_path, fourcc, fps_src / 2,  # vid_stride=2
+                               (w_px, h_px))
+
+    # Colour palette — consistent across players
+    PALETTE = [
+        (56, 189, 248), (244, 63, 94), (74, 222, 128), (251, 146, 60),
+        (167, 139, 250), (52, 211, 153), (251, 191, 36), (232, 121, 249),
+        (96, 165, 250), (248, 113, 113),
+    ]
+    # Map stable_id → colour
+    sid_colors: dict = {}
+    def _color(sid: str):
+        if sid not in sid_colors:
+            sid_colors[sid] = PALETTE[len(sid_colors) % len(PALETTE)]
+        return sid_colors[sid]
+
+    # Build reverse map: frame_num → [(box, sid, shot, zone, kps)]
+    frame_data: dict = collections.defaultdict(list)
+    for tid, data in local_tracks.items():
+        sid  = data.get("stable_id") or str(tid)
+        # We need per-frame boxes — re-derive from pose_results
+        pass  # handled below via pose_results directly
+
+    # COCO skeleton pairs for keypoint drawing
+    SKELETON = [
+        (5,6),(5,7),(7,9),(6,8),(8,10),      # shoulders + arms
+        (5,11),(6,12),(11,12),                 # torso
+        (11,13),(13,15),(12,14),(14,16),       # legs
+        (0,5),(0,6),                           # nose-shoulder
+    ]
+
+    # Build tid → stable_id map from local_tracks
+    tid_to_sid = {tid: (data.get("stable_id") or str(tid))
+                  for tid, data in local_tracks.items()}
+
+    frame_num = 0
+    for r, ball_pos in zip(pose_results,
+                           ball_detections + [None]*len(pose_results)):
+        cap.set(_cv2.CAP_PROP_POS_FRAMES, frame_num * 2)
+        ok, frame = cap.read()
+        if not ok:
+            frame_num += 1; continue
+
+        # ── Draw player boxes + labels ─────────────────────────────────
+        if r.boxes is not None and r.boxes.id is not None:
+            ids   = r.boxes.id.int().tolist()
+            boxes = r.boxes.xyxy.tolist()
+            kps   = r.keypoints.xy.tolist() if (r.keypoints is not None) else None
+
+            for i, tid in enumerate(ids):
+                sid   = tid_to_sid.get(tid, str(tid))
+                color = _color(sid)
+                box   = [int(v) for v in boxes[i]]
+                x1,y1,x2,y2 = box
+
+                # Skip height filter
+                if (y2-y1)/h_px < MIN_PLAYER_HEIGHT:
+                    continue
+
+                # Box
+                _cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
+
+                # Label: stable_id + zone
+                zone = _zone_for_point((x1+x2)/2/w_px, (y1+y2)/2/h_px)
+                zone_short = {"paint_left":"PNT-L","paint_right":"PNT-R",
+                              "mid_range":"MID","perimeter":"PERIM",
+                              "three_left":"3PT-L","three_right":"3PT-R",
+                              "backcourt":"BACK"}.get(zone, zone)
+                label = f"{sid} | {zone_short}"
+                lw, lh = _cv2.getTextSize(label, _cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                _cv2.rectangle(frame, (x1, y1-lh-6), (x1+lw+4, y1), color, -1)
+                _cv2.putText(frame, label, (x1+2, y1-4),
+                             _cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1)
+
+                # Skeleton keypoints
+                if kps and i < len(kps):
+                    pts = kps[i]
+                    for a, b in SKELETON:
+                        if a < len(pts) and b < len(pts):
+                            pa = (int(pts[a][0]), int(pts[a][1]))
+                            pb = (int(pts[b][0]), int(pts[b][1]))
+                            if pa != (0,0) and pb != (0,0):
+                                _cv2.line(frame, pa, pb, color, 1)
+                    for pt in pts:
+                        px, py = int(pt[0]), int(pt[1])
+                        if px != 0 or py != 0:
+                            _cv2.circle(frame, (px,py), 3, color, -1)
+
+        # ── Draw ball ─────────────────────────────────────────────────
+        if ball_pos is not None:
+            bx = int(ball_pos[0] * w_px)
+            by = int(ball_pos[1] * h_px)
+            _cv2.circle(frame, (bx, by), 14, (0, 165, 255), -1)   # orange fill
+            _cv2.circle(frame, (bx, by), 14, (0, 80, 200), 2)     # darker border
+            _cv2.putText(frame, "BALL", (bx+16, by+5),
+                         _cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0,165,255), 1)
+
+        # ── Frame counter ─────────────────────────────────────────────
+        _cv2.putText(frame, f"f{frame_num*2}", (8, 20),
+                     _cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200,200,200), 1)
+
+        writer.write(frame)
+        frame_num += 1
+
+    cap.release()
+    writer.release()
+    print(f"[Debug] Rendered: {out_path}")
+    return out_path
 
 
 def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "default") -> dict:
@@ -656,7 +781,7 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
         device=DEVICE,
         stream=True,
         conf=YOLO_CONF,
-        iou=0.5,
+        iou=0.45,
         classes=[0],          # person only
         half=HALF,
         imgsz=640,
@@ -673,7 +798,6 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
 
     import cv2 as _cv2
     registry = get_registry(session_id)
-    # local_tracks: bytetrack_id → accumulated data for this clip
     local_tracks: Dict[int, dict] = collections.defaultdict(lambda: {
         "centers": [], "kp_history": [], "zones": [],
         "stable_id": None, "first_frame": None, "first_box": None,
@@ -690,86 +814,108 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
         kps   = r.keypoints.xy if (has_kps and r.keypoints is not None) else None
         if ids is None:
             frame_num += 1; continue
-
-        cap.set(_cv2.CAP_PROP_POS_FRAMES, frame_num * 2)  # vid_stride=2
+        cap.set(_cv2.CAP_PROP_POS_FRAMES, frame_num * 2)
         ok, frame_bgr = cap.read()
-
         valid = 0
         for i, tid in enumerate(ids.int().tolist()):
-            box       = boxes[i].tolist()
-            box_h_pct = (box[3] - box[1]) / h_px
-            if box_h_pct < MIN_PLAYER_HEIGHT:
+            box = boxes[i].tolist()
+            if (box[3] - box[1]) / h_px < MIN_PLAYER_HEIGHT:
                 continue
             valid += 1
-            cx   = (box[0] + box[2]) / 2 / w_px
-            cy   = (box[1] + box[3]) / 2 / h_px
+            cx   = (box[0]+box[2])/2/w_px
+            cy   = (box[1]+box[3])/2/h_px
             zone = _zone_for_point(cx, cy)
-
             hist = registry.compute_hist(frame_bgr, box) if ok else []
-
-            # Resolve stable ID via registry (appearance match)
             if local_tracks[tid]["stable_id"] is None:
-                sid = registry.resolve(tid, None, hist, (cx, cy), zone)
+                sid = registry.resolve(tid, None, hist, (cx,cy), zone)
                 local_tracks[tid]["stable_id"] = sid
-                # Save first good frame for jersey reading
                 if ok and local_tracks[tid]["first_frame"] is None:
                     local_tracks[tid]["first_frame"] = frame_bgr.copy()
                     local_tracks[tid]["first_box"]   = box
             else:
-                registry._update(local_tracks[tid]["stable_id"], zone, (cx, cy), hist)
-
+                registry._update(local_tracks[tid]["stable_id"], zone, (cx,cy), hist)
             local_tracks[tid]["centers"].append((cx, cy))
             local_tracks[tid]["zones"].append(zone)
             if has_kps and kps is not None and kps.shape[1] >= 17:
                 local_tracks[tid]["kp_history"].append(kps[i].tolist())
-
-        if valid > 0:
-            frame_player_counts.append(valid)
+        if valid > 0: frame_player_counts.append(valid)
         frame_num += 1
-
     cap.release()
 
-    # ── Jersey reading for anonymous players (max 4 Gemini calls per clip) ──
+    # Jersey reading — skip entirely if Gemini quota is exhausted
     jersey_calls = 0
-    for tid, data in local_tracks.items():
-        sid = data["stable_id"]
-        if not sid or not sid.startswith("P"): continue
-        if jersey_calls >= 4: break
-        if data["first_frame"] is None: continue
-        jersey = _read_jersey(data["first_frame"], data["first_box"])
-        if jersey:
-            new_sid = registry.upgrade_jersey(sid, jersey)
-            data["stable_id"] = new_sid
-            print(f"[Registry] Track #{tid} → Jersey #{jersey} ({sid} → {new_sid})")
-        jersey_calls += 1
-
-    # Use stable IDs as the tracking key going forward
+    if not _gemini_quota_exhausted:
+        for tid, data in local_tracks.items():
+            sid = data["stable_id"]
+            if not sid or not sid.startswith("P") or jersey_calls >= 4: continue
+            if data["first_frame"] is None: continue
+            jersey = _read_jersey(data["first_frame"], data["first_box"])
+            if jersey:
+                new_sid = registry.upgrade_jersey(sid, jersey)
+                data["stable_id"] = new_sid
+                print(f"[Registry] #{tid} → #{jersey}")
+            jersey_calls += 1
+    else:
+        print("[Jersey] Skipping — Gemini quota exhausted.")
     tracks = local_tracks
 
-    # ── 2. Ball detection (optional model) ────────────────────────────────
-    ball_model = _load_ball_model()
-    ball_detections = []   # list of (cx_norm, cy_norm) per frame
-
-    if ball_model is not None:
-        ball_results = list(ball_model.predict(
-            source=clip_path,
-            device=DEVICE,
-            stream=True,
-            conf=BALL_CONF,
-            imgsz=640,
-            vid_stride=2,
-            verbose=False,
-        ))
-        for r in ball_results:
-            if r.boxes is None or len(r.boxes) == 0:
+    # ── 2. Ball + rim detection via Roboflow hosted inference ────────────────
+    # Sends sampled frames to Roboflow cloud API (basketball-players-fy4c2/25).
+    # Classes: ball, made, player, rim — we use ball and rim here.
+    # Falls back gracefully if ROBOFLOW_API_KEY is not set.
+    import cv2 as _cv2r
+    ball_detections  = []   # (cx_norm, cy_norm) or None per sampled frame
+    rim_detections   = []   # (cx_norm, cy_norm) or None per sampled frame
+    shot_made_flags  = []   # bool per sampled frame (Roboflow "made" class)
+    
+    cap_rf = _cv2r.VideoCapture(clip_path)
+    total_frames = int(cap_rf.get(_cv2r.CAP_PROP_FRAME_COUNT)) or 1
+    # Sample every 6th frame (~5fps from 30fps source) — fast enough, not hammering the API
+    STRIDE = 6
+    sampled = range(0, total_frames, STRIDE)
+    
+    if ROBOFLOW_API_KEY:
+        for fn in sampled:
+            cap_rf.set(_cv2r.CAP_PROP_POS_FRAMES, fn)
+            ok, frame = cap_rf.read()
+            if not ok:
                 ball_detections.append(None)
+                rim_detections.append(None)
+                shot_made_flags.append(False)
                 continue
-            # Take the highest-confidence detection
-            best = r.boxes[r.boxes.conf.argmax()]
-            bx   = best.xyxy[0].tolist()
-            ball_cx = (bx[0] + bx[2]) / 2 / w_px
-            ball_cy = (bx[1] + bx[3]) / 2 / h_px
-            ball_detections.append((round(ball_cx, 3), round(ball_cy, 3)))
+            preds = _rf_predict_frame(frame)
+            # Pick highest-confidence ball prediction
+            balls = [p for p in preds if p["class"] == RF_BALL_CLASS]
+            if balls:
+                best = max(balls, key=lambda p: p["confidence"])
+                ball_detections.append((
+                    round(best["x"] / w_px, 3),
+                    round(best["y"] / h_px, 3),
+                ))
+            else:
+                ball_detections.append(None)
+            # Rim
+            rims = [p for p in preds if p["class"] == RF_RIM_CLASS]
+            if rims:
+                best = max(rims, key=lambda p: p["confidence"])
+                rim_detections.append((round(best["x"]/w_px,3), round(best["y"]/h_px,3)))
+            else:
+                rim_detections.append(None)
+            # Made shot flag
+            shot_made_flags.append(any(p["class"] == RF_MADE_CLASS for p in preds))
+    else:
+        print("[Roboflow] ROBOFLOW_API_KEY not set — ball/rim tracking disabled.")
+        ball_detections = [None] * len(sampled)
+        rim_detections  = [None] * len(sampled)
+        shot_made_flags = [False] * len(sampled)
+    cap_rf.release()
+
+    # Log RF detection summary
+    n_ball = sum(1 for p in ball_detections if p is not None)
+    n_rim  = sum(1 for p in rim_detections  if p is not None)
+    n_made = sum(shot_made_flags)
+    n_frames = len(list(sampled))
+    print(f"[Roboflow] Sampled {n_frames} frames → ball:{n_ball} rim:{n_rim} made:{n_made}")
 
     # Ball summary stats
     detected_positions = [p for p in ball_detections if p is not None]
@@ -780,23 +926,18 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
         avg_ball_x = float(np.mean([p[0] for p in detected_positions]))
         ball_possession_side = "left" if avg_ball_x < 0.5 else "right"
 
-    # ── 3. Per-player metrics — keyed by stable registry ID ──────────────
+    # ── 3. Per-player metrics — keyed by stable ID ──────────────────────
     player_metrics = {}
-
     for tid, data in tracks.items():
-        if len(data["centers"]) < 5:
-            continue
+        if len(data["centers"]) < 5: continue
         sid  = data.get("stable_id") or str(tid)
         shot = _detect_shot(data["kp_history"]) if has_kps else False
-        if shot:
-            registry.record_shot(sid)
-
+        if shot: registry.record_shot(sid)
         zone_counts  = collections.Counter(data["zones"])
         primary_zone = max(zone_counts, key=zone_counts.get) if zone_counts else "unknown"
-
         player_metrics[sid] = {
             "primary_zone":  primary_zone,
-            "zone_pct":      {z: round(c/len(data["zones"])*100) for z,c in zone_counts.items()},
+            "zone_pct":      {z: round(cnt/len(data["zones"])*100) for z,cnt in zone_counts.items()},
             "shot_detected": shot,
             "jersey":        registry.players.get(sid, {}).get("jersey"),
         }
@@ -811,11 +952,9 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
     # ── 5. Trajectory data for court visualizer ────────────────────────────
     trajectories = {}
     for tid, data in tracks.items():
-        if len(data["centers"]) < 5:
-            continue
+        if len(data["centers"]) < 5: continue
         sid   = data.get("stable_id") or str(tid)
-        trail = data["centers"][-60:]
-        trajectories[sid] = [{"x": round(cx,4), "y": round(cy,4)} for cx,cy in trail]
+        trajectories[sid] = [{"x": round(cx,4), "y": round(cy,4)} for cx,cy in data["centers"][-60:]]
 
     # Ball trajectory for visualizer
     ball_trail = [{"x": p[0], "y": p[1]} for p in detected_positions[-60:]]
@@ -825,56 +964,79 @@ def extract_yolo_metrics(clip_path: str, fps: float = 30.0, session_id: str = "d
     for tid, data in tracks.items():
         sid = data.get("stable_id") or str(tid)
         pm  = player_metrics.get(sid)
-        if not pm or not pm["shot_detected"]:
-            continue
-        arc = []
-        for kp in data["kp_history"][-30:]:
-            wy = kp[10][1] if len(kp) > 10 and kp[10][0] != 0 else None
-            sy = kp[6][1]  if len(kp) > 6  and kp[6][0]  != 0 else None
-            arc.append({"wrist_y": round(wy/h_px,4) if wy else None,
-                        "shoulder_y": round(sy/h_px,4) if sy else None})
+        if not pm or not pm["shot_detected"]: continue
+        arc = [{"wrist_y": round(kp[10][1]/h_px,4) if len(kp)>10 and kp[10][0]!=0 else None,
+                "shoulder_y": round(kp[6][1]/h_px,4) if len(kp)>6 and kp[6][0]!=0 else None}
+               for kp in data["kp_history"][-30:]]
         shot_arcs[sid] = arc
+
+    # ── Debug render ──────────────────────────────────────────────────────
+    debug_path = None
+    if YOLO_DEBUG:
+        try:
+            debug_path = render_debug_video(
+                clip_path, pose_results, ball_detections,
+                registry, local_tracks, h_px, w_px
+            )
+        except Exception as e:
+            print(f"[Debug] Render failed: {e}")
 
     registry_summary = registry.summary()
 
+    # Rim position (use median of detected positions — rim doesn't move)
+    rim_positions = [p for p in rim_detections if p is not None]
+    rim_center = None
+    if rim_positions:
+        rim_center = {
+            "x": round(float(np.median([p[0] for p in rim_positions])), 3),
+            "y": round(float(np.median([p[1] for p in rim_positions])), 3),
+        }
+
+    # Shot made: Roboflow "made" class appeared in any frame
+    rf_shot_made = any(shot_made_flags)
+
     metrics = {
-        # Reliable counts
         "player_count":         len(player_metrics),
         "avg_players_in_frame": avg_players,
-        # Shot detection (boolean heuristic, not a count claim)
         "shot_attempts":        shot_attempts,
-        # Ball tracking
+        "rf_shot_made":         rf_shot_made,   # Roboflow visual confirmation
         "ball_detected":        ball_detected,
         "ball_possession_side": ball_possession_side,
         "ball_trail":           ball_trail,
-        # Zone occupancy
+        "rim_center":           rim_center,
         "zone_occupancy":       zone_summary,
         "players":              player_metrics,
-        # Visualizer data
         "trajectories":         trajectories,
         "shot_arcs":            shot_arcs,
+        "debug_video":          debug_path,
     }
 
+    registry_summary = registry.summary()
     metrics["registry"] = registry_summary
-
     lines = [
-        f"YOLO tracked {len(player_metrics)} on-court players (stable IDs across clips).",
-        f"Avg visible per frame: {avg_players}.",
-        f"Shot attempts this clip: {shot_attempts}.",
+        f"YOLO tracked {len(player_metrics)} players (stable IDs).",
+        f"Avg visible/frame: {avg_players}. Shot attempts: {shot_attempts}.",
+        f"Ball: {'detected, ' + str(ball_possession_side) + ' side' if ball_detected else 'not detected'}.",
+        f"Zones: { {z: cnt for z, cnt in list(zone_summary.items())[:3]} }.",
     ]
-    if ball_detected:
-        lines.append(f"Ball detected — {ball_possession_side} side of court.")
-    else:
-        lines.append("Ball not detected (ball model may not be loaded).")
-    lines.append(f"Zone activity: { {z: cnt for z, cnt in list(zone_summary.items())[:3]} }.")
     for sid, pm in list(player_metrics.items())[:6]:
-        label = f"Jersey #{pm['jersey']}" if pm.get("jersey") else sid
-        lines.append(f"  {label}: {pm['primary_zone']}"
-                     + (" [SHOT]" if pm["shot_detected"] else ""))
+        label = f"#{pm['jersey']}" if pm.get("jersey") else sid
+        lines.append(f"  {label}: {pm['primary_zone']}" + (" [SHOT]" if pm["shot_detected"] else ""))
     for sid, rp in list(registry_summary.items())[:5]:
         if rp["shots"] > 0:
             lines.append(f"  {sid} session shots: {rp['shots']}")
     summary = "\n".join(lines)
+
+    # ── Terminal summary ──────────────────────────────────────────────────
+    print(f"[YOLO] Players:{metrics['player_count']} ({metrics['avg_players_in_frame']}/frame) | "
+          f"Shots:{metrics['shot_attempts']} | "
+          f"Ball:{'✓ ' + str(metrics.get('ball_possession_side','')) if metrics['ball_detected'] else '✗'} | "
+          f"Rim:{'✓' if metrics.get('rim_center') else '✗'} | "
+          f"RF-Made:{'✓' if metrics.get('rf_shot_made') else '✗'}")
+    for sid, pm in list(player_metrics.items())[:6]:
+        label = f"#{pm['jersey']}" if pm.get("jersey") else sid
+        print(f"[YOLO]   {label:8s} → {pm['primary_zone']}" + (" 🏀SHOT" if pm["shot_detected"] else ""))
+
     return {"metrics": metrics, "summary": summary}
 
 
@@ -946,16 +1108,94 @@ def gemini_qualitative(video_file, yolo_summary: str) -> str:
         return f"Gemini error: {e}"
 
 
+_gemini_quota_exhausted = False  # set True on first 429; cleared at midnight
+
+def _is_quota_error(e: Exception) -> bool:
+    """Return True if the exception is a Gemini API quota exhaustion."""
+    s = str(e)
+    return "429" in s or "RESOURCE_EXHAUSTED" in s or "quota" in s.lower()
+
+
+def _yolo_only_report(yolo_metrics: dict) -> dict:
+    """
+    Build a structured report from YOLO data alone when Gemini is unavailable.
+    Returns the same shape as gemini_scout so callers need no changes.
+    """
+    m    = yolo_metrics.get("metrics", {})
+    reg  = m.get("registry", {})
+    zones = m.get("zone_occupancy", {})
+    ZONE_LABELS = {
+        "paint_left": "Paint (L)", "paint_right": "Paint (R)",
+        "mid_range": "Mid-Range", "perimeter": "Perimeter",
+        "three_left": "3PT (L)", "three_right": "3PT (R)", "backcourt": "Backcourt",
+    }
+
+    lines = ["⚠️ Gemini unavailable (API quota exhausted) — YOLO data only.\n"]
+
+    # Players
+    players = m.get("players", {})
+    lines.append(f"**{m.get('player_count', 0)} players tracked** "
+                 f"({m.get('avg_players_in_frame', 0)} avg/frame)")
+
+    # Shots
+    shots = m.get("shot_attempts", 0)
+    if shots:
+        shooters = [sid for sid, p in players.items() if p.get("shot_detected")]
+        labels   = [p.get("jersey") and f"#{p['jersey']}" or sid for sid in shooters]
+        lines.append(f"**{shots} shot attempt(s)** detected: {', '.join(labels)}")
+
+    # Ball
+    if m.get("ball_detected"):
+        side = m.get("ball_possession_side", "unknown")
+        lines.append(f"**Ball detected** — {side} side of court")
+    else:
+        lines.append("Ball not detected this clip.")
+
+    # Zone breakdown
+    if zones:
+        top = sorted(zones.items(), key=lambda x: -x[1])[:3]
+        zone_str = ", ".join(f"{ZONE_LABELS.get(z,z)} ({c})" for z, c in top)
+        lines.append(f"**Most active zones:** {zone_str}")
+
+    # Per-player summary
+    if players:
+        lines.append("\n**Player breakdown:**")
+        for sid, p in list(players.items())[:8]:
+            label = f"#{p['jersey']}" if p.get("jersey") else sid
+            shot_flag = " 🏀 SHOT" if p.get("shot_detected") else ""
+            zone = ZONE_LABELS.get(p.get("primary_zone", ""), p.get("primary_zone", ""))
+            lines.append(f"  • {label} — {zone}{shot_flag}")
+
+    # Session cumulative shots
+    session_shots = [(sid, rp["shots"]) for sid, rp in reg.items() if rp.get("shots", 0) > 0]
+    if session_shots:
+        lines.append("\n**Session shot totals:**")
+        for sid, n in sorted(session_shots, key=lambda x: -x[1]):
+            lines.append(f"  • {sid}: {n} shot(s)")
+
+    report = "\n".join(lines)
+    return {
+        "report":       report,
+        "score_update": None,
+        "period":       None,
+        "play_type":    None,
+        "possession":   None,
+        "shot_made":    None,
+        "structured":   {},
+        "gemini_used":  False,
+    }
+
+
 def gemini_scout(clip_path: str, yolo_metrics: dict) -> dict:
     """
-    Uploads raw clip once, fires both Gemini calls in parallel threads,
-    returns combined result.
+    Uploads raw clip once, fires both Gemini calls in parallel threads.
+    If Gemini quota is exhausted, falls back to a YOLO-only report immediately
+    without retrying or waiting.
     """
     yolo_summary = yolo_metrics.get("summary", "No YOLO data.")
     try:
         vf = _upload_and_wait(clip_path)
 
-        # Run both calls concurrently
         fast_result, qual_result = {}, ""
         def _fast():
             nonlocal fast_result
@@ -971,7 +1211,6 @@ def gemini_scout(clip_path: str, yolo_metrics: dict) -> dict:
 
         client.files.delete(name=vf.name)
 
-        # Build unified score string from structured JSON
         score_update = None
         if fast_result.get("team_a") and fast_result.get("score_a") is not None:
             score_update = (
@@ -979,7 +1218,7 @@ def gemini_scout(clip_path: str, yolo_metrics: dict) -> dict:
                 f"{fast_result.get('team_b','?')} {fast_result.get('score_b','?')}"
             )
 
-        return {
+        out = {
             "report":       qual_result,
             "score_update": score_update,
             "period":       fast_result.get("period"),
@@ -987,10 +1226,29 @@ def gemini_scout(clip_path: str, yolo_metrics: dict) -> dict:
             "possession":   fast_result.get("possession"),
             "shot_made":    fast_result.get("shot_made"),
             "structured":   fast_result,
+            "gemini_used":  True,
         }
+        print(f"[Gemini] ── Results ────────────────────────────────")
+        print(f"[Gemini]  Score      : {score_update or 'not detected'}")
+        print(f"[Gemini]  Period     : {fast_result.get('period','?')}")
+        print(f"[Gemini]  Play type  : {fast_result.get('play_type','?')}")
+        print(f"[Gemini]  Shot made  : {fast_result.get('shot_made','?')}")
+        print(f"[Gemini]  Report     : {qual_result[:120].strip()}...")
+        print(f"[Gemini] ────────────────────────────────────────────")
+        return out
     except Exception as e:
+        if _is_quota_error(e):
+            global _gemini_quota_exhausted
+            _gemini_quota_exhausted = True
+            print("[Gemini] Quota exhausted — returning YOLO-only report.")
+            try: client.files.delete(name=vf.name)
+            except: pass
+            result = _yolo_only_report(yolo_metrics)
+            result["gemini_used"] = False
+            return result
         return {"report": f"Gemini error: {e}", "score_update": None, "period": None,
-                "play_type": None, "possession": None, "shot_made": None, "structured": {}}
+                "play_type": None, "possession": None, "shot_made": None,
+                "structured": {}, "gemini_used": False}
 
 
 def gemini_confirm_viral(clip_path: str) -> dict:
@@ -1329,30 +1587,28 @@ def analyze_youtube_vod(request: YoutubeVodRequest):
     if not downloaded and _verify_streamlink():
         try:
             print("[VOD] Trying streamlink...")
-            r = subprocess.run([
+            # streamlink writes to a temp file; ffmpeg slices from it
+            # --stdout and -o are mutually exclusive — use -o only
+            sl_tmp = f"cache_clips/sl_full_{cache_key}.mp4"
+            sl = subprocess.run([
                 "streamlink",
-                "--stdout",               # pipe stream to stdout
-                "-o", "-",
-                yt_url,
-                "best",
-            ], capture_output=False, stdout=subprocess.PIPE, timeout=20)
-            # Pipe streamlink stdout → ffmpeg for slicing
-            proc = subprocess.Popen([
-                "streamlink", "--stdout", yt_url, "best",
-            ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            slice_proc = subprocess.run([
-                "ffmpeg", "-y",
-                "-ss", str(start),
-                "-i", "pipe:0",
-                "-t", "30",
-                "-c:v", CODEC, "-c:a", "aac",
-                clip_path
-            ], stdin=proc.stdout, capture_output=True, timeout=120)
-            proc.stdout.close()
-            proc.wait()
-            if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
-                downloaded = True
-                print("[VOD] streamlink OK")
+                "-o", sl_tmp,
+                "--force",          # overwrite without prompting
+                yt_url, "best",
+            ], capture_output=True, timeout=120)
+            if os.path.exists(sl_tmp) and os.path.getsize(sl_tmp) > 1000:
+                subprocess.run([
+                    "ffmpeg", "-y",
+                    "-ss", str(start), "-i", sl_tmp,
+                    "-t", "30", "-c:v", CODEC, "-c:a", "aac", clip_path
+                ], capture_output=True, timeout=60)
+                try: os.remove(sl_tmp)
+                except: pass
+                if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                    downloaded = True
+                    print("[VOD] streamlink OK")
+            else:
+                last_error = sl.stderr.decode(errors="replace")[:200]
         except Exception as e:
             last_error = f"streamlink: {e}"
             print(f"[VOD] streamlink failed: {e}")
@@ -1622,6 +1878,21 @@ def clear_cache(session_id: Optional[str] = None):
         for d in ["cache_clips", "cache_reports", "uploads", "live_buffers"]:
             shutil.rmtree(d, ignore_errors=True); os.makedirs(d, exist_ok=True)
     return {"status": "cleared"}
+
+
+@app.get("/api/debug_renders")
+def list_debug_renders():
+    """List all rendered debug videos. Served at /debug/<filename>"""
+    files = sorted(glob.glob("debug_renders/*_debug.mp4"), key=os.path.getmtime, reverse=True)
+    return {
+        "renders": [
+            {"filename": os.path.basename(f),
+             "url": f"/debug/{os.path.basename(f)}",
+             "size_mb": round(os.path.getsize(f)/1e6, 2),
+             "created": os.path.getmtime(f)}
+            for f in files
+        ]
+    }
 
 
 @app.get("/health")
