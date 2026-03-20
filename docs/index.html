@@ -3610,7 +3610,443 @@ loadData();
     ).join("") + `<div class="viz-leg-item"><div class="viz-leg-dot" style="background:#f43f5e"></div>Rim (10 ft)</div>`;
   }
 
-})(); // end AI Scout IIFE
+  let _trackSessionId = null;
+  let _trackESS       = null;   // EventSource
+  let _trackDone      = false;
+  let _lastZoneCounts = {};
+  let _shotFlashTimer = null;
+
+  // Player colours (must mirror Python _TRACK_COLORS palette)
+  const TRACK_COLORS = [
+    "#38bdf8","#f43f5e","#4ade80","#fb923c","#a78bfa",
+    "#34d399","#fbbf24","#e879f9","#60a5fa","#f87171",
+    "#22d3ee","#a3e635",
+  ];
+
+  // ── Inject HTML into the clip input card ────────────────────────────────────
+  // We inject a canvas + stats sidebar beneath the existing drop zone.
+  // The drop zone itself is left intact so upload still works.
+
+  function _injectTrackingUI() {
+    const clipCard = document.getElementById("scoutClipInput");
+    if (!clipCard || document.getElementById("trackingCanvas")) return;
+
+    const container = document.createElement("div");
+    container.id    = "trackingContainer";
+    container.style.cssText =
+      "display:none;margin-top:12px;display:none;gap:12px;align-items:flex-start";
+
+    container.innerHTML = `
+      <!-- Left: annotated frame canvas -->
+      <div style="flex:3;min-width:0;position:relative">
+        <canvas id="trackingCanvas"
+          style="width:100%;border-radius:6px;background:#000;display:block;
+                 border:1px solid var(--bdr)"></canvas>
+
+        <!-- Shot flash overlay -->
+        <div id="trackShotFlash"
+          style="display:none;position:absolute;inset:0;border-radius:6px;
+                 border:3px solid #f43f5e;pointer-events:none;
+                 box-shadow:0 0 24px rgba(244,63,94,.5)">
+          <span style="position:absolute;top:8px;left:50%;transform:translateX(-50%);
+                       background:#f43f5e;color:#fff;font-family:var(--fd);
+                       font-size:.65rem;font-weight:700;letter-spacing:2px;
+                       padding:3px 10px;border-radius:3px">
+            🏀 SHOT EVENT
+          </span>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="margin-top:6px;height:4px;background:var(--navy);
+                    border-radius:2px;overflow:hidden">
+          <div id="trackProgress"
+            style="height:100%;background:var(--blue-b);width:0%;transition:width .3s">
+          </div>
+        </div>
+        <div id="trackProgressLbl"
+          style="font-family:var(--fd);font-size:.58rem;color:var(--gray);
+                 letter-spacing:1px;margin-top:3px">
+          Awaiting frames…
+        </div>
+      </div>
+
+      <!-- Right: live stats -->
+      <div id="trackStats"
+        style="flex:1;min-width:150px;background:var(--surf);border:1px solid var(--bdr);
+               border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px">
+
+        <div style="font-family:var(--fd);font-size:.6rem;font-weight:700;
+                    letter-spacing:2px;text-transform:uppercase;color:var(--gold)">
+          Live Stats
+        </div>
+
+        <!-- Player count -->
+        <div>
+          <div style="font-family:var(--fd);font-size:.55rem;color:var(--gray);
+                      letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">
+            Players on Court
+          </div>
+          <div id="trackPlayerCount"
+            style="font-family:var(--fd);font-size:1.6rem;font-weight:900;
+                   color:var(--white);line-height:1">—</div>
+        </div>
+
+        <!-- Ball possession -->
+        <div>
+          <div style="font-family:var(--fd);font-size:.55rem;color:var(--gray);
+                      letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">
+            Ball
+          </div>
+          <div id="trackBallStatus"
+            style="font-family:var(--fd);font-size:.75rem;font-weight:700;
+                   color:var(--gray-l)">—</div>
+        </div>
+
+        <!-- Shot counter -->
+        <div>
+          <div style="font-family:var(--fd);font-size:.55rem;color:var(--gray);
+                      letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">
+            Shot Events
+          </div>
+          <div id="trackShotCount"
+            style="font-family:var(--fd);font-size:1.1rem;font-weight:900;
+                   color:#f43f5e;line-height:1">0</div>
+        </div>
+
+        <!-- Zone bars -->
+        <div>
+          <div style="font-family:var(--fd);font-size:.55rem;color:var(--gray);
+                      letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px">
+            Zone Activity
+          </div>
+          <div id="trackZoneBars"></div>
+        </div>
+
+        <!-- Court mini-map (trajectories) -->
+        <div>
+          <div style="font-family:var(--fd);font-size:.55rem;color:var(--gray);
+                      letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">
+            Movement Map
+          </div>
+          <canvas id="trackMiniCourt" width="120" height="72"
+            style="width:100%;border-radius:4px;background:#0a0a0a;
+                   border:1px solid var(--bdr);display:block"></canvas>
+        </div>
+      </div>
+    `;
+
+    // Insert below the drop zone label row
+    clipCard.appendChild(container);
+
+    // "Run Full Analysis" button (appears when tracking is done)
+    const analysisBtn = document.createElement("button");
+    analysisBtn.id        = "trackRunAnalysisBtn";
+    analysisBtn.className = "scout-btn primary";
+    analysisBtn.textContent = "🔍 Run Full Gemini Analysis";
+    analysisBtn.style.display = "none";
+    analysisBtn.style.marginTop = "8px";
+    analysisBtn.addEventListener("click", _triggerFullAnalysis);
+    clipCard.appendChild(analysisBtn);
+  }
+
+  // ── Start tracking after upload ──────────────────────────────────────────────
+  // Hook into the existing upload XHR success path.
+  // We patch the scoutDrop / scoutFileInput change handlers AFTER the page's
+  // own handler has run by observing the session_id being set on window.uploadSid.
+
+  function _onUploadSuccess(sessionId) {
+    _trackSessionId = sessionId;
+    _trackDone      = false;
+    document.getElementById("trackRunAnalysisBtn").style.display = "none";
+
+    // Show the container
+    const container = document.getElementById("trackingContainer");
+    if (container) {
+      container.style.display = "flex";
+    }
+
+    // Reset stats
+    _resetStats();
+
+    // Start worker on backend
+    fetch(`${BACKEND()}/api/start_tracking/${sessionId}`, { method: "POST" })
+      .then(r => r.json())
+      .then(d => {
+        console.log("[Tracking] Worker started:", d);
+        _openSSE(sessionId);
+      })
+      .catch(e => console.error("[Tracking] start_tracking failed:", e));
+  }
+
+  function _openSSE(sessionId) {
+    if (_trackESS) { _trackESS.close(); }
+    _trackESS = new EventSource(`${BACKEND()}/api/stream_tracking/${sessionId}`);
+
+    let shotCount = 0;
+    const canvas  = document.getElementById("trackingCanvas");
+    const ctx     = canvas?.getContext("2d");
+
+    _trackESS.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      // Draw frame
+      if (ctx && data.frame_b64) {
+        const img  = new Image();
+        img.onload = () => {
+          canvas.width  = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = "data:image/jpeg;base64," + data.frame_b64;
+      }
+
+      // Progress
+      const pct = data.progress_pct ?? 0;
+      const progBar = document.getElementById("trackProgress");
+      const progLbl = document.getElementById("trackProgressLbl");
+      if (progBar) progBar.style.width = pct + "%";
+      if (progLbl) progLbl.textContent =
+        `Frame ${(data.frame_num ?? 0) + 1} / ${data.total_frames ?? "?"}  (${pct}%)`;
+
+      // Player count
+      const pcEl = document.getElementById("trackPlayerCount");
+      if (pcEl) pcEl.textContent = data.player_count ?? "—";
+
+      // Ball status
+      const bsEl = document.getElementById("trackBallStatus");
+      if (bsEl) {
+        if (data.ball_detected) {
+          bsEl.textContent  = (data.ball_side === "left" ? "◀ Left" : "Right ▶");
+          bsEl.style.color  = "#fb923c";
+        } else {
+          bsEl.textContent = "Not detected";
+          bsEl.style.color = "var(--gray)";
+        }
+      }
+
+      // Shot event flash
+      if (data.shot_event) {
+        shotCount++;
+        const scEl = document.getElementById("trackShotCount");
+        if (scEl) scEl.textContent = shotCount;
+        _flashShot();
+      }
+
+      // Zone bars
+      if (data.zone_counts && Object.keys(data.zone_counts).length) {
+        _lastZoneCounts = data.zone_counts;
+        _renderZoneBars(data.zone_counts);
+      }
+
+      // Mini court trajectories
+      if (data.trajectories) {
+        _renderMiniCourt(data.trajectories);
+      }
+    };
+
+    _trackESS.addEventListener("done", () => {
+      _trackDone = true;
+      _trackESS.close();
+      const progLbl = document.getElementById("trackProgressLbl");
+      if (progLbl) progLbl.textContent = "✓ Tracking complete";
+      const progBar = document.getElementById("trackProgress");
+      if (progBar) { progBar.style.width = "100%"; progBar.style.background = "#4ade80"; }
+      const btn = document.getElementById("trackRunAnalysisBtn");
+      if (btn) btn.style.display = "block";
+    });
+
+    _trackESS.onerror = (e) => {
+      console.error("[Tracking SSE] Error", e);
+    };
+  }
+
+  // ── Shot flash animation ─────────────────────────────────────────────────────
+  function _flashShot() {
+    const flash = document.getElementById("trackShotFlash");
+    if (!flash) return;
+    flash.style.display = "block";
+    if (_shotFlashTimer) clearTimeout(_shotFlashTimer);
+    _shotFlashTimer = setTimeout(() => { flash.style.display = "none"; }, 800);
+  }
+
+  // ── Zone bars ────────────────────────────────────────────────────────────────
+  function _renderZoneBars(zoneCounts) {
+    const el = document.getElementById("trackZoneBars");
+    if (!el) return;
+    const total = Object.values(zoneCounts).reduce((a, b) => a + b, 0) || 1;
+    const sorted = Object.entries(zoneCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    el.innerHTML = sorted.map(([zone, cnt]) => {
+      const pct  = Math.round(cnt / total * 100);
+      const hot  = pct > 30;
+      const fill = hot ? "#f43f5e" : "var(--blue-b)";
+      const label = ZONE_LABELS[zone] || zone;
+      return `
+        <div style="margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;
+                      font-family:var(--fd);font-size:.54rem;
+                      color:var(--gray-l);margin-bottom:2px">
+            <span>${label}</span><span>${pct}%</span>
+          </div>
+          <div style="height:4px;background:var(--navy);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${fill};
+                        border-radius:2px;transition:width .4s"></div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  // ── Mini court trajectory map ────────────────────────────────────────────────
+  function _renderMiniCourt(trajectories) {
+    const canvas = document.getElementById("trackMiniCourt");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W   = canvas.width;
+    const H   = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Simple court outline
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(2, 2, W - 4, H - 4);
+    // Half-court line
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 2); ctx.lineTo(W / 2, H - 2);
+    ctx.stroke();
+
+    const ids = Object.keys(trajectories);
+    ids.forEach((tid, i) => {
+      const pts   = trajectories[tid];
+      const color = TRACK_COLORS[i % TRACK_COLORS.length];
+      if (pts.length < 2) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = 1.5;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      pts.forEach((p, j) => {
+        const x = p.x * W;
+        const y = p.y * H;
+        j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // Current position dot
+      const last = pts[pts.length - 1];
+      ctx.globalAlpha = 1;
+      ctx.fillStyle   = color;
+      ctx.beginPath();
+      ctx.arc(last.x * W, last.y * H, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Reset stats display ──────────────────────────────────────────────────────
+  function _resetStats() {
+    ["trackPlayerCount", "trackBallStatus", "trackShotCount"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = id === "trackShotCount" ? "0" : "—";
+    });
+    ["trackZoneBars"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+    const progBar = document.getElementById("trackProgress");
+    if (progBar) {
+      progBar.style.width      = "0%";
+      progBar.style.background = "var(--blue-b)";
+    }
+    const flash = document.getElementById("trackShotFlash");
+    if (flash) flash.style.display = "none";
+    const mini = document.getElementById("trackMiniCourt");
+    if (mini) mini.getContext("2d").clearRect(0, 0, mini.width, mini.height);
+  }
+
+  // ── Trigger full Gemini analysis after tracking completes ───────────────────
+  function _triggerFullAnalysis() {
+    if (!_trackSessionId) return;
+    const btn = document.getElementById("trackRunAnalysisBtn");
+    if (btn) { btn.textContent = "⏳ Analyzing…"; btn.disabled = true; }
+
+    // Reuse the existing scoutAnalyzeVodBtn flow: set the VOD URL input to
+    // the preview URL and fire the analyze endpoint.
+    // Alternatively call analyze_playhead directly:
+    const backend = BACKEND();
+    fetch(`${backend}/api/analyze_playhead`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ video_source: _trackSessionId, current_time: 0, force: false }),
+    })
+    .then(r => r.json())
+    .then(d => {
+      // Reuse existing renderResult from the AI Scout IIFE
+      if (typeof renderResult === "function") {
+        renderResult(d, d.dead_time || false);
+      } else {
+        // Fallback: put report in the scout report box
+        const el = document.getElementById("scoutReport");
+        if (el) el.innerHTML = `<p>${(d.scouting_report || "No report.").replace(/\n/g, "<br>")}</p>`;
+      }
+      if (btn) { btn.textContent = "✓ Analysis Complete"; btn.disabled = false; }
+    })
+    .catch(e => {
+      console.error("[Full Analysis]", e);
+      if (btn) { btn.textContent = "⚠ Analysis Failed"; btn.disabled = false; }
+    });
+  }
+
+  // ── Monkey-patch the upload XHR in the existing scoutFileInput handler ───────
+  // The AI Scout IIFE sets uploadSid after a successful XHR.
+  // We watch for that by patching doUpload — but since it's inside a closure,
+  // we instead observe the scoutVideoPlayer src being set (reliable side-effect).
+
+  const _origSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+  if (_origSrcDescriptor) {
+    Object.defineProperty(HTMLMediaElement.prototype, "src", {
+      set(val) {
+        _origSrcDescriptor.set.call(this, val);
+        if (this.id === "scoutVideoPlayer" && val && val.includes("/uploads/")) {
+          // Extract session_id from URL like /uploads/{uuid}.mp4
+          const m = val.match(/\/uploads\/([a-f0-9-]{36})/);
+          if (m) {
+            // Small delay so the existing doUpload handler finishes first
+            setTimeout(() => _onUploadSuccess(m[1]), 200);
+          }
+        }
+      },
+      get() { return _origSrcDescriptor.get.call(this); },
+    });
+  }
+
+  // ── Init: inject HTML when AI Scout tab is first shown ──────────────────────
+  const _origScoutInit = window.scoutInit;
+  window.scoutInit = function () {
+    if (_origScoutInit) _origScoutInit();
+    _injectTrackingUI();
+  };
+
+  // Also inject if the tab is already visible on load
+  if (document.getElementById("sec-aiscout")?.style.display !== "none") {
+    _injectTrackingUI();
+  }
+
+  // ── Clean up SSE when user clears the clip ──────────────────────────────────
+  document.addEventListener("click", (e) => {
+    if (e.target?.id === "scoutClearBtn" && _trackESS) {
+      _trackESS.close();
+      _trackESS = null;
+      if (_trackSessionId) {
+        fetch(`${BACKEND()}/api/stop_tracking/${_trackSessionId}`, { method: "DELETE" })
+          .catch(() => {});
+      }
+      _trackSessionId = null;
+      const container = document.getElementById("trackingContainer");
+      if (container) container.style.display = "none";
+      const btn = document.getElementById("trackRunAnalysisBtn");
+      if (btn) btn.style.display = "none";
+    }
+  });
+
+})();
 
 </script>
 </body>
